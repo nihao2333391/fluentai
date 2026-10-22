@@ -22,6 +22,11 @@ describe('App', () => {
           restart,
           onStatusChanged: vi.fn(() => () => undefined),
         },
+        credentials: {
+          getStatus: vi.fn().mockResolvedValue({ encryptionAvailable: true, configured: false }),
+          setFluentPassword: vi.fn(),
+          clearFluentPassword: vi.fn(),
+        },
       },
     })
 
@@ -30,6 +35,7 @@ describe('App', () => {
     expect(await screen.findByText('已就绪')).toBeInTheDocument()
     expect(screen.getByText('PID 4321')).toBeInTheDocument()
     expect(screen.getByText('127.0.0.1:61234')).toBeInTheDocument()
+    expect(await screen.findByText('凭据存储：可用')).toBeInTheDocument()
     expect(screen.getByText('自动化创建')).toBeInTheDocument()
     expect(screen.getByText('我的自动化')).toBeInTheDocument()
     expect(screen.getByText('我的模型')).toBeInTheDocument()

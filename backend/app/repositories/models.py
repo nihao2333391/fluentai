@@ -95,6 +95,30 @@ class ModelRepository:
             if cursor.rowcount == 0:
                 raise RepositoryNotFoundError(f"Model {model_id} was not found.")
 
+    def refresh(self, model_id: int) -> ModelRead:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT file_path FROM models WHERE id = ?", (model_id,)
+            ).fetchone()
+            if row is None:
+                raise RepositoryNotFoundError(f"Model {model_id} was not found.")
+            path = self._validated_file(str(row["file_path"]))
+            stat = path.stat()
+            connection.execute(
+                """
+                UPDATE models
+                SET file_size = ?, file_mtime = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    stat.st_size,
+                    datetime.fromtimestamp(stat.st_mtime, UTC).isoformat(),
+                    utc_now(),
+                    model_id,
+                ),
+            )
+        return self.get(model_id)
+
     def associate(self, model_id: int, payload: ModelAutomationAssociate) -> ModelRead:
         now = utc_now()
         with self.database.connect() as connection:

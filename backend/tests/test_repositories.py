@@ -96,6 +96,11 @@ def test_models_support_many_to_many_associations_and_one_default(tmp_path: Path
     assert associated.default_automation_id == second.id
     assert set(associated.automation_ids) == {first.id, second.id}
 
+    model_file.write_bytes(b"updated fake fluent case with more bytes")
+    refreshed = models.refresh(model.id)
+    assert refreshed.file_size == model_file.stat().st_size
+    assert refreshed.file_size > model.file_size
+
     with database.connect() as connection:
         default_count = connection.execute(
             "SELECT COUNT(*) FROM model_automations WHERE model_id = ? AND is_default = 1",

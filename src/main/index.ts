@@ -2,7 +2,11 @@ import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
 
 import type { SidecarStatus } from '../shared/contracts'
+import { registerBusinessIpc } from './business-ipc'
+import { createElectronCredentialStore } from './electron-credentials'
+import { ElectronModelFilePicker } from './electron-model-files'
 import { registerSidecarIpc, SIDECAR_STATUS_CHANGED_CHANNEL } from './ipc'
+import { ModelFileRegistry } from './model-file-registry'
 import { SidecarManager } from './sidecar'
 
 let mainWindow: BrowserWindow | null = null
@@ -73,6 +77,14 @@ const createMainWindow = (): BrowserWindow => {
 }
 
 app.whenReady().then(() => {
+  const modelFiles = new ModelFileRegistry()
+  registerBusinessIpc({
+    sidecar,
+    modelFiles,
+    modelFilePicker: new ElectronModelFilePicker(modelFiles),
+    credentials: createElectronCredentialStore(app.getPath('userData')),
+  })
+
   createMainWindow()
 
   void sidecar.start().catch((error: unknown) => {

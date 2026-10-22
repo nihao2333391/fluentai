@@ -8,85 +8,103 @@ Fluent AI is a Windows desktop application for managing reusable ANSYS Fluent au
 - **M1 - Engineering foundation: PASSED**
 - **M2 - IPC and sidecar supervision: PASSED**
 - **M3 - Database and domain model: PASSED**
-- **M4 - Electron security and file capabilities: NOT STARTED**
+- **M4 - Electron security and file capabilities: PASSED**
+- **M5 - UI framework and design system: NOT STARTED**
 
-The application now starts a supervised FastAPI sidecar, initializes a versioned SQLite database, and exposes authenticated CRUD APIs for automations, models, associations, settings, jobs, and synchronization logs.
+M4 completes the secure bridge between the Renderer and the M3 business API. Model paths must originate from a native file picker, Fluent passwords are encrypted through Electron safeStorage, and all business operations use typed preload IPC rather than direct HTTP access.
 
 ## Architecture
 
 ```text
 React renderer
-    ↓ typed preload IPC
+    ↓ typed renderer service
+    ↓ narrow preload API
 Electron main process
     ├─ sidecar supervisor
-    ├─ random port + bearer token
-    ├─ user-data database path
-    └─ narrow IPC handlers
-          ↓ 127.0.0.1
+    ├─ authenticated API proxy
+    ├─ native model-file picker and path registry
+    ├─ safeStorage credential vault
+    └─ user-data database path
+          ↓ 127.0.0.1 + bearer token
 FastAPI sidecar
-    ├─ bearer authentication
-    ├─ authenticated business API
+    ├─ authentication
+    ├─ business API
     ├─ SQLite migrations and repositories
     └─ FakeFluentAdapter
           ↓ future FluentAdapter
 ANSYS Fluent 2025 R2
 ```
 
-## Technology Baseline
+## Security Model
 
-| Layer         | Version                  |
-| ------------- | ------------------------ |
-| Node.js       | 24.21.0                  |
-| pnpm          | 12.5.1                   |
-| Electron      | 45.0.0                   |
-| electron-vite | 6.0.0                    |
-| Vite          | 8.3.5                    |
-| React         | 19.3.1                   |
-| TypeScript    | 5.9.3                    |
-| Python        | 3.12.14                  |
-| FastAPI       | 0.159.1                  |
-| PyFluent      | ansys-fluent-core 0.42.1 |
+- `contextIsolation: true`
+- `nodeIntegration: false`
+- `sandbox: true`
+- CommonJS preload output
+- Content Security Policy
+- No raw `ipcRenderer` or arbitrary IPC channel exposed
+- Bearer token remains in the Electron main process
+- Renderer communicates with the sidecar only through typed IPC
+- Model file paths require a native file picker selection token
+- Selected paths are canonicalized and validated as regular, non-empty Fluent files
+- Fluent passwords are encrypted with Electron safeStorage
+- Existing passwords are never returned to the Renderer
+- External links open in the system browser
 
-## Persistence
+## M4 Capabilities
 
-SQLite is owned exclusively by the Python sidecar.
+### Native model file selection
 
-- Production data path: `%APPDATA%\fluent-ai\data\fluent-ai.db`
-- Development fallback: `.runtime\data\fluent-ai.db`
-- WAL journal mode
-- Foreign keys enabled
-- Connection per operation
-- Versioned migrations in `schema_migrations`
+Supported files:
 
-Tables:
+- `.cas`
+- `.cas.h5`
+- `.msh`
+- `.msh.h5`
 
-- `automations`
-- `models`
-- `model_automations`
-- `app_settings`
-- `jobs`
-- `sync_logs`
-- `schema_migrations`
+The Renderer receives a short-lived selection token plus display metadata. The main process resolves the token to the canonical path only when creating or updating a model.
 
-Automation presets are versioned JSON documents with typed setting items. Models and automations use a many-to-many association, with at most one default automation per model.
+### Model metadata refresh
 
-## Authenticated Business API
+`POST /api/models/{id}/refresh` re-reads the selected file and updates:
 
-- `/api/automations`
-- `/api/automations/{id}`
-- `/api/models`
-- `/api/models/{id}`
-- `/api/models/{id}/associate`
-- `/api/settings`
-- `/api/jobs`
-- `/api/jobs/{id}`
-- `/api/sync-logs`
+- file size
+- modification time
+- updated timestamp
 
-All business endpoints require the per-launch bearer token. FastAPI also exposes `/docs` and `/openapi.json` on the loopback listener for development.
+Missing, inaccessible, empty, directory, or unsupported paths are rejected.
+
+### Encrypted Fluent credentials
+
+The main process stores the encrypted Fluent password at:
+
+`%APPDATA%\fluent-ai\secrets\fluent-credentials.json`
+
+The Renderer can only:
+
+- query whether secure storage is available;
+- query whether a password is configured;
+- set or replace the password;
+- clear the password.
+
+It cannot read the existing password.
+
+### Typed business IPC
+
+The preload API now exposes:
+
+- automations
+- models and file selection
+- settings
+- jobs
+- sync logs
+- credential status and management
+
+The Renderer service wrapper is in `src/renderer/src/services/fluentAi.ts`.
 
 ## Development
 
-Install dependencies:
+Install and run:
 
 ```powershell
 pnpm install
@@ -96,21 +114,9 @@ pnpm setup:electron
   -m venv .venv
 & '.\.venv\Scripts\python.exe' -m pip install --upgrade pip
 & '.\.venv\Scripts\python.exe' -m pip install -r backend\requirements-dev.txt
-```
 
-Run the complete desktop app:
-
-```powershell
 pnpm dev
 ```
-
-Run only the sidecar in development:
-
-```powershell
-pnpm backend:dev
-```
-
-The development script prints a temporary bearer token. Use it for authenticated readiness or API requests.
 
 ## Verification
 
@@ -121,21 +127,14 @@ pnpm check
 Expected final marker:
 
 ```text
-M3_CHECK_PASSED
-```
-
-Run the M3 database/API tests directly:
-
-```powershell
-$env:PYTHONPATH = 'D:\Fluent AI\fluent-ai-app\backend'
-& 'D:\Fluent AI\fluent-ai-app\.venv\Scripts\python.exe' `
-  -m pytest -q 'D:\Fluent AI\fluent-ai-app\backend\tests'
+M4_CHECK_PASSED
 ```
 
 ## Evidence
 
+- M4 verification: `docs/m4-verification.md`
+- M4 architecture decision: `docs/adr/0005-m4-secure-file-and-credentials.md`
 - M3 verification: `docs/m3-verification.md`
-- M3 architecture decision: `docs/adr/0004-m3-persistence.md`
 - M2 verification: `docs/m2-verification.md`
 - M1 verification: `docs/m1-verification.md`
 - M0 Fluent report: `docs/poc/fluent-2025R2.md`
@@ -143,11 +142,12 @@ $env:PYTHONPATH = 'D:\Fluent AI\fluent-ai-app\backend'
 
 ## Next Milestone
 
-M4 will add:
+M5 will add:
 
-- secure Electron file pickers and path validation;
-- model file metadata refresh;
-- encrypted handling for future Fluent credentials;
-- IPC methods for business operations;
-- typed renderer service layer;
-- file-related error and permission tests.
+- React Router with four top-level modules;
+- Ant Design 5 theme and locale integration;
+- responsive application shell;
+- global sidecar and task status surfaces;
+- loading, empty, error, and permission states;
+- i18n foundation and theme switching;
+- frontend component and layout tests.

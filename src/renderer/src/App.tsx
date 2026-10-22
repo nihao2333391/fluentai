@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
-import type { SidecarStatus } from '../../shared/contracts'
+import type { CredentialStatus, SidecarStatus } from '../../shared/contracts'
+import { fluentAiService } from './services/fluentAi'
 
 const modules = [
   {
@@ -44,6 +45,7 @@ export default function App() {
         },
   )
   const [restarting, setRestarting] = useState(false)
+  const [credentialStatus, setCredentialStatus] = useState<CredentialStatus | null>(null)
   const platform = window.fluentAI?.platform ?? 'browser'
 
   useEffect(() => {
@@ -71,6 +73,28 @@ export default function App() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!window.fluentAI) {
+      return
+    }
+    let active = true
+    void fluentAiService.credentials
+      .getStatus()
+      .then((status) => {
+        if (active) {
+          setCredentialStatus(status)
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setCredentialStatus({ encryptionAvailable: false, configured: false })
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
   const restartSidecar = async (): Promise<void> => {
     const sidecar = window.fluentAI?.sidecar
     if (!sidecar || restarting) {
@@ -95,10 +119,10 @@ export default function App() {
       <header className="hero">
         <div>
           <p className="eyebrow">FLUENT AI</p>
-          <h1>桌面应用基础框架已就绪</h1>
+          <h1>桌面应用安全基础已就绪</h1>
           <p className="summary">
-            Electron、React 与 FastAPI 侧车已经联通。M2 聚焦本地进程监管、安全握手和状态恢复；
-            业务页面将在后续阶段实现。
+            Electron、React 与 FastAPI 侧车已经联通。M4 增加了安全文件选择、加密凭据存储、 业务 IPC
+            和类型化 Renderer 服务层；完整业务页面将在后续阶段实现。
           </p>
         </div>
         <span className={`status status--${sidecarStatus.state}`}>
@@ -115,6 +139,12 @@ export default function App() {
             {sidecarStatus.version ? <span>版本 {sidecarStatus.version}</span> : null}
             {sidecarStatus.pid ? <span>PID {sidecarStatus.pid}</span> : null}
             {sidecarStatus.port ? <span>127.0.0.1:{sidecarStatus.port}</span> : null}
+            {credentialStatus ? (
+              <span>
+                凭据存储：{credentialStatus.encryptionAvailable ? '可用' : '不可用'}
+                {credentialStatus.configured ? ' / 已配置' : ''}
+              </span>
+            ) : null}
           </div>
         </div>
         <button
@@ -139,7 +169,7 @@ export default function App() {
 
       <footer>
         <span>运行平台：{platform}</span>
-        <span>下一阶段：数据库与领域模型</span>
+        <span>下一阶段：界面框架与设计系统</span>
       </footer>
     </main>
   )

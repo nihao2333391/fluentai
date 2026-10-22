@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
+import type { Automation } from '../shared/contracts'
 import { SidecarManager } from './sidecar'
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -47,6 +48,19 @@ describe('SidecarManager', () => {
       expect(ready.port).toBeGreaterThan(0)
       expect(JSON.stringify(ready)).not.toContain('token')
 
+      const initial = await manager.request<Automation[]>('/api/automations')
+      expect(initial).toEqual([])
+      const created = await manager.request<Automation>('/api/automations', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: 'Sidecar proxy automation',
+          description: 'M4 request proxy',
+          status: 'draft',
+          preset: { schema_version: 1, fluent_version: null, items: [] },
+        }),
+      })
+      expect(created.name).toBe('Sidecar proxy automation')
+
       const restarted = await manager.restart()
       expect(restarted.state).toBe('ready')
       expect(restarted.pid).toBeGreaterThan(0)
@@ -54,6 +68,8 @@ describe('SidecarManager', () => {
       expect(states).toContain('starting')
       expect(states).toContain('ready')
       expect(states).toContain('stopped')
+      const persisted = await manager.request<Automation[]>('/api/automations')
+      expect(persisted.map((item) => item.name)).toContain('Sidecar proxy automation')
     } finally {
       unsubscribe()
       await manager.stop()

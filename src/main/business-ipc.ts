@@ -1,0 +1,124 @@
+import { BrowserWindow, ipcMain } from 'electron'
+
+import type {
+  Automation,
+  AutomationInput,
+  CredentialStatus,
+  Job,
+  Model,
+  ModelAssociationRequest,
+  ModelCreateRequest,
+  ModelUpdateRequest,
+  SettingsPayload,
+  SyncLog,
+} from '../shared/contracts'
+import type { CredentialStore } from './credential-store'
+import type { ElectronModelFilePicker } from './electron-model-files'
+import type { ModelFileRegistry } from './model-file-registry'
+import type { SidecarManager } from './sidecar'
+
+interface BusinessIpcOptions {
+  sidecar: SidecarManager
+  modelFiles: ModelFileRegistry
+  modelFilePicker: ElectronModelFilePicker
+  credentials: CredentialStore
+}
+
+const jsonBody = (value: unknown): string => JSON.stringify(value)
+
+export function registerBusinessIpc(options: BusinessIpcOptions): void {
+  const { sidecar, modelFiles, modelFilePicker, credentials } = options
+
+  ipcMain.handle('automations:list', () => sidecar.request<Automation[]>('/api/automations'))
+  ipcMain.handle('automations:create', (_event, payload: AutomationInput) =>
+    sidecar.request<Automation>('/api/automations', {
+      method: 'POST',
+      body: jsonBody(payload),
+    }),
+  )
+  ipcMain.handle('automations:get', (_event, id: number) =>
+    sidecar.request<Automation>(`/api/automations/${id}`),
+  )
+  ipcMain.handle('automations:update', (_event, id: number, payload: AutomationInput) =>
+    sidecar.request<Automation>(`/api/automations/${id}`, {
+      method: 'PUT',
+      body: jsonBody(payload),
+    }),
+  )
+  ipcMain.handle('automations:delete', (_event, id: number) =>
+    sidecar.request<void>(`/api/automations/${id}`, { method: 'DELETE' }),
+  )
+
+  ipcMain.handle('models:list', () => sidecar.request<Model[]>('/api/models'))
+  ipcMain.handle('models:get', (_event, id: number) => sidecar.request<Model>(`/api/models/${id}`))
+  ipcMain.handle('models:pick-file', () =>
+    modelFilePicker.pickFile(BrowserWindow.getFocusedWindow()),
+  )
+  ipcMain.handle('models:create', (_event, payload: ModelCreateRequest) => {
+    const selected = modelFiles.resolve(payload.fileToken)
+    return sidecar.request<Model>('/api/models', {
+      method: 'POST',
+      body: jsonBody({
+        name: payload.name,
+        file_path: selected.filePath,
+        description: payload.description ?? '',
+        tags: payload.tags ?? [],
+      }),
+    })
+  })
+  ipcMain.handle('models:update', async (_event, id: number, payload: ModelUpdateRequest) => {
+    const current = await sidecar.request<Model>(`/api/models/${id}`)
+    const filePath = payload.fileToken
+      ? modelFiles.resolve(payload.fileToken).filePath
+      : current.file_path
+    return sidecar.request<Model>(`/api/models/${id}`, {
+      method: 'PUT',
+      body: jsonBody({
+        name: payload.name,
+        file_path: filePath,
+        description: payload.description ?? current.description,
+        tags: payload.tags ?? current.tags,
+      }),
+    })
+  })
+  ipcMain.handle('models:associate', (_event, id: number, payload: ModelAssociationRequest) =>
+    sidecar.request<Model>(`/api/models/${id}/associate`, {
+      method: 'POST',
+      body: jsonBody({
+        automation_id: payload.automationId,
+        is_default: payload.isDefault,
+      }),
+    }),
+  )
+  ipcMain.handle('models:refresh', (_event, id: number) =>
+    sidecar.request<Model>(`/api/models/${id}/refresh`, { method: 'POST' }),
+  )
+  ipcMain.handle('models:delete', (_event, id: number) =>
+    sidecar.request<void>(`/api/models/${id}`, { method: 'DELETE' }),
+  )
+
+  ipcMain.handle('settings:get', () => sidecar.request<SettingsPayload>('/api/settings'))
+  ipcMain.handle('settings:update', (_event, payload: SettingsPayload) =>
+    sidecar.request<SettingsPayload>('/api/settings', {
+      method: 'PUT',
+      body: jsonBody(payload),
+    }),
+  )
+
+  ipcMain.handle('jobs:list', (_event, limit = 50) =>
+    sidecar.request<Job[]>(`/api/jobs?limit=${Math.max(1, Math.min(limit, 200))}`),
+  )
+  ipcMain.handle('jobs:get', (_event, id: string) =>
+    sidecar.request<Job>(`/api/jobs/${encodeURIComponent(id)}`),
+  )
+
+  ipcMain.handle('sync-logs:list', (_event, limit = 100) =>
+    sidecar.request<SyncLog[]>(`/api/sync-logs?limit=${Math.max(1, Math.min(limit, 500))}`),
+  )
+
+  ipcMain.handle('credentials:status', (): Promise<CredentialStatus> => credentials.getStatus())
+  ipcMain.handle('credentials:set-fluent-password', (_event, password: string) =>
+    credentials.setFluentPassword(password),
+  )
+  ipcMain.handle('credentials:clear-fluent-password', () => credentials.clearFluentPassword())
+}

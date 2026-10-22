@@ -80,6 +80,51 @@ export class SidecarManager extends EventEmitter {
     return this.startPromise
   }
 
+  async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+    if (!path.startsWith('/api/')) {
+      throw new Error('Sidecar requests must use an authenticated /api path.')
+    }
+    if (this.status.state !== 'ready' || !this.port || !this.token) {
+      throw new Error('Sidecar is not ready.')
+    }
+
+    const headers = new Headers(init.headers)
+    headers.set('Authorization', `Bearer ${this.token}`)
+    if (init.body !== undefined && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json')
+    }
+
+    const response = await fetch(`http://127.0.0.1:${this.port}${path}`, {
+      ...init,
+      headers,
+      signal: init.signal ?? AbortSignal.timeout(15_000),
+    })
+
+    if (response.status === 204) {
+      return undefined as T
+    }
+
+    const text = await response.text()
+    let payload: unknown = null
+    if (text) {
+      try {
+        payload = JSON.parse(text)
+      } catch {
+        payload = text
+      }
+    }
+
+    if (!response.ok) {
+      const detail =
+        typeof payload === 'object' && payload !== null && 'detail' in payload
+          ? String((payload as { detail: unknown }).detail)
+          : `HTTP ${response.status}`
+      throw new Error(`Sidecar request failed: ${detail}`)
+    }
+
+    return payload as T
+  }
+
   async restart(): Promise<SidecarStatus> {
     this.restartAttempts = 0
     await this.stop()

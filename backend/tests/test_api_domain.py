@@ -78,6 +78,11 @@ def test_automation_model_settings_job_and_log_api(
     assert model.status_code == 201
     model_id = model.json()["id"]
 
+    model_file.write_bytes(b"updated case from API")
+    refreshed = app_client.post(f"/api/models/{model_id}/refresh", headers=auth_headers)
+    assert refreshed.status_code == 200
+    assert refreshed.json()["file_size"] == model_file.stat().st_size
+
     associated = app_client.post(
         f"/api/models/{model_id}/associate",
         headers=auth_headers,

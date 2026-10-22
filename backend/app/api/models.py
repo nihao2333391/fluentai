@@ -51,6 +51,11 @@ def update_model(
     return ModelRepository(database).update(model_id, payload)
 
 
+@router.post("/{model_id}/refresh", response_model=ModelRead)
+def refresh_model(model_id: int, database: DatabaseDependency) -> ModelRead:
+    return ModelRepository(database).refresh(model_id)
+
+
 @router.post("/{model_id}/associate", response_model=ModelRead)
 def associate_model(
     model_id: int,
