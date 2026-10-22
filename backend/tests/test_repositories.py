@@ -4,6 +4,7 @@ from app.database import Database
 from app.domain import (
     AutomationCreate,
     AutomationUpdate,
+    FluentConnectionConfig,
     JobCreate,
     ModelAutomationAssociate,
     ModelCreate,
@@ -150,7 +151,7 @@ def test_settings_jobs_and_sync_logs(tmp_path: Path) -> None:
 
 def test_fake_fluent_adapter_reads_and_writes_settings() -> None:
     adapter = FakeFluentAdapter({"solver.iterations": 200})
-    session = adapter.connect({"mode": "launch"})
+    session = adapter.connect(FluentConnectionConfig(mode="launch"))
     assert session.connected is True
 
     results = adapter.apply_preset(
@@ -162,6 +163,8 @@ def test_fake_fluent_adapter_reads_and_writes_settings() -> None:
         )
     )
 
-    assert results[0].success is True
-    assert adapter.read_settings(["solver.iterations"]) == {"solver.iterations": 500}
-    assert results[1].success is False
+    assert results.results[0].success is True
+    assert adapter.read_settings(["solver.iterations"]) == {"solver.iterations": 200}
+    assert results.status == "failed"
+    assert results.rollback_attempted is True
+    assert results.results[1].success is False

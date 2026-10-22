@@ -8,7 +8,8 @@
 | M3 - Database and domain model        | PASSED      | SQLite migrations, repositories, authenticated CRUD APIs, jobs, logs and FakeFluentAdapter                    |
 | M4 - Secure files and credentials     | PASSED      | native file picker, path tokens, metadata refresh, safeStorage credentials, business IPC and Renderer service |
 | M5 - UI framework and design system   | PASSED      | four-module Ant Design shell, router, responsive layout, themes, i18n, global status and page states          |
-| M6 - FluentAdapter and SettingCatalog | NOT STARTED | Awaiting approval after M5 review                                                                             |
+| M6 - FluentAdapter and SettingCatalog | PASSED      | PyFluent adapter, 20-setting catalog, readback verification, rollback reports and real Fluent validation      |
+| M7 - First end-to-end vertical slice  | NOT STARTED | Awaiting approval after M6 review                                                                             |
 
 ## Evidence
 
@@ -18,4 +19,5 @@
 - M3: `docs/m3-verification.md`
 - M4: `docs/m4-verification.md`
 - M5: `docs/m5-verification.md`
+- M6: `docs/m6-verification.md`
 - Decisions: `docs/adr/`

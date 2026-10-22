@@ -1,0 +1,130 @@
+{
+  "status": "passed",
+  "started_at_utc": "2026-10-22T08:40:00.208201+00:00",
+  "case": "D:\\Fluent AI\\ansys-runs\\compat-smoke-20261021-170520\\01_mesh.cas.h5",
+  "fluent_executable": "D:\\Ansys2025R2\\ANSYS Inc\\v252\\fluent\\ntbin\\win64\\fluent.exe",
+  "catalog_version": "25.2.0",
+  "catalog_size": 20,
+  "connection_status": {
+    "connected": true,
+    "mode": "launch",
+    "version": "Ansys Fluent 2025 R2",
+    "pid": 8104,
+    "host": "localhost",
+    "port": 59518
+  },
+  "initial_values": {
+    "solver.time": "steady",
+    "solver.type": "pressure-based",
+    "solver.velocity_formulation": "absolute",
+    "energy.enabled": false,
+    "viscous.model": "k-omega",
+    "viscous.k_omega_model": "sst",
+    "viscous.low_re_correction": false,
+    "viscous.curvature_correction": false,
+    "viscous.corner_flow_correction": false,
+    "residual.continuity": 0.001,
+    "residual.x-velocity": 0.001,
+    "residual.y-velocity": 0.001,
+    "residual.z-velocity": 0.001,
+    "residual.k": 0.001,
+    "residual.omega": 0.001,
+    "reference.area": 1,
+    "reference.density": 1.225,
+    "reference.length": 1,
+    "reference.velocity": 1,
+    "reference.viscosity": 1.7894e-05
+  },
+  "read_count": 20,
+  "apply_report": {
+    "operation": "apply",
+    "status": "success",
+    "results": [
+      {
+        "setting_id": "residual.continuity",
+        "expected": 0.0011,
+        "actual": 0.0011,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "reference.area",
+        "expected": 1.05,
+        "actual": 1.05,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "reference.density",
+        "expected": 1.2862500000000001,
+        "actual": 1.2862500000000001,
+        "success": true,
+        "message": ""
+      }
+    ],
+    "rollback_attempted": false,
+    "rollback_succeeded": null,
+    "rollback_results": []
+  },
+  "after_apply": {
+    "residual.continuity": 0.0011,
+    "reference.area": 1.05,
+    "reference.density": 1.2862500000000001
+  },
+  "restore_report": {
+    "operation": "write",
+    "status": "success",
+    "results": [
+      {
+        "setting_id": "residual.continuity",
+        "expected": 0.001,
+        "actual": 0.001,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "reference.area",
+        "expected": 1.0,
+        "actual": 1.0,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "reference.density",
+        "expected": 1.225,
+        "actual": 1.225,
+        "success": true,
+        "message": ""
+      }
+    ],
+    "rollback_attempted": false,
+    "rollback_succeeded": null,
+    "rollback_results": []
+  },
+  "final_values": {
+    "solver.time": "steady",
+    "solver.type": "pressure-based",
+    "solver.velocity_formulation": "absolute",
+    "energy.enabled": false,
+    "viscous.model": "k-omega",
+    "viscous.k_omega_model": "sst",
+    "viscous.low_re_correction": false,
+    "viscous.curvature_correction": false,
+    "viscous.corner_flow_correction": false,
+    "residual.continuity": 0.001,
+    "residual.x-velocity": 0.001,
+    "residual.y-velocity": 0.001,
+    "residual.z-velocity": 0.001,
+    "residual.k": 0.001,
+    "residual.omega": 0.001,
+    "reference.area": 1.0,
+    "reference.density": 1.225,
+    "reference.length": 1,
+    "reference.velocity": 1,
+    "reference.viscosity": 1.7894e-05
+  },
+  "apply_verified": true,
+  "restored": true,
+  "disconnect": "success",
+  "finished_at_utc": "2026-10-22T08:40:23.036274+00:00"
+}

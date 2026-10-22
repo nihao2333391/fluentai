@@ -136,3 +136,57 @@ class SyncLogCreate(BaseModel):
 class SyncLogRead(SyncLogCreate):
     id: int
     created_at: str
+
+
+FluentLaunchMode = Literal["launch", "attach"]
+FluentUiMode = Literal["no_gui", "no_graphics", "hidden_gui", "gui"]
+
+
+class FluentConnectionConfig(BaseModel):
+    """Connection options for a real Fluent session."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    mode: FluentLaunchMode = "launch"
+    fluent_path: str | None = None
+    product_version: str = "25.2.0"
+    processor_count: int = Field(default=1, ge=1, le=128)
+    ui_mode: FluentUiMode = "no_gui"
+    start_timeout: int = Field(default=300, ge=10, le=1_800)
+    cleanup_on_exit: bool = True
+    host: str = "127.0.0.1"
+    port: int | None = Field(default=None, ge=1, le=65_535)
+    password: str | None = None
+    server_info_file: str | None = None
+
+
+class FluentStatus(BaseModel):
+    """Current adapter session status."""
+
+    connected: bool
+    mode: FluentLaunchMode | None = None
+    version: str | None = None
+    pid: int | None = None
+    host: str | None = None
+    port: int | None = None
+
+
+class SettingWriteResult(BaseModel):
+    """Per-setting write and readback outcome."""
+
+    setting_id: str
+    expected: PresetValue
+    actual: PresetValue
+    success: bool
+    message: str = ""
+
+
+class FluentOperationReport(BaseModel):
+    """Write or preset-apply report with rollback information."""
+
+    operation: Literal["write", "apply"]
+    status: Literal["success", "failed"]
+    results: list[SettingWriteResult] = Field(default_factory=list)
+    rollback_attempted: bool = False
+    rollback_succeeded: bool | None = None
+    rollback_results: list[SettingWriteResult] = Field(default_factory=list)

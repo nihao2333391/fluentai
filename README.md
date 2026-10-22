@@ -10,19 +10,18 @@ Fluent AI is a Windows desktop application for managing reusable ANSYS Fluent au
 - **M3 - Database and domain model: PASSED**
 - **M4 - Electron security and file capabilities: PASSED**
 - **M5 - UI framework and design system: PASSED**
-- **M6 - FluentAdapter and SettingCatalog: NOT STARTED**
+- **M6 - FluentAdapter and SettingCatalog: PASSED**
+- **M7 - First end-to-end vertical slice: NOT STARTED**
 
-The application now has a responsive four-module Ant Design shell with route navigation, persistent light/dark/system themes, Chinese/English localization, global sidecar and task status, and reusable loading, empty, error, and permission states.
+M6 adds a real Fluent 2025 R2 PyFluent adapter, a curated catalog of 20 validated settings, typed read/write/apply operations, readback verification, and rollback reporting.
 
 ## Architecture
 
 ```text
 React renderer
-    ├─ React Router 7 hash routes
-    ├─ Ant Design 5 + design tokens
-    ├─ Zustand persisted preferences
-    ├─ i18next Chinese/English resources
-    └─ typed Renderer service layer
+    ├─ four-module Ant Design shell
+    ├─ typed Renderer service layer
+    └─ persisted theme and language
           ↓ narrow preload API
 Electron main process
     ├─ sidecar supervisor
@@ -35,115 +34,138 @@ FastAPI sidecar
     ├─ authentication
     ├─ business API
     ├─ SQLite migrations and repositories
-    └─ FakeFluentAdapter
-          ↓ future FluentAdapter
+    └─ Fluent service layer
+          ├─ FluentSettingCatalog 25.2
+          ├─ PyFluentAdapter
+          └─ FakeFluentAdapter
+               ↓
 ANSYS Fluent 2025 R2
 ```
 
-## Four Top-Level Modules
+## M6 FluentAdapter
 
-- 自动化创建 / Create Automation
-- 我的自动化 / My Automations
-- 我的模型 / My Models
-- 设置 / Settings
+`PyFluentAdapter` supports:
 
-M5 establishes the route, navigation, responsive layout, design system, state components, and settings controls. The individual automation and model business forms remain placeholders until their corresponding workflow milestones.
+- launch mode;
+- attach mode by host/port or server-info file;
+- session status and version information;
+- case loading;
+- case saving;
+- reading catalog settings;
+- writing settings with immediate readback verification;
+- applying a versioned preset document;
+- rollback after partial write failure;
+- per-setting success and diagnostic results.
 
-## UI Framework
+The sidecar API and UI do not yet expose Fluent operations. M7 will connect the adapter through authenticated routes and the first end-to-end workflow.
 
-| Capability             | Implementation                              |
-| ---------------------- | ------------------------------------------- |
-| Routing                | React Router 7 hash router                  |
-| Components             | Ant Design 5                                |
-| Icons                  | Ant Design Icons                            |
-| UI state               | Zustand 5 with persisted preferences        |
-| Localization           | i18next + react-i18next                     |
-| React 19 compatibility | `@ant-design/v5-patch-for-react-19`         |
-| Theme                  | Ant Design algorithms plus CSS variables    |
-| Responsive behavior    | Ant Design Layout/Sider and CSS breakpoints |
+## Validated SettingCatalog 25.2
 
-### Theme
+The catalog contains 20 settings verified against Fluent 2025 R2:
 
-Supported modes:
+- solver time;
+- solver type;
+- velocity formulation;
+- energy equation;
+- viscous model;
+- k-omega model;
+- low-Re correction;
+- curvature correction;
+- corner-flow correction;
+- six residual criteria;
+- reference area;
+- reference density;
+- reference length;
+- reference velocity;
+- reference viscosity.
 
-- light
-- dark
-- follow system
+Each setting has:
 
-Theme and language preferences persist in local storage under `fluent-ai-ui-preferences`.
+- stable setting ID;
+- display name;
+- value type;
+- getter and setter;
+- allowed values or numeric range;
+- description.
 
-### Localization
+## Readback and rollback
 
-Chinese and English resources are kept key-for-key equivalent by an automated test. Ant Design locale providers switch together with the application language.
+Writes are evaluated as follows:
 
-### Page states
+```text
+validate all requested values
+→ capture original values
+→ apply each setting
+→ read every value back
+→ compare with numeric tolerance
+→ stop and rollback on failure
+→ verify rollback values
+→ return a structured report
+```
 
-Reusable components cover:
+No arbitrary Python/TUI execution is exposed through this adapter.
 
-- loading
-- empty
-- error with retry action
-- unavailable desktop bridge
-- permission/bridge unavailable state
+## Real Fluent Evidence
 
-### Global status surfaces
+Validated against Ansys Fluent 2025 R2:
 
-The application header shows:
+- all 20 catalog settings read successfully;
+- three settings applied through `apply_preset`;
+- all three readback values matched;
+- original values restored through `write_settings`;
+- all 20 values matched the original state;
+- adapter disconnected cleanly;
+- no Fluent process remained.
 
-- active job count, including no-active-task state;
-- FastAPI sidecar state;
-- sidecar version, PID, and random port in a popover;
-- manual sidecar restart.
+Evidence:
+
+- `docs/poc/reports/m6_fluent_adapter.json`
+- `docs/m6-verification.md`
 
 ## Technology Baseline
 
-| Layer         | Version                  |
-| ------------- | ------------------------ |
-| Node.js       | 24.21.0                  |
-| pnpm          | 12.5.1                   |
-| Electron      | 45.0.0                   |
-| electron-vite | 6.0.0                    |
-| Vite          | 8.3.5                    |
-| React         | 19.3.1                   |
-| React Router  | 7.18.4                   |
-| Ant Design    | 5.29.3                   |
-| Zustand       | 5.0.16                   |
-| i18next       | 26.5.4                   |
-| TypeScript    | 5.9.3                    |
-| Python        | 3.12.14                  |
-| FastAPI       | 0.159.1                  |
-| PyFluent      | ansys-fluent-core 0.42.1 |
+| Layer        | Version                  |
+| ------------ | ------------------------ |
+| Node.js      | 24.21.0                  |
+| pnpm         | 12.5.1                   |
+| Electron     | 45.0.0                   |
+| React        | 19.3.1                   |
+| React Router | 7.18.4                   |
+| Ant Design   | 5.29.3                   |
+| Zustand      | 5.0.16                   |
+| i18next      | 26.5.4                   |
+| TypeScript   | 5.9.3                    |
+| Python       | 3.12.14                  |
+| FastAPI      | 0.159.1                  |
+| PyFluent     | ansys-fluent-core 0.42.1 |
 
-## Development
+## Development and Verification
 
 ```powershell
-pnpm install
-pnpm setup:electron
-
-& 'C:\Users\MECH\AppData\Roaming\uv\python\cpython-3.12.14-windows-x86_64-none\python.exe' `
-  -m venv .venv
-& '.\.venv\Scripts\python.exe' -m pip install --upgrade pip
-& '.\.venv\Scripts\python.exe' -m pip install -r backend\requirements-dev.txt
-
 pnpm dev
-```
-
-## Verification
-
-```powershell
 pnpm check
 ```
 
 Expected final marker:
 
 ```text
-M5_CHECK_PASSED
+M6_CHECK_PASSED
 ```
+
+Run the real Fluent adapter validation:
+
+```powershell
+& 'D:\Fluent AI\fluent-ai-app\.venv\Scripts\python.exe' `
+  'D:\Fluent AI\fluent-ai-app\scripts\validate_m6_fluent.py'
+```
+
+The validation launches Fluent, reads all catalog settings, applies three safe changes, verifies readback, restores the original state, writes the report, and closes the session.
 
 ## Evidence
 
+- M6 verification: `docs/m6-verification.md`
+- M6 architecture decision: `docs/adr/0007-m6-fluent-adapter.md`
 - M5 verification: `docs/m5-verification.md`
-- M5 architecture decision: `docs/adr/0006-m5-ui-framework.md`
 - M4 verification: `docs/m4-verification.md`
 - M3 verification: `docs/m3-verification.md`
 - M2 verification: `docs/m2-verification.md`
@@ -153,11 +175,11 @@ M5_CHECK_PASSED
 
 ## Next Milestone
 
-M6 will add:
+M7 will add:
 
-- explicit Fluent 2025 R2 adapter implementation;
-- curated SettingCatalog with 10-20 validated settings;
-- typed read/write/apply operations;
-- readback validation and rollback reports;
-- FakeFluentAdapter contract tests;
-- integration tests against the real M0 Fluent environment.
+- FastAPI Fluent connection/status/read/write/apply endpoints;
+- adapter lifecycle owned by the sidecar;
+- preview and validation APIs;
+- renderer workflows for applying a preset;
+- first persisted model+automation end-to-end path;
+- structured sync logs and job progress.
