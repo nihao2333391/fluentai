@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { spawn, type ChildProcessByStdio } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { delimiter, join } from 'node:path'
 import type { Readable, Writable } from 'node:stream'
 
 import type { SidecarHandshake, SidecarReadyResponse, SidecarStatus } from '../shared/contracts'
@@ -18,7 +18,7 @@ interface SidecarManagerOptions {
 
 type SidecarChild = ChildProcessByStdio<Writable, Readable, Readable>
 
-const DEFAULT_START_TIMEOUT_MS = 20_000
+const DEFAULT_START_TIMEOUT_MS = 60_000
 const DEFAULT_STOP_TIMEOUT_MS = 5_000
 const DEFAULT_MAX_AUTO_RESTARTS = 2
 
@@ -173,18 +173,31 @@ export class SidecarManager extends EventEmitter {
       this.port = null
       this.setStatus({ state: 'starting', message: 'Starting FastAPI sidecar...' })
 
+      const bundledPythonHome = join(this.appRoot, 'python')
+      const bundledSitePackages = join(this.appRoot, 'site-packages')
+      const pythonPathEntries = [
+        this.backendDirectory,
+        ...(existsSync(bundledSitePackages) ? [bundledSitePackages] : []),
+        ...(process.env.PYTHONPATH ? [process.env.PYTHONPATH] : []),
+      ]
+      const sidecarEnvironment: NodeJS.ProcessEnv = {
+        ...process.env,
+        FLUENT_AI_SIDECAR_TOKEN: token,
+        FLUENT_AI_PARENT_PIPE: '1',
+        FLUENT_AI_DATA_DIR: this.dataDirectory,
+        PYTHONPATH: pythonPathEntries.join(delimiter),
+        PYTHONUNBUFFERED: '1',
+        PYTHONNOUSERSITE: '1',
+      }
+      if (existsSync(join(bundledPythonHome, 'python.exe'))) {
+        sidecarEnvironment.PYTHONHOME = bundledPythonHome
+      }
+
       const child = spawn(pythonExecutable, ['-m', 'app.sidecar'], {
         cwd: this.backendDirectory,
         windowsHide: true,
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: {
-          ...process.env,
-          FLUENT_AI_SIDECAR_TOKEN: token,
-          FLUENT_AI_PARENT_PIPE: '1',
-          FLUENT_AI_DATA_DIR: this.dataDirectory,
-          PYTHONPATH: this.backendDirectory,
-          PYTHONUNBUFFERED: '1',
-        },
+        env: sidecarEnvironment,
       }) as SidecarChild
 
       this.child = child
@@ -224,6 +237,7 @@ export class SidecarManager extends EventEmitter {
     const candidates = [
       this.pythonExecutable,
       process.env.FLUENT_AI_PYTHON,
+      join(this.appRoot, 'python', 'python.exe'),
       join(this.appRoot, '.venv', 'Scripts', 'python.exe'),
       join(this.appRoot, '.venv', 'bin', 'python'),
       'python',

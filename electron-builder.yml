@@ -1,0 +1,39 @@
+appId: com.fluentai.desktop
+productName: Fluent AI
+copyright: Copyright © 2026 Fluent AI Project
+
+directories:
+  output: release
+
+electronDist: node_modules/electron/dist
+
+files:
+  - out/**/*
+  - package.json
+  - '!node_modules/**/*'
+
+extraResources:
+  - from: build/sidecar
+    to: sidecar
+
+asar: true
+compression: normal
+
+win:
+  executableName: FluentAI
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+artifactName: FluentAI-${version}-${arch}-Setup.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Fluent AI
+  deleteAppDataOnUninstall: false

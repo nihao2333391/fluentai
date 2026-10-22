@@ -158,9 +158,28 @@ Run the real end-to-end workflow:
   'D:\Fluent AI\fluent-ai-app\scripts\validate_m7_workflow.py'
 ```
 
+## Windows Packager
+
+Build the installable Windows x64 application:
+
+```powershell
+pnpm package:win
+```
+
+The command builds the Electron application, stages a standalone Python 3.12 sidecar, verifies the packaged sidecar, creates an NSIS installer, silently installs it, runs a packaged renderer/sidecar smoke test, and uninstalls the test installation.
+
+Artifact:
+
+```text
+release\FluentAI-0.1.0-x64-Setup.exe
+```
+
+Current installer boundary: it is not Authenticode-signed and still uses the default Electron icon.
+
 ## Evidence
 
 - M7 verification: `docs/m7-verification.md`
+- M9.2 packaging: `docs/m9.2-verification.md`
 - M7 architecture decision: `docs/adr/0008-m7-vertical-slice.md`
 - M6 verification: `docs/m6-verification.md`
 - M5 verification: `docs/m5-verification.md`
@@ -189,10 +208,12 @@ Completed:
 - readback verification and strict stop-before-mesh behavior;
 - Solver automation edit and duplicate workflows;
 - model association and direct open-in-Fluent actions.
+- standalone Python sidecar staged into Electron resources;
+- Windows NSIS installer with silent install/uninstall smoke verification;
+- installed application verified to load the real renderer and reach sidecar readiness.
 
 M9 remaining work:
 
 - recent-session restore;
 - detailed job progress and cancellation;
-- sync-log details and filtering;
-- production installer packaging and bundled sidecar strategy.
+- sync-log details and filtering.

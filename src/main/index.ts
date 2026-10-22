@@ -1,4 +1,5 @@
 import { app, BrowserWindow, shell } from 'electron'
+import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import type { SidecarStatus } from '../shared/contracts'
@@ -11,10 +12,59 @@ import { SidecarManager } from './sidecar'
 
 let mainWindow: BrowserWindow | null = null
 let quitAfterSidecarStop = false
+const smokeTest = process.env.FLUENT_AI_SMOKE_TEST === '1'
+let smokeRendererLoaded = false
+let smokeSidecarStatus: SidecarStatus | null = null
 
+const completeSmokeTestIfReady = (): void => {
+  if (!smokeTest || !smokeRendererLoaded || smokeSidecarStatus === null) return
+  const reportPath = process.env.FLUENT_AI_SMOKE_REPORT
+  if (reportPath) {
+    writeFileSync(
+      reportPath,
+      JSON.stringify(
+        {
+          status: 'passed',
+          app_version: app.getVersion(),
+          is_packaged: app.isPackaged,
+          resources_path: process.resourcesPath,
+          sidecar: smokeSidecarStatus,
+        },
+        null,
+        2,
+      ),
+      'utf8',
+    )
+  }
+  app.quit()
+}
+
+const failSmokeTest = (error: unknown): void => {
+  if (!smokeTest) return
+  const reportPath = process.env.FLUENT_AI_SMOKE_REPORT
+  if (reportPath) {
+    writeFileSync(
+      reportPath,
+      JSON.stringify(
+        {
+          status: 'failed',
+          error: error instanceof Error ? error.message : String(error),
+        },
+        null,
+        2,
+      ),
+      'utf8',
+    )
+  }
+  app.exit(1)
+}
+
+const sidecarRoot = app.isPackaged ? join(process.resourcesPath, 'sidecar') : app.getAppPath()
 const sidecar = new SidecarManager({
-  appRoot: app.getAppPath(),
-  pythonExecutable: process.env.FLUENT_AI_PYTHON,
+  appRoot: sidecarRoot,
+  pythonExecutable: app.isPackaged
+    ? join(sidecarRoot, 'python', 'python.exe')
+    : process.env.FLUENT_AI_PYTHON,
   dataDirectory: join(app.getPath('userData'), 'data'),
 })
 
@@ -48,11 +98,13 @@ const createMainWindow = (): BrowserWindow => {
   mainWindow = window
 
   window.once('ready-to-show', () => {
-    window.show()
+    if (!smokeTest) window.show()
   })
 
   window.webContents.once('did-finish-load', () => {
     window.webContents.send(SIDECAR_STATUS_CHANGED_CHANNEL, sidecar.getStatus())
+    smokeRendererLoaded = true
+    completeSmokeTestIfReady()
   })
 
   window.on('closed', () => {
@@ -87,9 +139,16 @@ app.whenReady().then(() => {
 
   createMainWindow()
 
-  void sidecar.start().catch((error: unknown) => {
-    console.error('Failed to start sidecar:', error)
-  })
+  void sidecar
+    .start()
+    .then((status) => {
+      smokeSidecarStatus = status
+      completeSmokeTestIfReady()
+    })
+    .catch((error: unknown) => {
+      console.error('Failed to start sidecar:', error)
+      failSmokeTest(error)
+    })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

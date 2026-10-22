@@ -14,7 +14,7 @@
 10. Ant Design and icon modules produce an eager renderer bundle around 3.07 MB before gzip. Bundle optimization remains a hardening task.
 11. Theme and language preferences persist locally, but authoritative synchronization with backend app settings is not implemented.
 12. Database backup, restore, compaction, export, and corruption recovery are not implemented.
-13. Packaged sidecar executable resolution and PyInstaller bundling are not implemented.
+13. The Windows installer bundles a standalone Python runtime and the current site-packages. PyInstaller or dependency pruning can reduce the roughly 300 MB sidecar payload in a later hardening pass.
 14. Sidecar logs are currently console-only and not persisted to rotating files.
 15. The per-launch bearer token is passed through the child process environment. It is not exposed to the renderer, but same-user process inspection remains part of the local threat model.
 16. M0, M6, and M7 cover one Windows installation and Fluent 2025 R2 only.
@@ -22,3 +22,5 @@
 18. Arbitrary Python/TUI command execution remains out of scope.
 19. Meshing name validation can only use names exposed after geometry import; names that first appear after surface mesh generation are intentionally rejected under the no-mesh rule.
 20. Direct `.dsco` import can block in standalone Fluent Meshing. Use the generated `.pmdb` or another verified native geometry format for Meshing apply.
+21. The NSIS installer is not Authenticode-signed because no code-signing certificate is configured. Windows SmartScreen may show an unknown-publisher warning.
+22. The Windows executable currently uses Electron's default application icon.

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Desktop automation manager for ANSYS Fluent",
+  "author": "Fluent AI Project",
   "type": "module",
   "main": "out/main/index.js",
   "packageManager": "pnpm@12.5.1",
@@ -21,6 +22,11 @@
     "test:watch": "vitest",
     "check": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/check.ps1",
     "backend:dev": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/backend-dev.ps1",
+    "package:sidecar": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/prepare-sidecar.ps1",
+    "package:check-sidecar": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/check-packaged-sidecar.ps1",
+    "package:check-installed": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/check-installed-app.ps1",
+    "package:dir": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/package.ps1 -Target dir",
+    "package:win": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/package.ps1 -Target nsis",
     "setup:electron": "pnpm exec electron --version"
   },
   "dependencies": {
@@ -43,6 +49,7 @@
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
     "electron": "45.0.0",
+    "electron-builder": "^26.15.3",
     "electron-vite": "6.0.0",
     "eslint": "9.39.5",
     "eslint-plugin-react-hooks": "7.1.1",
