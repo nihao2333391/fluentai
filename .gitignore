@@ -1,9 +1,13 @@
+node_modules/
+out/
+dist/
+coverage/
 .runtime/
 .venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
-.coverage
-htmlcov/
+.ruff_cache/
 *.trn
+*.tsbuildinfo

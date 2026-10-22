@@ -6,40 +6,40 @@
 
 ## Environment
 
-| Item | Value |
-|---|---|
-| Fluent | Ansys Fluent 2025 R2 |
-| Fluent executable | `D:\Ansys2025R2\ANSYS Inc\v252\fluent\ntbin\win64\fluent.exe` |
-| Python | 3.12.14 |
-| Python executable | `D:\Fluent AI\.venvs\ansys-wwj\Scripts\python.exe` |
-| PyFluent | `ansys-fluent-core 0.42.1` |
-| Test case | `D:\Fluent AI\ansys-runs\compat-smoke-20261021-170520\01_mesh.cas.h5` |
-| Case size | 1,875,448 bytes |
+| Item              | Value                                                                 |
+| ----------------- | --------------------------------------------------------------------- |
+| Fluent            | Ansys Fluent 2025 R2                                                  |
+| Fluent executable | `D:\Ansys2025R2\ANSYS Inc\v252\fluent\ntbin\win64\fluent.exe`         |
+| Python            | 3.12.14                                                               |
+| Python executable | `D:\Fluent AI\.venvs\ansys-wwj\Scripts\python.exe`                    |
+| PyFluent          | `ansys-fluent-core 0.42.1`                                            |
+| Test case         | `D:\Fluent AI\ansys-runs\compat-smoke-20261021-170520\01_mesh.cas.h5` |
+| Case size         | 1,875,448 bytes                                                       |
 
 ## Gate Results
 
-| Test | Result | Evidence |
-|---|---|---|
-| Environment and path check | PASS | `docs/poc/reports/env_check.json` |
-| Headless launch and case load | PASS | `docs/poc/reports/launch.json` |
-| Visible GUI launch and case load | PASS | `docs/poc/reports/launch_gui.json` |
-| Temporary session for attach | PASS | `docs/poc/reports/launch_hold.json` |
-| Independent-process attach | PASS | `docs/poc/reports/attach.json` |
-| Structured failure handling | PASS | `docs/poc/reports/attach_failure.json` |
-| Cleanup after launch | PASS | No Fluent processes or temporary session file remained |
+| Test                             | Result | Evidence                                               |
+| -------------------------------- | ------ | ------------------------------------------------------ |
+| Environment and path check       | PASS   | `docs/poc/reports/env_check.json`                      |
+| Headless launch and case load    | PASS   | `docs/poc/reports/launch.json`                         |
+| Visible GUI launch and case load | PASS   | `docs/poc/reports/launch_gui.json`                     |
+| Temporary session for attach     | PASS   | `docs/poc/reports/launch_hold.json`                    |
+| Independent-process attach       | PASS   | `docs/poc/reports/attach.json`                         |
+| Structured failure handling      | PASS   | `docs/poc/reports/attach_failure.json`                 |
+| Cleanup after launch             | PASS   | No Fluent processes or temporary session file remained |
 
 ## Settings Read
 
 All six settings were read successfully from the loaded case:
 
-| Setting | Value |
-|---|---|
-| Solver time | `steady` |
-| Viscous model | `k-omega` |
-| K-omega model | `sst` |
-| Energy enabled | `false` |
-| Continuity residual criterion | `0.001` |
-| X-velocity residual criterion | `0.001` |
+| Setting                       | Value     |
+| ----------------------------- | --------- |
+| Solver time                   | `steady`  |
+| Viscous model                 | `k-omega` |
+| K-omega model                 | `sst`     |
+| Energy enabled                | `false`   |
+| Continuity residual criterion | `0.001`   |
+| X-velocity residual criterion | `0.001`   |
 
 ## Write Verification
 
