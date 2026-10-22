@@ -1,9 +1,9 @@
 {
     "status":  "passed",
     "installer":  "D:\\Fluent AI\\fluent-ai-app\\release\\FluentAI-0.1.0-x64-Setup.exe",
-    "installer_bytes":  189078586,
+    "installer_bytes":  189092767,
     "install_directory":  "D:\\Fluent AI\\fluent-ai-app\\build\\installed-smoke",
-    "started_at_utc":  "2026-10-22T15:11:41.1752681Z",
+    "started_at_utc":  "2026-10-22T15:51:50.1459000Z",
     "installer_exit_code":  0,
     "app_path":  "D:\\Fluent AI\\fluent-ai-app\\build\\installed-smoke\\FluentAI.exe",
     "sidecar_root":  "D:\\Fluent AI\\fluent-ai-app\\build\\installed-smoke\\resources\\sidecar",
@@ -16,10 +16,10 @@
                                       "state":  "ready",
                                       "message":  "FastAPI sidecar is ready.",
                                       "version":  "0.1.0",
-                                      "pid":  28812,
-                                      "port":  54176
+                                      "pid":  6392,
+                                      "port":  51089
                                   }
                   },
     "marker":  "INSTALLER_SMOKE_PASSED",
-    "finished_at_utc":  "2026-10-22T15:16:10.5836101Z"
+    "finished_at_utc":  "2026-10-22T15:57:09.6229047Z"
 }

@@ -40,8 +40,9 @@ describe('fluentAiService', () => {
         delete: vi.fn(),
       },
       settings: { get: vi.fn(), update: vi.fn() },
-      jobs: { list: vi.fn(), get: vi.fn() },
+      jobs: { list: vi.fn(), get: vi.fn(), cancel: vi.fn() },
       syncLogs: { list: vi.fn() },
+      session: { recent: vi.fn() },
       credentials: {
         getStatus: vi.fn(),
         setFluentPassword: vi.fn(),

@@ -29,10 +29,12 @@ from app.domain import (
 from app.fluent.base import FluentAdapter
 from app.fluent.catalog import FLUENT_252_CATALOG
 from app.repositories.automations import AutomationRepository
+from app.repositories.common import utc_now
 from app.repositories.jobs import JobRepository
 from app.repositories.models import ModelRepository
 from app.repositories.settings import SettingsRepository
 from app.repositories.sync_logs import SyncLogRepository
+from app.services.job_control import JobCancelledError, ensure_job_active
 
 
 class FluentService:
@@ -186,6 +188,9 @@ class FluentService:
                 connection_status = self.adapter.connect(config)
             if payload.load_case:
                 self.adapter.load_case(model.file_path)
+            SettingsRepository(self.database).update(
+                {"recent_model_id": str(model_id), "recent_session_at": utc_now()}
+            )
             return ModelOpenReport(
                 status="success",
                 model_id=model_id,
@@ -230,6 +235,7 @@ class FluentService:
         sync_log_id: int | None = None
         try:
             jobs.update(job.id, status="running", progress=5, message="Loading resources.")
+            ensure_job_active(jobs, job.id)
             automation = automations.get(automation_id)
             current_automation_id = automation.id
             model = models.get(payload.model_id)
@@ -243,12 +249,21 @@ class FluentService:
             if not connection_status.connected:
                 config = payload.connection or self.default_connection_config()
                 connection_status = self.adapter.connect(config)
+            ensure_job_active(jobs, job.id)
             jobs.update(job.id, status="running", progress=30, message="Fluent connected.")
 
             if payload.load_case:
                 self.adapter.load_case(model.file_path)
+            ensure_job_active(jobs, job.id)
             jobs.update(job.id, status="running", progress=55, message="Model loaded.")
 
+            ensure_job_active(jobs, job.id)
+            jobs.update(
+                job.id,
+                status="running",
+                progress=70,
+                message="Applying preset and verifying readback.",
+            )
             apply_report = self.adapter.apply_preset(
                 PresetDocument(
                     schema_version=automation.preset.schema_version,
@@ -308,6 +323,13 @@ class FluentService:
                     "applied_settings": len(apply_report.results),
                 },
             )
+            SettingsRepository(self.database).update(
+                {
+                    "recent_model_id": str(model.id),
+                    "recent_automation_id": str(automation.id),
+                    "recent_session_at": utc_now(),
+                }
+            )
             return WorkflowReport(
                 status="success",
                 automation_id=automation_id,
@@ -348,7 +370,7 @@ class FluentService:
                 automation_id=automation_id,
                 model_id=payload.model_id,
                 job_id=job.id,
-                message=message,
+                message="Cancelled by user." if isinstance(exc, JobCancelledError) else message,
                 connection=connection_status,
                 apply_report=apply_report,
                 sync_log_id=sync_log_id,

@@ -28,9 +28,11 @@ import type {
   PresetItem,
   PresetValidationReport,
   PresetValue,
+  RecentSession,
   SettingCatalogEntry,
   SettingsPayload,
   SyncLog,
+  SyncLogQuery,
   WorkflowReport,
 } from '../shared/contracts'
 import type { CredentialStore } from './credential-store'
@@ -138,10 +140,24 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
   ipcMain.handle('jobs:get', (_event, id: string) =>
     sidecar.request<Job>(`/api/jobs/${encodeURIComponent(id)}`),
   )
-
-  ipcMain.handle('sync-logs:list', (_event, limit = 100) =>
-    sidecar.request<SyncLog[]>(`/api/sync-logs?limit=${Math.max(1, Math.min(limit, 500))}`),
+  ipcMain.handle('jobs:cancel', (_event, id: string) =>
+    sidecar.request<Job>(`/api/jobs/${encodeURIComponent(id)}/cancel`, { method: 'POST' }),
   )
+
+  ipcMain.handle('sync-logs:list', (_event, query: SyncLogQuery = {}) => {
+    const params = new URLSearchParams()
+    params.set('limit', String(Math.max(1, Math.min(query.limit ?? 100, 500))))
+    if (query.direction) params.set('direction', query.direction)
+    if (query.status) params.set('status_filter', query.status)
+    if (query.automationId) params.set('automation_id', String(query.automationId))
+    if (query.meshingAutomationId)
+      params.set('meshing_automation_id', String(query.meshingAutomationId))
+    if (query.modelId) params.set('model_id', String(query.modelId))
+    if (query.search?.trim()) params.set('search', query.search.trim())
+    return sidecar.request<SyncLog[]>(`/api/sync-logs?${params.toString()}`)
+  })
+
+  ipcMain.handle('session:recent', () => sidecar.request<RecentSession>('/api/session/recent'))
 
   ipcMain.handle('meshing:schemas', () =>
     sidecar.request<MeshingSchemaSummary[]>('/api/meshing/schemas'),

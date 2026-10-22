@@ -357,3 +357,10 @@ class MeshingWorkflowReport(BaseModel):
     connection: FluentStatus | None = None
     apply_report: MeshingApplyReport | None = None
     sync_log_id: int | None = None
+
+
+class RecentSessionRead(BaseModel):
+    model: ModelRead | None = None
+    automation: AutomationRead | None = None
+    meshing_automation: MeshingAutomationRead | None = None
+    updated_at: str | None = None

@@ -14,6 +14,7 @@ import type {
   PresetDocument,
   PresetItem,
   SettingsPayload,
+  SyncLogQuery,
 } from '../../../shared/contracts'
 
 export function getFluentAIApi(): FluentAIApi {
@@ -53,9 +54,13 @@ export const fluentAiService = {
   jobs: {
     list: (limit?: number) => getFluentAIApi().jobs.list(limit),
     get: (id: string) => getFluentAIApi().jobs.get(id),
+    cancel: (id: string) => getFluentAIApi().jobs.cancel(id),
   },
   syncLogs: {
-    list: (limit?: number) => getFluentAIApi().syncLogs.list(limit),
+    list: (query?: SyncLogQuery) => getFluentAIApi().syncLogs.list(query),
+  },
+  session: {
+    recent: () => getFluentAIApi().session.recent(),
   },
   credentials: {
     getStatus: () => getFluentAIApi().credentials.getStatus(),

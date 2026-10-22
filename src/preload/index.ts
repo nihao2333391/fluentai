@@ -30,10 +30,12 @@ import type {
   PresetItem,
   PresetValidationReport,
   PresetValue,
+  RecentSession,
   SettingCatalogEntry,
   SettingsPayload,
   SidecarStatus,
   SyncLog,
+  SyncLogQuery,
   WorkflowReport,
 } from '../shared/contracts'
 
@@ -84,9 +86,13 @@ const api: FluentAIApi = Object.freeze({
   jobs: Object.freeze({
     list: (limit = 50) => invoke<Job[]>('jobs:list', limit),
     get: (id: string) => invoke<Job>('jobs:get', id),
+    cancel: (id: string) => invoke<Job>('jobs:cancel', id),
   }),
   syncLogs: Object.freeze({
-    list: (limit = 100) => invoke<SyncLog[]>('sync-logs:list', limit),
+    list: (query: SyncLogQuery = {}) => invoke<SyncLog[]>('sync-logs:list', query),
+  }),
+  session: Object.freeze({
+    recent: () => invoke<RecentSession>('session:recent'),
   }),
   credentials: Object.freeze({
     getStatus: () => invoke<CredentialStatus>('credentials:status'),

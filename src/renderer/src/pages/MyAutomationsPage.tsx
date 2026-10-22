@@ -5,13 +5,33 @@ import {
   PlayCircleOutlined,
   ReloadOutlined,
 } from '@ant-design/icons'
-import { Alert, App, Button, Card, List, Modal, Select, Space, Table, Tag, Typography } from 'antd'
+import {
+  Alert,
+  App,
+  Button,
+  Card,
+  Input,
+  List,
+  Modal,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Typography,
+} from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
-import type { Automation, Model, SyncLog } from '../../../shared/contracts'
+import type {
+  Automation,
+  Model,
+  RecentSession,
+  SyncLog,
+  SyncLogDirection,
+  SyncLogStatus,
+} from '../../../shared/contracts'
 import { EmptyState, ErrorState, LoadingState, PageContent } from '../components/PageState'
 import { fluentAiService } from '../services/fluentAi'
 import { useSidecarStore } from '../store/sidecarStore'
@@ -24,27 +44,41 @@ export function MyAutomationsPage() {
   const [automations, setAutomations] = useState<Automation[]>([])
   const [models, setModels] = useState<Model[]>([])
   const [logs, setLogs] = useState<SyncLog[]>([])
+  const [recentSession, setRecentSession] = useState<RecentSession | null>(null)
+  const [logDirection, setLogDirection] = useState<SyncLogDirection | undefined>()
+  const [logStatus, setLogStatus] = useState<SyncLogStatus | undefined>()
+  const [logSearch, setLogSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [applyAutomation, setApplyAutomation] = useState<Automation | null>(null)
   const [selectedModelId, setSelectedModelId] = useState<number | null>(null)
   const [applying, setApplying] = useState(false)
 
-  const fetchData = (): Promise<[Automation[], Model[], SyncLog[]]> =>
-    Promise.all([
-      fluentAiService.automations.list(),
-      fluentAiService.models.list(),
-      fluentAiService.syncLogs.list(8),
-    ])
+  const fetchData = useCallback(
+    (): Promise<[Automation[], Model[], SyncLog[], RecentSession]> =>
+      Promise.all([
+        fluentAiService.automations.list(),
+        fluentAiService.models.list(),
+        fluentAiService.syncLogs.list({
+          limit: 20,
+          direction: logDirection,
+          status: logStatus,
+          search: logSearch || undefined,
+        }),
+        fluentAiService.session.recent(),
+      ]),
+    [logDirection, logSearch, logStatus],
+  )
 
   const loadData = async (): Promise<void> => {
     setLoading(true)
     setError(null)
     try {
-      const [nextAutomations, nextModels, nextLogs] = await fetchData()
+      const [nextAutomations, nextModels, nextLogs, nextRecentSession] = await fetchData()
       setAutomations(nextAutomations)
       setModels(nextModels)
       setLogs(nextLogs)
+      setRecentSession(nextRecentSession)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError))
     } finally {
@@ -58,11 +92,12 @@ export function MyAutomationsPage() {
     }
     let active = true
     void fetchData()
-      .then(([nextAutomations, nextModels, nextLogs]) => {
+      .then(([nextAutomations, nextModels, nextLogs, nextRecentSession]) => {
         if (active) {
           setAutomations(nextAutomations)
           setModels(nextModels)
           setLogs(nextLogs)
+          setRecentSession(nextRecentSession)
         }
       })
       .catch((loadError: unknown) => {
@@ -76,7 +111,18 @@ export function MyAutomationsPage() {
     return () => {
       active = false
     }
-  }, [sidecarState])
+  }, [fetchData, sidecarState])
+
+  const restoreRecentSession = (): void => {
+    if (!recentSession?.model) {
+      navigate('/models')
+      return
+    }
+    if (recentSession.automation) {
+      setApplyAutomation(recentSession.automation)
+      setSelectedModelId(recentSession.model.id)
+    }
+  }
 
   const openApply = (automation: Automation): void => {
     setApplyAutomation(automation)
@@ -232,6 +278,32 @@ export function MyAutomationsPage() {
         />
       ) : (
         <Space direction="vertical" size={18} className="full-width">
+          {recentSession?.model ? (
+            <Card
+              title={t('pages.myAutomations.recentSession')}
+              extra={
+                recentSession.automation ? (
+                  <Button type="primary" onClick={restoreRecentSession}>
+                    {t('pages.myAutomations.restoreRecent')}
+                  </Button>
+                ) : undefined
+              }
+            >
+              <Space direction="vertical" size={6}>
+                <Typography.Text strong>{recentSession.model.name}</Typography.Text>
+                <Typography.Text type="secondary">
+                  {recentSession.automation?.name ??
+                    recentSession.meshing_automation?.name ??
+                    t('pages.myAutomations.noAutomation')}
+                </Typography.Text>
+                <Typography.Text type="secondary">
+                  {recentSession.updated_at
+                    ? new Date(recentSession.updated_at).toLocaleString()
+                    : ''}
+                </Typography.Text>
+              </Space>
+            </Card>
+          ) : null}
           <Table
             rowKey="id"
             columns={columns}
@@ -240,6 +312,40 @@ export function MyAutomationsPage() {
             className="data-table-card"
           />
           <Card title={t('pages.myAutomations.recentLogs')}>
+            <Space wrap className="log-filter-row">
+              <Select
+                allowClear
+                value={logDirection}
+                onChange={setLogDirection}
+                placeholder={t('pages.myAutomations.filterDirection')}
+                options={[
+                  { value: 'apply', label: 'apply' },
+                  { value: 'write', label: 'write' },
+                  { value: 'read', label: 'read' },
+                  { value: 'sync', label: 'sync' },
+                  { value: 'pull', label: 'pull' },
+                ]}
+                className="log-filter-select"
+              />
+              <Select
+                allowClear
+                value={logStatus}
+                onChange={setLogStatus}
+                placeholder={t('pages.myAutomations.filterStatus')}
+                options={[
+                  { value: 'success', label: 'success' },
+                  { value: 'failed', label: 'failed' },
+                ]}
+                className="log-filter-select"
+              />
+              <Input.Search
+                allowClear
+                defaultValue={logSearch}
+                placeholder={t('pages.myAutomations.searchLogs')}
+                onSearch={setLogSearch}
+                className="log-search"
+              />
+            </Space>
             {logs.length === 0 ? (
               <Typography.Text type="secondary">{t('common.notAvailable')}</Typography.Text>
             ) : (

@@ -187,6 +187,32 @@ select {
   cursor: default;
 }
 
+.task-tag {
+  cursor: pointer;
+}
+
+.task-popover {
+  width: 430px;
+  max-width: 70vw;
+}
+
+.task-empty {
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+.log-filter-row {
+  margin-bottom: 14px;
+}
+
+.log-filter-select {
+  min-width: 130px;
+}
+
+.log-search {
+  width: 260px;
+}
+
 .sidecar-popover {
   width: 310px;
 }

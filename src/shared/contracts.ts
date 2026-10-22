@@ -159,6 +159,16 @@ export interface SyncLog {
   created_at: string
 }
 
+export interface SyncLogQuery {
+  limit?: number
+  direction?: SyncLogDirection
+  status?: SyncLogStatus
+  automationId?: number
+  meshingAutomationId?: number
+  modelId?: number
+  search?: string
+}
+
 export interface AutomationsApi {
   list: () => Promise<Automation[]>
   create: (payload: AutomationInput) => Promise<Automation>
@@ -187,10 +197,11 @@ export interface SettingsApi {
 export interface JobsApi {
   list: (limit?: number) => Promise<Job[]>
   get: (id: string) => Promise<Job>
+  cancel: (id: string) => Promise<Job>
 }
 
 export interface SyncLogsApi {
-  list: (limit?: number) => Promise<SyncLog[]>
+  list: (query?: SyncLogQuery) => Promise<SyncLog[]>
 }
 
 export interface CredentialStatus {
@@ -443,6 +454,17 @@ export interface MeshingWorkflowReport {
   sync_log_id: number | null
 }
 
+export interface RecentSession {
+  model: Model | null
+  automation: Automation | null
+  meshing_automation: MeshingAutomation | null
+  updated_at: string | null
+}
+
+export interface SessionApi {
+  recent: () => Promise<RecentSession>
+}
+
 export interface MeshingApi {
   schemas: () => Promise<MeshingSchemaSummary[]>
   schema: (workflowType: MeshingWorkflowType) => Promise<MeshingWorkflowSchema>
@@ -467,6 +489,7 @@ export interface FluentAIApi {
   readonly settings: SettingsApi
   readonly jobs: JobsApi
   readonly syncLogs: SyncLogsApi
+  readonly session: SessionApi
   readonly credentials: CredentialsApi
   readonly fluent: FluentApi
   readonly workflows: WorkflowsApi

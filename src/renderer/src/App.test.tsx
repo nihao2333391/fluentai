@@ -49,9 +49,18 @@ const createMockApi = (): FluentAIApi => ({
   jobs: {
     list: vi.fn().mockResolvedValue([]),
     get: vi.fn(),
+    cancel: vi.fn(),
   },
   syncLogs: {
     list: vi.fn().mockResolvedValue([]),
+  },
+  session: {
+    recent: vi.fn().mockResolvedValue({
+      model: null,
+      automation: null,
+      meshing_automation: null,
+      updated_at: null,
+    }),
   },
   credentials: {
     getStatus: vi.fn().mockResolvedValue({ encryptionAvailable: true, configured: false }),

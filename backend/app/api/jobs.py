@@ -22,3 +22,8 @@ def create_job(payload: JobCreate, database: DatabaseDependency) -> JobRead:
 @router.get("/{job_id}", response_model=JobRead)
 def get_job(job_id: str, database: DatabaseDependency) -> JobRead:
     return JobRepository(database).get(job_id)
+
+
+@router.post("/{job_id}/cancel", response_model=JobRead)
+def cancel_job(job_id: str, database: DatabaseDependency) -> JobRead:
+    return JobRepository(database).cancel(job_id)

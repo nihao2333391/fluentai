@@ -45,6 +45,23 @@ class JobRepository:
             ).fetchall()
         return [self._row_to_model(row) for row in rows]
 
+    def is_cancelled(self, job_id: str) -> bool:
+        return self.get(job_id).status == "cancelled"
+
+    def cancel(self, job_id: str) -> JobRead:
+        now = utc_now()
+        with self.database.connect() as connection:
+            connection.execute(
+                """
+                UPDATE jobs
+                SET status = 'cancelled', message = 'Cancelled by user.',
+                    updated_at = ?, finished_at = COALESCE(finished_at, ?)
+                WHERE id = ? AND status IN ('queued', 'running')
+                """,
+                (now, now, job_id),
+            )
+        return self.get(job_id)
+
     def update(
         self,
         job_id: str,
@@ -64,7 +81,7 @@ class JobRepository:
                 UPDATE jobs
                 SET status = ?, progress = ?, message = ?, result_json = ?, error = ?,
                     updated_at = ?, started_at = COALESCE(started_at, ?), finished_at = ?
-                WHERE id = ?
+                WHERE id = ? AND status <> 'cancelled'
                 """,
                 (
                     status,
@@ -79,7 +96,8 @@ class JobRepository:
                 ),
             )
             if cursor.rowcount == 0:
-                raise RepositoryNotFoundError(f"Job {job_id} was not found.")
+                # A cancelled job is terminal and must not be overwritten by the worker.
+                return self.get(job_id)
         return self.get(job_id)
 
     @staticmethod

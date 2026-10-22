@@ -21,11 +21,13 @@ from app.domain import (
 )
 from app.meshing.base import MeshingWorkflowAdapter
 from app.meshing.schema_index import MESHING_SCHEMA_INDEX
+from app.repositories.common import utc_now
 from app.repositories.jobs import JobRepository
 from app.repositories.meshing_automations import MeshingAutomationRepository
 from app.repositories.models import ModelRepository
 from app.repositories.settings import SettingsRepository
 from app.repositories.sync_logs import SyncLogRepository
+from app.services.job_control import JobCancelledError, ensure_job_active
 
 MESHING_GEOMETRY_EXTENSIONS = {
     ".dsco",
@@ -117,8 +119,16 @@ class MeshingService:
             if not connection_status.connected:
                 config = payload.connection or self.default_connection_config()
                 connection_status = self.adapter.connect(config)
+            ensure_job_active(jobs, job.id)
             jobs.update(job.id, status="running", progress=30, message="Fluent Meshing connected.")
 
+            ensure_job_active(jobs, job.id)
+            jobs.update(
+                job.id,
+                status="running",
+                progress=55,
+                message="Importing geometry and validating names.",
+            )
             apply_report = self.adapter.apply_preset(
                 automation.preset,
                 model.file_path,
@@ -178,6 +188,13 @@ class MeshingService:
                     "created_children": len(apply_report.created_children),
                 },
             )
+            SettingsRepository(self.database).update(
+                {
+                    "recent_model_id": str(model.id),
+                    "recent_meshing_automation_id": str(automation.id),
+                    "recent_session_at": utc_now(),
+                }
+            )
             return MeshingWorkflowReport(
                 status="success",
                 automation_id=automation_id,
@@ -218,7 +235,7 @@ class MeshingService:
                 automation_id=automation_id,
                 model_id=payload.model_id,
                 job_id=job.id,
-                message=error,
+                message="Cancelled by user." if isinstance(exc, JobCancelledError) else error,
                 connection=connection_status,
                 apply_report=apply_report,
                 sync_log_id=sync_log_id,

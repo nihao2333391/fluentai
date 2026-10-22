@@ -100,6 +100,10 @@ export const resources = {
         title: '任务',
         none: '无活动任务',
         active: '{{count}} 个活动任务',
+        details: '任务详情与进度',
+        noJobs: '暂无任务记录',
+        cancel: '取消任务',
+        cancelled: '任务已取消',
       },
       pages: {
         automationCreate: {
@@ -142,6 +146,12 @@ export const resources = {
           applied: '自动化已应用并通过回读验证',
           failed: '自动化应用失败',
           recentLogs: '最近同步日志',
+          recentSession: '上次会话',
+          restoreRecent: '继续上次应用',
+          noAutomation: '最近模型尚未关联自动化',
+          filterDirection: '日志方向',
+          filterStatus: '日志状态',
+          searchLogs: '搜索日志',
         },
         myModels: {
           title: '我的模型',
@@ -309,6 +319,10 @@ export const resources = {
         title: 'Tasks',
         none: 'No active tasks',
         active: '{{count}} active tasks',
+        details: 'Task details and progress',
+        noJobs: 'No task history yet',
+        cancel: 'Cancel task',
+        cancelled: 'Task cancelled',
       },
       pages: {
         automationCreate: {
@@ -355,6 +369,12 @@ export const resources = {
           applied: 'Automation applied and verified',
           failed: 'Automation apply failed',
           recentLogs: 'Recent sync logs',
+          recentSession: 'Last session',
+          restoreRecent: 'Continue last apply',
+          noAutomation: 'The recent model has no associated automation',
+          filterDirection: 'Log direction',
+          filterStatus: 'Log status',
+          searchLogs: 'Search logs',
         },
         myModels: {
           title: 'My Models',

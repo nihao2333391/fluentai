@@ -3,7 +3,7 @@
 - PyFluent 0.42.1 raises `RecursionError` while extracting command arguments for `Identify Construction Surfaces` and `Create Local Refinement Regions`; these two FTM tasks remain explicitly unavailable until PyFluent is fixed or a reference-derived adapter is validated.
 
 1. The Solver preset editor covers General, Models, Solution criteria, and Reference Values. The Meshing editor and apply engine now cover both approved workflows, nested arguments, named compound children, exact name checks, and readback verification.
-2. Job execution is synchronous. Progress is persisted but not streamed in real time, and cancellation is not implemented.
+2. Job execution remains synchronous at the HTTP caller. The UI polls persisted progress, and cancellation is cooperative between workflow stages; an atomic in-progress Fluent call cannot be interrupted.
 3. Attach mode is supported by the adapter and settings but the M7 real workflow validation uses launch mode.
 4. Fluent credentials are encrypted and stored by Electron, but are not yet consumed by the sidecar attach flow.
 5. Model files are referenced in place and are not copied into an application-managed library directory.

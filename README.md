@@ -13,7 +13,7 @@ Fluent AI is a Windows desktop application for managing reusable ANSYS Fluent au
 - **M6 - FluentAdapter and SettingCatalog: PASSED**
 - **M7 - First end-to-end vertical slice: PASSED**
 - **M8 - Complete Meshing automation and apply workflows: PASSED**
-- **M9 - Delivery lifecycle and packaging: IN PROGRESS**
+- **M9 - Delivery lifecycle and packaging: PASSED**
 
 The application now supports a real, persisted vertical workflow:
 
@@ -212,8 +212,8 @@ Completed:
 - Windows NSIS installer with silent install/uninstall smoke verification;
 - installed application verified to load the real renderer and reach sidecar readiness.
 
-M9 remaining work:
+M9 completion includes:
 
-- recent-session restore;
-- detailed job progress and cancellation;
-- sync-log details and filtering.
+- recent-session restore across application restarts;
+- detailed job progress and cooperative cancellation;
+- server-side sync-log filtering by direction, status, model, automation, and text.
