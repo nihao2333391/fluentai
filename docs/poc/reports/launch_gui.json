@@ -1,0 +1,40 @@
+{
+  "status": "passed",
+  "mode": "launch",
+  "started_at_utc": "2026-10-22T06:34:00.574843+00:00",
+  "schema_version": 1,
+  "created_at_utc": "2026-10-22T06:34:20.557445+00:00",
+  "fluent_version": "Ansys Fluent 2025 R2",
+  "case_path": "D:\\Fluent AI\\ansys-runs\\compat-smoke-20261021-170520\\01_mesh.cas.h5",
+  "settings_read": {
+    "solver_time": "steady",
+    "viscous_model": "k-omega",
+    "k_omega_model": "sst",
+    "energy_enabled": false,
+    "residual_continuity": 0.001,
+    "residual_x_velocity": 0.001
+  },
+  "settings_read_count": 6,
+  "settings_read_errors": {},
+  "write_verification": {
+    "setting": "solution.monitor.residual.equations.continuity.absolute_criteria",
+    "before": 0.001,
+    "replacement": 0.0011,
+    "write_verified": true,
+    "restored": true,
+    "after_write": 0.0011,
+    "after_restore": 0.001
+  },
+  "connection": {
+    "ip": "localhost",
+    "port": 53028,
+    "cortex_host": "ComputerOfWeiJiabao",
+    "cortex_pid": 21560,
+    "fluent_host_pid": 3668,
+    "inside_container": false,
+    "password_redacted": true
+  },
+  "ui_mode": "gui",
+  "close_error": null,
+  "finished_at_utc": "2026-10-22T06:34:20.573503+00:00"
+}

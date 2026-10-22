@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "checked_at_utc": "2026-10-22T06:24:04.890044+00:00",
+  "python": "3.12.14 (main, Aug 14 2026, 15:40:22) [MSC v.1944 64 bit (AMD64)]",
+  "python_executable": "D:\\Fluent AI\\.venvs\\ansys-wwj\\Scripts\\python.exe",
+  "ansys_fluent_core_version": "0.42.1",
+  "pyfluent_version": "0.42.1",
+  "fluent_executable": "D:\\Ansys2025R2\\ANSYS Inc\\v252\\fluent\\ntbin\\win64\\fluent.exe",
+  "case_file": "D:\\Fluent AI\\ansys-runs\\compat-smoke-20261021-170520\\01_mesh.cas.h5",
+  "case_bytes": 1875448,
+  "launch_api": true,
+  "attach_api": true
+}
