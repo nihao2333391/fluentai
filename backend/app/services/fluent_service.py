@@ -65,6 +65,7 @@ class FluentService:
             SettingCatalogEntry(
                 setting_id=definition.setting_id,
                 display_name=definition.display_name,
+                group=definition.group,
                 value_type=definition.value_type,
                 allowed_values=(
                     list(definition.allowed_values)

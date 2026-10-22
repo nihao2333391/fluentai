@@ -18,6 +18,12 @@ export const resources = {
         success: '成功',
         failed: '失败',
       },
+      fluentGroups: {
+        general: '常规',
+        models: '模型',
+        solution: '求解',
+        reference: '参考值',
+      },
       nav: {
         workspace: '工作区',
         system: '系统',
@@ -61,6 +67,9 @@ export const resources = {
           saving: '正在保存',
           created: '自动化已创建',
           invalidPreset: '请检查预设值',
+          fluentWorkflow: 'Fluent 工作流预设',
+          selectedSettings: '已选择 {{count}} 项设置',
+          selectAtLeastOne: '请至少选择一项 Fluent 设置',
         },
         myAutomations: {
           title: '我的自动化',
@@ -149,6 +158,12 @@ export const resources = {
         success: 'Success',
         failed: 'Failed',
       },
+      fluentGroups: {
+        general: 'General',
+        models: 'Models',
+        solution: 'Solution',
+        reference: 'Reference Values',
+      },
       nav: {
         workspace: 'Workspace',
         system: 'System',
@@ -194,6 +209,9 @@ export const resources = {
           saving: 'Saving',
           created: 'Automation created',
           invalidPreset: 'Review the preset values',
+          fluentWorkflow: 'Fluent workflow preset',
+          selectedSettings: '{{count}} settings selected',
+          selectAtLeastOne: 'Select at least one Fluent setting',
         },
         myAutomations: {
           title: 'My Automations',

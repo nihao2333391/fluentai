@@ -29,6 +29,7 @@ def _definition(
     return SettingDefinition(
         setting_id=setting_id,
         display_name=setting_id,
+        group="general",
         value_type="float",
         getter=getter,
         setter=setter,

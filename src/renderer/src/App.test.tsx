@@ -72,6 +72,7 @@ const createMockApi = (): FluentAIApi => ({
       {
         setting_id: 'residual.continuity',
         display_name: 'Residual criterion: continuity',
+        group: 'solution',
         value_type: 'float',
         allowed_values: null,
         minimum: 1e-12,
@@ -104,6 +105,11 @@ describe('App', () => {
     render(<App />)
 
     expect(await screen.findByRole('heading', { name: '自动化创建' })).toBeInTheDocument()
+    expect(await screen.findByText('Fluent 工作流预设')).toBeInTheDocument()
+    expect(screen.getByText('常规')).toBeInTheDocument()
+    expect(screen.getByText('模型')).toBeInTheDocument()
+    expect(screen.getByText('求解')).toBeInTheDocument()
+    expect(screen.getByText('参考值')).toBeInTheDocument()
     expect(screen.getByText('我的自动化')).toBeInTheDocument()
     expect(screen.getByText('我的模型')).toBeInTheDocument()
     expect(screen.getByText('设置')).toBeInTheDocument()

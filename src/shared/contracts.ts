@@ -216,9 +216,12 @@ export interface FluentStatus {
   port: number | null
 }
 
+export type FluentSettingGroup = 'general' | 'models' | 'solution' | 'reference'
+
 export interface SettingCatalogEntry {
   setting_id: string
   display_name: string
+  group: FluentSettingGroup
   value_type: PresetType
   allowed_values: PresetValue[] | null
   minimum: number | null

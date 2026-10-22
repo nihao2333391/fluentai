@@ -9,6 +9,14 @@ def test_catalog_contains_twenty_unique_validated_settings() -> None:
     assert len(setting_ids) == 20
     assert FLUENT_252_CATALOG.version == "25.2.0"
     assert FLUENT_252_CATALOG.get("residual.continuity").value_type == "float"
+    assert {definition.group for definition in definitions} == {
+        "general",
+        "models",
+        "solution",
+        "reference",
+    }
+    assert "density-based-implicit" in (FLUENT_252_CATALOG.get("solver.type").allowed_values or ())
+    assert "unsteady-2nd-order" in (FLUENT_252_CATALOG.get("solver.time").allowed_values or ())
 
 
 def test_catalog_rejects_invalid_values() -> None:
@@ -43,6 +51,7 @@ def test_catalog_rejects_duplicate_ids() -> None:
     definition = SettingDefinition(
         setting_id="test.value",
         display_name="Test",
+        group="general",
         value_type="float",
         getter=lambda session: session.value,
         setter=lambda session, value: setattr(session, "value", value),

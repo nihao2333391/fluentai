@@ -12,7 +12,7 @@ Fluent AI is a Windows desktop application for managing reusable ANSYS Fluent au
 - **M5 - UI framework and design system: PASSED**
 - **M6 - FluentAdapter and SettingCatalog: PASSED**
 - **M7 - First end-to-end vertical slice: PASSED**
-- **M8 - Complete automation and model workflows: NOT STARTED**
+- **M8 - Complete automation and model workflows: IN PROGRESS**
 
 The application now supports a real, persisted vertical workflow:
 
@@ -98,8 +98,13 @@ ANSYS Fluent 2025 R2
 
 ### Automation creation
 
-- real SettingCatalog selector;
-- typed preset rows;
+- Fluent-style preset workflow;
+- left-side groups matching Fluent concepts: General, Models, Solution, Reference Values;
+- real Fluent 2025 R2 enum choices for solver time/type, velocity formulation, viscous and k-omega models;
+- switches for boolean model options;
+- numeric controls for residual criteria and reference values;
+- explicit include/exclude selection for every preset item;
+- no manual setting-ID entry;
 - backend validation before persistence;
 - duplicate-name protection;
 - preset stored as versioned JSON.
@@ -164,14 +169,23 @@ Run the real end-to-end workflow:
 - M0 Fluent report: `docs/poc/fluent-2025R2.md`
 - Known boundaries: `docs/KNOWN_ISSUES.md`
 
-## Next Milestone
+## M8 Progress
 
-M8 will add:
+Completed:
 
+- Fluent-style grouped preset editor;
+- real enum option lists from Fluent 2025 R2;
+- per-setting include controls and type-specific widgets.
+
+Remaining M8 work:
+
+- Materials and cell-zone branches;
+- boundary-condition and named-zone selectors;
+- solver methods and controls;
+- monitors, initialization and calculation activities;
 - full automation edit and duplicate workflows;
 - richer model-to-automation associations;
 - recent-session restore;
 - detailed job progress and cancellation;
 - sync-log details and filtering;
-- connection settings hardening;
 - broader error recovery and UI regression coverage.

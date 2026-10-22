@@ -197,6 +197,7 @@ class SettingCatalogEntry(BaseModel):
 
     setting_id: str
     display_name: str
+    group: Literal["general", "models", "solution", "reference"]
     value_type: Literal["int", "float", "bool", "string", "enum"]
     allowed_values: list[PresetValue] | None = None
     minimum: float | None = None

@@ -1,6 +1,6 @@
 # Known Issues and Current Boundaries
 
-1. Automation editing in place, duplicate actions, and richer model-association management remain M8 work.
+1. The Fluent-style preset editor currently covers General, Models, Solution criteria, and Reference Values. Materials, cell zones, boundary conditions, solver methods, monitors, initialization, and calculation activities still need to be mapped.
 2. Job execution is synchronous. Progress is persisted but not streamed in real time, and cancellation is not implemented.
 3. Attach mode is supported by the adapter and settings but the M7 real workflow validation uses launch mode.
 4. Fluent credentials are encrypted and stored by Electron, but are not yet consumed by the sidecar attach flow.
@@ -9,7 +9,7 @@
 7. Recent-session restoration and richer sync-log filtering are not implemented.
 8. Rollback is best-effort because Fluent does not provide a transaction across arbitrary setting nodes.
 9. Only the curated 20-setting Fluent 2025 R2 catalog is supported.
-10. Ant Design and icon modules produce an eager renderer bundle around 2.99 MB before gzip. Bundle optimization remains a hardening task.
+10. Ant Design and icon modules produce an eager renderer bundle around 3.07 MB before gzip. Bundle optimization remains a hardening task.
 11. Theme and language preferences persist locally, but authoritative synchronization with backend app settings is not implemented.
 12. Database backup, restore, compaction, export, and corruption recovery are not implemented.
 13. Packaged sidecar executable resolution and PyInstaller bundling are not implemented.

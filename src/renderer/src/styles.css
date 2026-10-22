@@ -337,3 +337,62 @@ select {
     min-width: 0;
   }
 }
+
+.fluent-workflow-tabs {
+  margin-top: 8px;
+}
+
+.fluent-workflow-tabs .ant-tabs-nav {
+  min-width: 190px;
+}
+
+.fluent-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 14px 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-panel-strong) 72%, transparent);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.fluent-setting-row.is-included {
+  border-color: rgba(22, 119, 255, 0.45);
+  background: color-mix(in srgb, var(--app-panel-strong) 72%, rgba(22, 119, 255, 0.12));
+}
+
+.fluent-setting-value {
+  flex: 0 1 280px;
+  min-width: 180px;
+}
+
+.fluent-setting-control {
+  width: 100%;
+}
+
+.fluent-setting-description {
+  max-width: 620px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .fluent-workflow-tabs .ant-tabs-nav {
+    min-width: 140px;
+  }
+
+  .fluent-setting-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .fluent-setting-value {
+    width: 100%;
+    min-width: 0;
+  }
+}

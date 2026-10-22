@@ -9,6 +9,7 @@ from typing import Any, Literal, cast
 from app.domain import PresetValue
 
 SettingValueType = Literal["int", "float", "bool", "string", "enum"]
+SettingGroup = Literal["general", "models", "solution", "reference"]
 SettingGetter = Callable[[Any], PresetValue]
 SettingSetter = Callable[[Any, PresetValue], None]
 
@@ -19,6 +20,7 @@ class SettingDefinition:
 
     setting_id: str
     display_name: str
+    group: SettingGroup
     value_type: SettingValueType
     getter: SettingGetter
     setter: SettingSetter
@@ -113,6 +115,7 @@ def _residual(setting_id: str, equation: str) -> SettingDefinition:
     return SettingDefinition(
         setting_id=setting_id,
         display_name=f"Residual criterion: {equation}",
+        group="solution",
         value_type="float",
         getter=getter,
         setter=setter,
@@ -202,22 +205,35 @@ def create_fluent_252_catalog() -> FluentSettingCatalog:
     definitions = [
         SettingDefinition(
             setting_id="solver.time",
+            group="general",
             display_name="Solver time",
             value_type="enum",
             getter=solver_time_getter,
             setter=solver_time_setter,
+            allowed_values=(
+                "steady",
+                "unsteady-1st-order",
+                "unsteady-2nd-order",
+                "unsteady-2nd-order-bounded",
+            ),
             description="Steady or transient solver mode.",
         ),
         SettingDefinition(
             setting_id="solver.type",
+            group="general",
             display_name="Solver type",
             value_type="enum",
             getter=solver_type_getter,
             setter=solver_type_setter,
-            allowed_values=("pressure-based", "density-based"),
+            allowed_values=(
+                "pressure-based",
+                "density-based-implicit",
+                "density-based-explicit",
+            ),
         ),
         SettingDefinition(
             setting_id="solver.velocity_formulation",
+            group="general",
             display_name="Velocity formulation",
             value_type="enum",
             getter=velocity_getter,
@@ -226,6 +242,7 @@ def create_fluent_252_catalog() -> FluentSettingCatalog:
         ),
         SettingDefinition(
             setting_id="energy.enabled",
+            group="models",
             display_name="Energy equation",
             value_type="bool",
             getter=energy_getter,
@@ -233,20 +250,38 @@ def create_fluent_252_catalog() -> FluentSettingCatalog:
         ),
         SettingDefinition(
             setting_id="viscous.model",
+            group="models",
             display_name="Viscous model",
             value_type="enum",
             getter=viscous_model_getter,
             setter=viscous_model_setter,
+            allowed_values=(
+                "inviscid",
+                "laminar",
+                "k-epsilon",
+                "k-omega",
+                "mixing-length",
+                "spalart-allmaras",
+                "k-kl-w",
+                "transition-sst",
+                "reynolds-stress",
+                "scale-adaptive-simulation",
+                "detached-eddy-simulation",
+                "large-eddy-simulation",
+            ),
         ),
         SettingDefinition(
             setting_id="viscous.k_omega_model",
+            group="models",
             display_name="K-omega model",
             value_type="enum",
             getter=k_omega_model_getter,
             setter=k_omega_model_setter,
+            allowed_values=("standard", "geko", "bsl", "sst", "wj-bsl-earsm"),
         ),
         SettingDefinition(
             setting_id="viscous.low_re_correction",
+            group="models",
             display_name="K-omega low-Re correction",
             value_type="bool",
             getter=low_re_getter,
@@ -254,6 +289,7 @@ def create_fluent_252_catalog() -> FluentSettingCatalog:
         ),
         SettingDefinition(
             setting_id="viscous.curvature_correction",
+            group="models",
             display_name="Curvature correction",
             value_type="bool",
             getter=curvature_getter,
@@ -261,6 +297,7 @@ def create_fluent_252_catalog() -> FluentSettingCatalog:
         ),
         SettingDefinition(
             setting_id="viscous.corner_flow_correction",
+            group="models",
             display_name="Corner flow correction",
             value_type="bool",
             getter=corner_getter,
@@ -274,6 +311,7 @@ def create_fluent_252_catalog() -> FluentSettingCatalog:
         _residual("residual.omega", "omega"),
         SettingDefinition(
             setting_id="reference.area",
+            group="reference",
             display_name="Reference area",
             value_type="float",
             getter=reference_getter("area"),
@@ -282,6 +320,7 @@ def create_fluent_252_catalog() -> FluentSettingCatalog:
         ),
         SettingDefinition(
             setting_id="reference.density",
+            group="reference",
             display_name="Reference density",
             value_type="float",
             getter=reference_getter("density"),
@@ -290,6 +329,7 @@ def create_fluent_252_catalog() -> FluentSettingCatalog:
         ),
         SettingDefinition(
             setting_id="reference.length",
+            group="reference",
             display_name="Reference length",
             value_type="float",
             getter=reference_getter("length"),
@@ -298,6 +338,7 @@ def create_fluent_252_catalog() -> FluentSettingCatalog:
         ),
         SettingDefinition(
             setting_id="reference.velocity",
+            group="reference",
             display_name="Reference velocity",
             value_type="float",
             getter=reference_getter("velocity"),
@@ -306,6 +347,7 @@ def create_fluent_252_catalog() -> FluentSettingCatalog:
         ),
         SettingDefinition(
             setting_id="reference.viscosity",
+            group="reference",
             display_name="Reference viscosity",
             value_type="float",
             getter=reference_getter("viscosity"),
