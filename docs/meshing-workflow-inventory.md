@@ -1,6 +1,6 @@
 # Fluent Meshing Workflow Inventory - 2025 R2
 
-- Status: inventory complete; implementation in progress
+- Status: inventory complete; Watertight and Fault-tolerant editing/apply implemented
 - Reference: `D:\Fluent AI\wql.meshed.wbpj`
 - Native workflow: `wql.meshed_files\dp0\FFF\Fluent\FFF_workflow_files\FFF.wft`
 - Workbench version: 2025 R2
@@ -184,12 +184,14 @@ The implementation will therefore use:
 - `docs/meshing/fluent-meshing-25.2-fault-tolerant.schema.json`
 - `docs/meshing/schema-generation-summary.json`
 
-Generation result:
+Generation result after nested templates:
 
-- Watertight: 11 top-level tasks, 221 arguments.
-- Fault-tolerant: 25 top-level tasks, 307 arguments.
-- Watertight: 45 parameters expose allowed values.
-- Fault-tolerant: 69 parameters expose allowed values.
+- Watertight: 11 top-level tasks, 562 arguments.
+- Fault-tolerant: 25 top-level tasks, 635 arguments.
+- Watertight: 3/3 compound tasks expose a child template.
+- Fault-tolerant: 10/12 compound tasks expose a child template; the two remaining tasks are explicitly blocked.
+
+Real apply verification is recorded in `docs/m8.4-verification.md`. The verified native geometry route uses the reference PMDB file; apply stops before surface or volume mesh generation.
 
 ### Remaining PyFluent API Limitation
 

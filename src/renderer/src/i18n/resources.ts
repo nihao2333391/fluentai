@@ -60,6 +60,15 @@ export const resources = {
         childNameRequired: '{{task}} 中存在未命名的复合子任务，请填写名称或删除该预设。',
         duplicateChildName: '{{task}} 中的子任务名称“{{name}}”重复。',
         childHasNoSelection: '{{task}} 的子任务“{{name}}”没有选择任何设置。',
+        applyTitle: '应用 Meshing 预设：{{name}}',
+        applyDescription:
+          '选择同类几何模型。Fluent AI 将导入几何、校验名称、创建复合子任务并逐项回读，但不会生成表面网格或体网格。',
+        selectApplyModel: '选择 Meshing 几何模型',
+        noGeometryModels: '模型库中没有可用的几何文件，请先导入 .dsco、STEP 或同类几何。',
+        applySuccess: 'Meshing 预设已应用并通过回读验证',
+        applyVerified: '已写入并回读 {{count}} 项设置，未生成网格。',
+        applyStoppedBefore:
+          '工作流停在 Generate the Surface Mesh 和 Generate the Volume Mesh 之前。',
       },
       nav: {
         workspace: '工作区',
@@ -242,6 +251,16 @@ export const resources = {
           'A compound child in {{task}} has no name. Name it or remove the preset.',
         duplicateChildName: 'The child name “{{name}}” is duplicated in {{task}}.',
         childHasNoSelection: 'The child “{{name}}” in {{task}} has no selected settings.',
+        applyTitle: 'Apply Meshing preset: {{name}}',
+        applyDescription:
+          'Choose a geometry from the same model family. Fluent AI imports geometry, validates names, creates compound children, and verifies every write without generating a surface or volume mesh.',
+        selectApplyModel: 'Select Meshing geometry',
+        noGeometryModels:
+          'No geometry is available in the model library. Import a .dsco, STEP, or similar geometry first.',
+        applySuccess: 'Meshing preset applied and verified',
+        applyVerified: '{{count}} settings written and read back; no mesh was generated.',
+        applyStoppedBefore:
+          'The workflow stopped before Generate the Surface Mesh and Generate the Volume Mesh.',
       },
       nav: {
         workspace: 'Workspace',

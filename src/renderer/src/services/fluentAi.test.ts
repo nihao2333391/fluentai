@@ -76,6 +76,7 @@ describe('fluentAiService', () => {
         update: vi.fn(),
         delete: vi.fn(),
         validate: vi.fn(),
+        apply: vi.fn(),
       },
     } satisfies FluentAIApi
 

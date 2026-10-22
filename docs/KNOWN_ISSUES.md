@@ -2,7 +2,7 @@
 
 - PyFluent 0.42.1 raises `RecursionError` while extracting command arguments for `Identify Construction Surfaces` and `Create Local Refinement Regions`; these two FTM tasks remain explicitly unavailable until PyFluent is fixed or a reference-derived adapter is validated.
 
-1. The Solver preset editor covers General, Models, Solution criteria, and Reference Values. The Meshing preset editor now covers the full Watertight and Fault-tolerant task trees, including nested arguments and named compound children, but the Meshing apply engine is still pending.
+1. The Solver preset editor covers General, Models, Solution criteria, and Reference Values. The Meshing editor and apply engine now cover both approved workflows, nested arguments, named compound children, exact name checks, and readback verification.
 2. Job execution is synchronous. Progress is persisted but not streamed in real time, and cancellation is not implemented.
 3. Attach mode is supported by the adapter and settings but the M7 real workflow validation uses launch mode.
 4. Fluent credentials are encrypted and stored by Electron, but are not yet consumed by the sidecar attach flow.
@@ -20,3 +20,5 @@
 16. M0, M6, and M7 cover one Windows installation and Fluent 2025 R2 only.
 17. FastAPI TestClient emits a Starlette deprecation warning about `httpx`; tests pass, but the HTTP test dependency should be revisited before upgrading Starlette.
 18. Arbitrary Python/TUI command execution remains out of scope.
+19. Meshing name validation can only use names exposed after geometry import; names that first appear after surface mesh generation are intentionally rejected under the no-mesh rule.
+20. Direct `.dsco` import can block in standalone Fluent Meshing. Use the generated `.pmdb` or another verified native geometry format for Meshing apply.

@@ -16,14 +16,31 @@ from app.domain import (
 from app.repositories.models import ModelRepository
 
 router = APIRouter(tags=["models"])
-ALLOWED_SUFFIXES = {".cas", ".h5", ".msh"}
+ALLOWED_SUFFIXES = {
+    ".cas",
+    ".h5",
+    ".msh",
+    ".dsco",
+    ".scdoc",
+    ".step",
+    ".stp",
+    ".iges",
+    ".igs",
+    ".pmdb",
+    ".fmd",
+    ".tgf",
+    ".x_t",
+    ".x_b",
+    ".sat",
+    ".sab",
+}
 
 
 def _validate_model_suffix(file_path: str) -> None:
     if Path(file_path).suffix.lower() not in ALLOWED_SUFFIXES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="Model file must use .cas, .cas.h5, .msh, or .msh.h5.",
+            detail="Model file must use a supported Fluent case, mesh, or geometry format.",
         )
 
 

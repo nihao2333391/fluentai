@@ -80,3 +80,25 @@ def test_compound_child_name_is_rejected_for_simple_tasks() -> None:
     )
     assert report.valid is False
     assert "does not support compound child presets" in report.errors[0]
+
+
+def test_same_compound_argument_is_allowed_for_different_children() -> None:
+    preset = MeshingPresetDocument(
+        workflow_type="watertight",
+        items=[
+            MeshingPresetItem(
+                task_path=["add_local_sizing"],
+                argument_path=["boi_size"],
+                value=0.001,
+                compound_child_name="wall-big",
+            ),
+            MeshingPresetItem(
+                task_path=["add_local_sizing"],
+                argument_path=["boi_size"],
+                value=0.0005,
+                compound_child_name="wall-small",
+            ),
+        ],
+    )
+    report = MESHING_SCHEMA_INDEX.validate(preset)
+    assert report.valid is True

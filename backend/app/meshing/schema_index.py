@@ -72,6 +72,32 @@ class MeshingSchemaIndex:
             )
         return summaries
 
+    def get_argument(
+        self,
+        workflow_type: MeshingWorkflowType,
+        task_path: list[str],
+        argument_path: list[str],
+        compound_child_name: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Return the schema entry for one task or compound-child argument."""
+        task = self._task_index.get(workflow_type, {}).get(tuple(task_path))
+        if task is None:
+            return None
+        if compound_child_name:
+            template = task.get("child_template")
+            if not isinstance(template, dict):
+                return None
+            candidates = list(template.get("arguments") or [])
+        else:
+            candidates = list(task.get("arguments") or [])
+        argument: dict[str, Any] | None = None
+        for part in argument_path:
+            argument = next((entry for entry in candidates if entry.get("name") == part), None)
+            if argument is None:
+                return None
+            candidates = list(argument.get("children") or [])
+        return argument
+
     def validate(self, preset: MeshingPresetDocument) -> MeshingPresetValidationReport:
         schema_id = f"fluent-meshing-25.2-{preset.workflow_type}"
         errors: list[str] = []
@@ -79,7 +105,7 @@ class MeshingSchemaIndex:
         if not task_index:
             errors.append(f"No schema is available for workflow type {preset.workflow_type!r}.")
 
-        seen: set[tuple[tuple[str, ...], tuple[str, ...]]] = set()
+        seen: set[tuple[tuple[str, ...], tuple[str, ...], str | None]] = set()
         for item in preset.items:
             try:
                 self._validate_item(item, task_index, seen)
@@ -96,14 +122,17 @@ class MeshingSchemaIndex:
     def _validate_item(
         item: MeshingPresetItem,
         task_index: dict[tuple[str, ...], dict[str, Any]],
-        seen: set[tuple[tuple[str, ...], tuple[str, ...]]],
+        seen: set[tuple[tuple[str, ...], tuple[str, ...], str | None]],
     ) -> None:
         task_path = tuple(item.task_path)
         argument_path = tuple(item.argument_path)
-        key = (task_path, argument_path)
+        child_key = (item.compound_child_name or "").strip() or None
+        key = (task_path, argument_path, child_key)
         if key in seen:
+            owner = f"[{child_key}]" if child_key else ""
             raise ValueError(
-                f"Duplicate Meshing preset item: {'.'.join(task_path)}.{'.'.join(argument_path)}"
+                "Duplicate Meshing preset item: "
+                f"{'.'.join(task_path)}{owner}.{'.'.join(argument_path)}"
             )
         seen.add(key)
 

@@ -4,14 +4,16 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Response, status
 
-from app.api.deps import DatabaseDependency
+from app.api.deps import DatabaseDependency, MeshingServiceDependency
 from app.domain import (
+    ApplyMeshingAutomationRequest,
     MeshingAutomationCreate,
     MeshingAutomationRead,
     MeshingAutomationUpdate,
     MeshingPresetDocument,
     MeshingPresetValidationReport,
     MeshingSchemaSummary,
+    MeshingWorkflowReport,
 )
 from app.meshing.schema_index import MESHING_SCHEMA_INDEX
 from app.repositories.meshing_automations import MeshingAutomationRepository
@@ -107,3 +109,15 @@ def validate_saved_meshing_automation(
 ) -> MeshingPresetValidationReport:
     automation = MeshingAutomationRepository(database).get(automation_id)
     return MESHING_SCHEMA_INDEX.validate(automation.preset)
+
+
+@router.post(
+    "/meshing-automations/{automation_id}/apply",
+    response_model=MeshingWorkflowReport,
+)
+def apply_meshing_automation(
+    automation_id: int,
+    payload: ApplyMeshingAutomationRequest,
+    meshing: MeshingServiceDependency,
+) -> MeshingWorkflowReport:
+    return meshing.apply_automation(automation_id, payload)

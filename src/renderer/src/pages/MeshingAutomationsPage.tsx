@@ -1,32 +1,60 @@
-import { DeleteOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
-import { App, Button, Space, Table, Tag, Typography } from 'antd'
+import { DeleteOutlined, PlayCircleOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import { Alert, App, Button, Modal, Select, Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
-import type { MeshingAutomation } from '../../../shared/contracts'
+import type { MeshingAutomation, MeshingWorkflowReport, Model } from '../../../shared/contracts'
 import { EmptyState, ErrorState, LoadingState, PageContent } from '../components/PageState'
 import { fluentAiService } from '../services/fluentAi'
 import { useSidecarStore } from '../store/sidecarStore'
 
+const MESHING_GEOMETRY_EXTENSIONS = [
+  '.dsco',
+  '.scdoc',
+  '.step',
+  '.stp',
+  '.iges',
+  '.igs',
+  '.pmdb',
+  '.fmd',
+  '.tgf',
+  '.x_t',
+  '.x_b',
+  '.sat',
+  '.sab',
+]
+
+const isMeshingGeometry = (model: Model): boolean =>
+  MESHING_GEOMETRY_EXTENSIONS.some((extension) =>
+    model.file_path.toLocaleLowerCase().endsWith(extension),
+  )
+
 export function MeshingAutomationsPage() {
   const { t } = useTranslation()
-  const { modal } = App.useApp()
+  const { message, modal } = App.useApp()
   const navigate = useNavigate()
   const sidecarState = useSidecarStore((state) => state.status.state)
   const [automations, setAutomations] = useState<MeshingAutomation[]>([])
+  const [models, setModels] = useState<Model[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [applyAutomation, setApplyAutomation] = useState<MeshingAutomation | null>(null)
+  const [selectedModelId, setSelectedModelId] = useState<number | null>(null)
+  const [applying, setApplying] = useState(false)
+  const [applyReport, setApplyReport] = useState<MeshingWorkflowReport | null>(null)
 
-  const fetchAutomations = (): Promise<MeshingAutomation[]> =>
-    fluentAiService.meshingAutomations.list()
+  const fetchData = async (): Promise<[MeshingAutomation[], Model[]]> =>
+    Promise.all([fluentAiService.meshingAutomations.list(), fluentAiService.models.list()])
 
   const load = async (): Promise<void> => {
     setLoading(true)
     setError(null)
     try {
-      setAutomations(await fetchAutomations())
+      const [nextAutomations, nextModels] = await fetchData()
+      setAutomations(nextAutomations)
+      setModels(nextModels)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError))
     } finally {
@@ -37,9 +65,11 @@ export function MeshingAutomationsPage() {
   useEffect(() => {
     if (sidecarState !== 'ready') return
     let active = true
-    void fetchAutomations()
-      .then((items) => {
-        if (active) setAutomations(items)
+    void fetchData()
+      .then(([nextAutomations, nextModels]) => {
+        if (!active) return
+        setAutomations(nextAutomations)
+        setModels(nextModels)
       })
       .catch((loadError: unknown) => {
         if (active) setError(loadError instanceof Error ? loadError.message : String(loadError))
@@ -61,6 +91,48 @@ export function MeshingAutomationsPage() {
       },
     })
   }
+
+  const openApply = (automation: MeshingAutomation): void => {
+    setApplyAutomation(automation)
+    setSelectedModelId(automation.reference_model_id)
+    setApplyReport(null)
+  }
+
+  const closeApply = (): void => {
+    if (applying) return
+    setApplyAutomation(null)
+    setSelectedModelId(null)
+    setApplyReport(null)
+  }
+
+  const apply = async (): Promise<void> => {
+    if (!applyAutomation) return
+    if (!selectedModelId) {
+      message.warning(t('meshing.selectApplyModel'))
+      return
+    }
+    setApplying(true)
+    setApplyReport(null)
+    try {
+      const report = await fluentAiService.meshingAutomations.apply(applyAutomation.id, {
+        model_id: selectedModelId,
+        connection: null,
+        import_geometry: true,
+      })
+      setApplyReport(report)
+      if (report.status === 'success') {
+        message.success(t('meshing.applySuccess'))
+      } else {
+        message.error(report.message)
+      }
+    } catch (applyError) {
+      message.error(applyError instanceof Error ? applyError.message : String(applyError))
+    } finally {
+      setApplying(false)
+    }
+  }
+
+  const geometryModels = models.filter(isMeshingGeometry)
 
   const columns: ColumnsType<MeshingAutomation> = [
     {
@@ -106,9 +178,17 @@ export function MeshingAutomationsPage() {
     {
       title: '',
       key: 'actions',
-      width: 70,
+      width: 130,
       render: (_, record) => (
-        <Button danger type="text" icon={<DeleteOutlined />} onClick={() => remove(record)} />
+        <Space size={4}>
+          <Button
+            type="text"
+            icon={<PlayCircleOutlined />}
+            aria-label={t('common.apply')}
+            onClick={() => openApply(record)}
+          />
+          <Button danger type="text" icon={<DeleteOutlined />} onClick={() => remove(record)} />
+        </Space>
       ),
     },
   ]
@@ -159,6 +239,64 @@ export function MeshingAutomationsPage() {
           className="data-table-card"
         />
       )}
+
+      <Modal
+        open={applyAutomation !== null}
+        title={t('meshing.applyTitle', { name: applyAutomation?.name ?? '' })}
+        okText={t('common.apply')}
+        cancelText={t('common.cancel')}
+        confirmLoading={applying}
+        onOk={() => void apply()}
+        onCancel={closeApply}
+        maskClosable={!applying}
+        closable={!applying}
+      >
+        <Space direction="vertical" size={14} className="full-width">
+          <Typography.Paragraph type="secondary" className="meshing-apply-note">
+            {t('meshing.applyDescription')}
+          </Typography.Paragraph>
+          <Select
+            value={selectedModelId}
+            onChange={setSelectedModelId}
+            className="full-width"
+            placeholder={t('meshing.selectApplyModel')}
+            options={geometryModels.map((model) => ({
+              value: model.id,
+              label: `${model.name} — ${model.file_path}`,
+            }))}
+            notFoundContent={t('meshing.noGeometryModels')}
+            showSearch
+            optionFilterProp="label"
+          />
+          {applyReport ? (
+            <Alert
+              type={applyReport.status === 'success' ? 'success' : 'error'}
+              showIcon
+              message={
+                applyReport.status === 'success'
+                  ? t('meshing.applyVerified', {
+                      count: applyReport.apply_report?.results.length ?? 0,
+                    })
+                  : applyReport.message
+              }
+              description={
+                <Space direction="vertical" size={6}>
+                  <span>{t('meshing.applyStoppedBefore')}</span>
+                  {applyReport.apply_report?.missing_names.length ? (
+                    <Space wrap>
+                      {applyReport.apply_report.missing_names.map((name) => (
+                        <Tag color="red" key={name}>
+                          {name}
+                        </Tag>
+                      ))}
+                    </Space>
+                  ) : null}
+                </Space>
+              }
+            />
+          ) : null}
+        </Space>
+      </Modal>
     </PageContent>
   )
 }

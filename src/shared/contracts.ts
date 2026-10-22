@@ -139,6 +139,7 @@ export interface SyncLog {
   direction: SyncLogDirection
   target: string
   automation_id: number | null
+  meshing_automation_id: number | null
   model_id: number | null
   payload: Record<string, unknown>
   status: SyncLogStatus
@@ -384,6 +385,51 @@ export interface MeshingPresetValidationReport {
   item_count: number
 }
 
+export interface ApplyMeshingAutomationRequest {
+  model_id: number
+  connection?: FluentConnectionConfig | null
+  import_geometry: boolean
+}
+
+export interface MeshingArgumentWriteResult {
+  task_path: string[]
+  argument_path: string[]
+  compound_child_name: string | null
+  expected: MeshingPresetValue
+  actual: MeshingPresetValue | null
+  success: boolean
+  message: string
+}
+
+export interface MeshingNameCheck {
+  kind: 'label' | 'zone' | 'region' | 'object' | 'selection'
+  name: string
+  found: boolean
+}
+
+export interface MeshingApplyReport {
+  workflow_type: MeshingWorkflowType
+  status: 'success' | 'failed'
+  results: MeshingArgumentWriteResult[]
+  name_checks: MeshingNameCheck[]
+  created_children: string[]
+  stopped_before: string[]
+  imported_model: string | null
+  missing_names: string[]
+  error: string | null
+}
+
+export interface MeshingWorkflowReport {
+  status: 'success' | 'failed'
+  automation_id: number
+  model_id: number
+  job_id: string
+  message: string
+  connection: FluentStatus | null
+  apply_report: MeshingApplyReport | null
+  sync_log_id: number | null
+}
+
 export interface MeshingApi {
   schemas: () => Promise<MeshingSchemaSummary[]>
   schema: (workflowType: MeshingWorkflowType) => Promise<MeshingWorkflowSchema>
@@ -397,6 +443,7 @@ export interface MeshingAutomationsApi {
   update: (id: number, payload: MeshingAutomationInput) => Promise<MeshingAutomation>
   delete: (id: number) => Promise<void>
   validate: (id: number) => Promise<MeshingPresetValidationReport>
+  apply: (id: number, payload: ApplyMeshingAutomationRequest) => Promise<MeshingWorkflowReport>
 }
 
 export interface FluentAIApi {

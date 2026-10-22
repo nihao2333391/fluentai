@@ -1,0 +1,304 @@
+{
+  "status": "passed",
+  "started_at_utc": "2026-10-22T14:06:37.113329+00:00",
+  "connection": {
+    "connected": true,
+    "mode": "launch",
+    "version": "Ansys Fluent 2025 R2",
+    "pid": 15808,
+    "host": "localhost",
+    "port": 52813
+  },
+  "missing_name_report": {
+    "workflow_type": "watertight",
+    "status": "failed",
+    "results": [],
+    "name_checks": [
+      {
+        "kind": "label",
+        "name": "wall-big-missing",
+        "found": false
+      }
+    ],
+    "created_children": [],
+    "stopped_before": [
+      "Generate the Surface Mesh",
+      "Generate the Volume Mesh"
+    ],
+    "imported_model": "D:\\Fluent AI\\wql.meshed_files\\dp0\\FFF\\Fluent\\FM_ComputerOfWeiJiabao_9648\\wenqiuli.dsco.pmdb",
+    "missing_names": [
+      "label:wall-big-missing"
+    ],
+    "error": "Missing required Meshing names: label:wall-big-missing"
+  },
+  "apply_report": {
+    "workflow_type": "watertight",
+    "status": "success",
+    "results": [
+      {
+        "task_path": [
+          "import_geometry"
+        ],
+        "argument_path": [
+          "length_unit"
+        ],
+        "compound_child_name": null,
+        "expected": "m",
+        "actual": "m",
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "create_surface_mesh"
+        ],
+        "argument_path": [
+          "cfd_surface_mesh_controls",
+          "max_size"
+        ],
+        "compound_child_name": null,
+        "expected": 0.002,
+        "actual": 0.002,
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_local_sizing"
+        ],
+        "argument_path": [
+          "boi_control_name"
+        ],
+        "compound_child_name": "wall-big",
+        "expected": "wall-big",
+        "actual": "wall-big",
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_local_sizing"
+        ],
+        "argument_path": [
+          "boi_execution"
+        ],
+        "compound_child_name": "wall-big",
+        "expected": "Face Size",
+        "actual": "Face Size",
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_local_sizing"
+        ],
+        "argument_path": [
+          "boi_face_label_list"
+        ],
+        "compound_child_name": "wall-big",
+        "expected": [
+          "wall-big"
+        ],
+        "actual": [
+          "wall-big"
+        ],
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_local_sizing"
+        ],
+        "argument_path": [
+          "boi_size"
+        ],
+        "compound_child_name": "wall-big",
+        "expected": 0.001,
+        "actual": 0.001,
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_local_sizing"
+        ],
+        "argument_path": [
+          "boi_control_name"
+        ],
+        "compound_child_name": "wall-small",
+        "expected": "wall-small",
+        "actual": "wall-small",
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_local_sizing"
+        ],
+        "argument_path": [
+          "boi_execution"
+        ],
+        "compound_child_name": "wall-small",
+        "expected": "Face Size",
+        "actual": "Face Size",
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_local_sizing"
+        ],
+        "argument_path": [
+          "boi_face_label_list"
+        ],
+        "compound_child_name": "wall-small",
+        "expected": [
+          "wall-small"
+        ],
+        "actual": [
+          "wall-small"
+        ],
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_local_sizing"
+        ],
+        "argument_path": [
+          "boi_size"
+        ],
+        "compound_child_name": "wall-small",
+        "expected": 0.0005,
+        "actual": 0.0005,
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_boundary_layer"
+        ],
+        "argument_path": [
+          "bl_control_name"
+        ],
+        "compound_child_name": "smooth-transition_1",
+        "expected": "smooth-transition_1",
+        "actual": "smooth-transition_1",
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_boundary_layer"
+        ],
+        "argument_path": [
+          "bl_label_list"
+        ],
+        "compound_child_name": "smooth-transition_1",
+        "expected": [
+          "wall-big",
+          "wall-small"
+        ],
+        "actual": [
+          "wall-big",
+          "wall-small"
+        ],
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_boundary_layer"
+        ],
+        "argument_path": [
+          "offset_method_type"
+        ],
+        "compound_child_name": "smooth-transition_1",
+        "expected": "smooth-transition",
+        "actual": "smooth-transition",
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_boundary_layer"
+        ],
+        "argument_path": [
+          "number_of_layers"
+        ],
+        "compound_child_name": "smooth-transition_1",
+        "expected": 3,
+        "actual": 3,
+        "success": true,
+        "message": ""
+      }
+    ],
+    "name_checks": [
+      {
+        "kind": "label",
+        "name": "wall-big",
+        "found": true
+      },
+      {
+        "kind": "label",
+        "name": "wall-small",
+        "found": true
+      }
+    ],
+    "created_children": [
+      "add_local_sizing[wall-big]",
+      "add_local_sizing[wall-small]",
+      "add_boundary_layer[smooth-transition_1]"
+    ],
+    "stopped_before": [
+      "Generate the Surface Mesh",
+      "Generate the Volume Mesh"
+    ],
+    "imported_model": "D:\\Fluent AI\\wql.meshed_files\\dp0\\FFF\\Fluent\\FM_ComputerOfWeiJiabao_9648\\wenqiuli.dsco.pmdb",
+    "missing_names": [],
+    "error": null
+  },
+  "fault_tolerant_report": {
+    "workflow_type": "fault-tolerant",
+    "status": "success",
+    "results": [
+      {
+        "task_path": [
+          "mesh_controls_table"
+        ],
+        "argument_path": [
+          "global_max"
+        ],
+        "compound_child_name": null,
+        "expected": 1.0,
+        "actual": 1.0,
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "mesh_controls_table"
+        ],
+        "argument_path": [
+          "target_growth_rate"
+        ],
+        "compound_child_name": null,
+        "expected": 1.2,
+        "actual": 1.2,
+        "success": true,
+        "message": ""
+      }
+    ],
+    "name_checks": [],
+    "created_children": [],
+    "stopped_before": [
+      "Generate the Surface Mesh",
+      "Generate the Volume Mesh"
+    ],
+    "imported_model": "D:\\Fluent AI\\wql.meshed_files\\dp0\\FFF\\Fluent\\FM_ComputerOfWeiJiabao_9648\\wenqiuli.dsco.pmdb",
+    "missing_names": [],
+    "error": null
+  },
+  "marker": "M8_APPLY_CHECK_PASSED",
+  "finished_at_utc": "2026-10-22T14:07:12.918250+00:00"
+}

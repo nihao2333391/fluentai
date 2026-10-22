@@ -105,6 +105,7 @@ const createMockApi = (): FluentAIApi => ({
     update: vi.fn(),
     delete: vi.fn(),
     validate: vi.fn(),
+    apply: vi.fn(),
   },
 })
 

@@ -21,14 +21,15 @@ class SyncLogRepository:
             cursor = connection.execute(
                 """
                 INSERT INTO sync_logs(
-                    direction, target, automation_id, model_id, payload_json,
-                    status, message, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    direction, target, automation_id, meshing_automation_id,
+                    model_id, payload_json, status, message, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     payload.direction,
                     payload.target,
                     payload.automation_id,
+                    payload.meshing_automation_id,
                     payload.model_id,
                     dump_json(payload.payload),
                     payload.status,
@@ -58,6 +59,7 @@ class SyncLogRepository:
             direction=cast(LogDirection, row["direction"]),
             target=str(row["target"]),
             automation_id=cast(int | None, row["automation_id"]),
+            meshing_automation_id=cast(int | None, row["meshing_automation_id"]),
             model_id=cast(int | None, row["model_id"]),
             payload=cast(dict[str, object], load_json(cast(str, row["payload_json"]), {})),
             status=cast(LogStatus, row["status"]),

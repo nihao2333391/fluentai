@@ -112,6 +112,17 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ON meshing_automations(workflow_type, updated_at DESC);
         """,
     ),
+    (
+        3,
+        """
+        ALTER TABLE sync_logs
+            ADD COLUMN meshing_automation_id INTEGER
+            REFERENCES meshing_automations(id) ON DELETE SET NULL;
+
+        CREATE INDEX sync_logs_meshing_automation
+            ON sync_logs(meshing_automation_id, created_at DESC);
+        """,
+    ),
 )
 
 

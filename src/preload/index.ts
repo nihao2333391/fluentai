@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 import type {
   ApplyAutomationRequest,
+  ApplyMeshingAutomationRequest,
   Automation,
   AutomationInput,
   CredentialStatus,
@@ -17,6 +18,7 @@ import type {
   MeshingSchemaSummary,
   MeshingWorkflowSchema,
   MeshingWorkflowType,
+  MeshingWorkflowReport,
   Model,
   ModelAssociationRequest,
   ModelCreateRequest,
@@ -105,6 +107,8 @@ const api: FluentAIApi = Object.freeze({
     delete: (id: number) => invoke<void>('meshing-automations:delete', id),
     validate: (id: number) =>
       invoke<MeshingPresetValidationReport>('meshing-automations:validate', id),
+    apply: (id: number, payload: ApplyMeshingAutomationRequest) =>
+      invoke<MeshingWorkflowReport>('meshing-automations:apply', id, payload),
   }),
   fluent: Object.freeze({
     status: () => invoke<FluentStatus>('fluent:status'),

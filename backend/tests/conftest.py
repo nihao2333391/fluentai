@@ -11,6 +11,7 @@ if str(BACKEND_ROOT) not in sys.path:
 
 from app.fluent.fake import FakeFluentAdapter  # noqa: E402
 from app.main import create_app  # noqa: E402
+from app.meshing.fake import FakeMeshingAdapter  # noqa: E402
 
 TEST_TOKEN = "test-sidecar-token"
 AUTH_HEADERS = {"Authorization": f"Bearer {TEST_TOKEN}"}
@@ -28,14 +29,21 @@ def fake_fluent_adapter() -> FakeFluentAdapter:
 
 
 @pytest.fixture
+def fake_meshing_adapter() -> FakeMeshingAdapter:
+    return FakeMeshingAdapter()
+
+
+@pytest.fixture
 def app_client(
     tmp_path: Path,
     fake_fluent_adapter: FakeFluentAdapter,
+    fake_meshing_adapter: FakeMeshingAdapter,
 ) -> Iterator[TestClient]:
     app = create_app(
         TEST_TOKEN,
         tmp_path / "fluent-ai-test.db",
         fluent_adapter=fake_fluent_adapter,
+        meshing_adapter=fake_meshing_adapter,
     )
     with TestClient(app) as client:
         yield client

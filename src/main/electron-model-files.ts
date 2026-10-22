@@ -12,8 +12,26 @@ export class ElectronModelFilePicker {
       properties: ['openFile'],
       filters: [
         {
-          name: 'Fluent case and mesh files',
-          extensions: ['cas', 'cas.h5', 'msh', 'msh.h5'],
+          name: 'Fluent case, mesh, and geometry files',
+          extensions: [
+            'cas',
+            'cas.h5',
+            'msh',
+            'msh.h5',
+            'dsco',
+            'scdoc',
+            'step',
+            'stp',
+            'iges',
+            'igs',
+            'pmdb',
+            'fmd',
+            'tgf',
+            'x_t',
+            'x_b',
+            'sat',
+            'sab',
+          ],
         },
       ],
     }

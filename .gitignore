@@ -12,3 +12,5 @@ __pycache__/
 *.trn
 *.tsbuildinfo
 cortexerror.log
+FM_*/
+cleanup-fluent-*.bat

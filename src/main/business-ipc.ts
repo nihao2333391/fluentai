@@ -4,6 +4,7 @@ import type {
   Automation,
   AutomationInput,
   ApplyAutomationRequest,
+  ApplyMeshingAutomationRequest,
   CredentialStatus,
   FluentConnectionConfig,
   FluentOperationReport,
@@ -16,6 +17,7 @@ import type {
   MeshingSchemaSummary,
   MeshingWorkflowSchema,
   MeshingWorkflowType,
+  MeshingWorkflowReport,
   Model,
   ModelAssociationRequest,
   ModelCreateRequest,
@@ -172,6 +174,14 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
     sidecar.request<MeshingPresetValidationReport>(`/api/meshing-automations/${id}/validate`, {
       method: 'POST',
     }),
+  )
+  ipcMain.handle(
+    'meshing-automations:apply',
+    (_event, id: number, payload: ApplyMeshingAutomationRequest) =>
+      sidecar.request<MeshingWorkflowReport>(`/api/meshing-automations/${id}/apply`, {
+        method: 'POST',
+        body: jsonBody(payload),
+      }),
   )
 
   ipcMain.handle('fluent:status', () => sidecar.request<FluentStatus>('/api/fluent/status'))

@@ -1,5 +1,6 @@
 import type {
   ApplyAutomationRequest,
+  ApplyMeshingAutomationRequest,
   AutomationInput,
   FluentAIApi,
   FluentConnectionConfig,
@@ -75,6 +76,8 @@ export const fluentAiService = {
       getFluentAIApi().meshingAutomations.update(id, payload),
     delete: (id: number) => getFluentAIApi().meshingAutomations.delete(id),
     validate: (id: number) => getFluentAIApi().meshingAutomations.validate(id),
+    apply: (id: number, payload: ApplyMeshingAutomationRequest) =>
+      getFluentAIApi().meshingAutomations.apply(id, payload),
   },
   fluent: {
     status: () => getFluentAIApi().fluent.status(),

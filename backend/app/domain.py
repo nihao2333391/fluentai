@@ -127,6 +127,7 @@ class SyncLogCreate(BaseModel):
     direction: Literal["read", "write", "sync", "apply", "pull"]
     target: str = Field(min_length=1, max_length=300)
     automation_id: int | None = None
+    meshing_automation_id: int | None = None
     model_id: int | None = None
     payload: dict[str, object] = Field(default_factory=dict)
     status: Literal["success", "failed"]
@@ -309,3 +310,50 @@ class MeshingSchemaSummary(BaseModel):
     fluent_version: str
     task_count: int
     argument_count: int
+
+
+class ApplyMeshingAutomationRequest(BaseModel):
+    """Apply a Meshing workflow preset to a geometry model."""
+
+    model_id: int = Field(gt=0)
+    connection: FluentConnectionConfig | None = None
+    import_geometry: bool = True
+
+
+class MeshingArgumentWriteResult(BaseModel):
+    task_path: list[str]
+    argument_path: list[str]
+    compound_child_name: str | None = None
+    expected: MeshingPresetValue
+    actual: MeshingPresetValue | None = None
+    success: bool
+    message: str = ""
+
+
+class MeshingNameCheck(BaseModel):
+    kind: Literal["label", "zone", "region", "object", "selection"]
+    name: str
+    found: bool
+
+
+class MeshingApplyReport(BaseModel):
+    workflow_type: MeshingWorkflowType
+    status: Literal["success", "failed"]
+    results: list[MeshingArgumentWriteResult] = Field(default_factory=list)
+    name_checks: list[MeshingNameCheck] = Field(default_factory=list)
+    created_children: list[str] = Field(default_factory=list)
+    stopped_before: list[str] = Field(default_factory=list)
+    imported_model: str | None = None
+    missing_names: list[str] = Field(default_factory=list)
+    error: str | None = None
+
+
+class MeshingWorkflowReport(BaseModel):
+    status: Literal["success", "failed"]
+    automation_id: int
+    model_id: int
+    job_id: str
+    message: str
+    connection: FluentStatus | None = None
+    apply_report: MeshingApplyReport | None = None
+    sync_log_id: int | None = None

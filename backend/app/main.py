@@ -14,9 +14,12 @@ from app.auth import require_bearer_token
 from app.database import Database
 from app.fluent.base import FluentAdapter
 from app.fluent.pyfluent_adapter import PyFluentAdapter
+from app.meshing.base import MeshingWorkflowAdapter
+from app.meshing.pyfluent_adapter import PyFluentMeshingAdapter
 from app.repositories.errors import RepositoryConflictError, RepositoryNotFoundError
 from app.schemas import HealthResponse, ReadyResponse, ShutdownResponse
 from app.services.fluent_service import FluentService
+from app.services.meshing_service import MeshingService
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -35,6 +38,7 @@ def create_app(
     auth_token: str | None = None,
     database_path: Path | str | None = None,
     fluent_adapter: FluentAdapter | None = None,
+    meshing_adapter: MeshingWorkflowAdapter | None = None,
 ) -> FastAPI:
     """Create a sidecar application with authentication and persistence."""
     app = FastAPI(
@@ -48,6 +52,9 @@ def create_app(
     app.state.request_shutdown = None
     app.state.database = database
     app.state.fluent_service = FluentService(database, fluent_adapter or PyFluentAdapter())
+    app.state.meshing_service = MeshingService(
+        database, meshing_adapter or PyFluentMeshingAdapter()
+    )
 
     @app.exception_handler(RepositoryNotFoundError)
     def handle_not_found(_request: Request, exc: RepositoryNotFoundError) -> JSONResponse:

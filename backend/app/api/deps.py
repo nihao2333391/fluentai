@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException, Request, status
 
 from app.database import Database
 from app.services.fluent_service import FluentService
+from app.services.meshing_service import MeshingService
 
 
 def get_database(request: Request) -> Database:
@@ -32,3 +33,16 @@ def get_fluent_service(request: Request) -> FluentService:
 
 
 FluentServiceDependency = Annotated[FluentService, Depends(get_fluent_service)]
+
+
+def get_meshing_service(request: Request) -> MeshingService:
+    service: object = getattr(request.app.state, "meshing_service", None)
+    if not isinstance(service, MeshingService):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Meshing service is not configured.",
+        )
+    return service
+
+
+MeshingServiceDependency = Annotated[MeshingService, Depends(get_meshing_service)]
