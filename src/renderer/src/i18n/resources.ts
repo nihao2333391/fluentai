@@ -1,0 +1,176 @@
+export const resources = {
+  zh: {
+    translation: {
+      common: {
+        appName: 'Fluent AI',
+        loading: '加载中',
+        planned: '计划中',
+        comingSoon: '功能将在后续阶段实现',
+        notAvailable: '不可用',
+      },
+      nav: {
+        workspace: '工作区',
+        system: '系统',
+        automationCreate: '自动化创建',
+        myAutomations: '我的自动化',
+        myModels: '我的模型',
+        settings: '设置',
+      },
+      sidecar: {
+        title: 'FastAPI 侧车',
+        ready: '已就绪',
+        starting: '启动中',
+        restarting: '重启中',
+        error: '异常',
+        stopped: '未启动',
+        restart: '重启侧车',
+        restartingAction: '正在重启',
+        version: '版本 {{version}}',
+        pid: 'PID {{pid}}',
+        port: '127.0.0.1:{{port}}',
+        database: '数据库已就绪',
+      },
+      tasks: {
+        title: '任务',
+        none: '无活动任务',
+        active: '{{count}} 个活动任务',
+      },
+      pages: {
+        automationCreate: {
+          title: '自动化创建',
+          description: '定义参数、验证设置并保存可复用的 Fluent 自动化预设。',
+          emptyTitle: '自动化表单尚未接入',
+          emptyDescription: 'M5 已建立页面框架，业务表单将在后续里程碑接入。',
+        },
+        myAutomations: {
+          title: '我的自动化',
+          description: '查看、应用、编辑和同步已保存的 Fluent 自动化预设。',
+          emptyTitle: '暂无自动化',
+          emptyDescription: '自动化列表将在业务功能阶段接入真实数据。',
+        },
+        myModels: {
+          title: '我的模型',
+          description: '导入 Fluent 算例或网格，关联自动化并恢复最近会话。',
+          emptyTitle: '暂无模型',
+          emptyDescription: '安全文件选择和模型资料库界面将在模型工作流阶段接入。',
+        },
+        settings: {
+          title: '设置',
+          description: '管理界面主题、语言、凭据和后续 Fluent 连接参数。',
+        },
+      },
+      settings: {
+        appearance: '界面外观',
+        theme: '主题',
+        themeDescription: '选择浅色、深色或跟随系统主题。',
+        light: '浅色',
+        dark: '深色',
+        system: '跟随系统',
+        language: '界面语言',
+        languageDescription: '切换后立即应用到导航、页面和状态提示。',
+        credentials: 'Fluent 凭据',
+        credentialAvailable: '安全存储可用',
+        credentialUnavailable: '安全存储不可用',
+        credentialConfigured: '已配置密码',
+        credentialNotConfigured: '尚未配置密码',
+        stageNote: '连接参数和密码编辑界面将在 Fluent 工作流阶段接入。',
+      },
+      errors: {
+        bridgeUnavailableTitle: '桌面桥不可用',
+        bridgeUnavailableDescription: '请在 Electron 桌面应用中运行本页面。',
+        sidecarErrorTitle: '侧车服务异常',
+        sidecarErrorDescription: '请查看侧车状态并尝试重启。',
+      },
+    },
+  },
+  en: {
+    translation: {
+      common: {
+        appName: 'Fluent AI',
+        loading: 'Loading',
+        planned: 'Planned',
+        comingSoon: 'This capability arrives in a later milestone.',
+        notAvailable: 'Unavailable',
+      },
+      nav: {
+        workspace: 'Workspace',
+        system: 'System',
+        automationCreate: 'Create Automation',
+        myAutomations: 'My Automations',
+        myModels: 'My Models',
+        settings: 'Settings',
+      },
+      sidecar: {
+        title: 'FastAPI Sidecar',
+        ready: 'Ready',
+        starting: 'Starting',
+        restarting: 'Restarting',
+        error: 'Error',
+        stopped: 'Stopped',
+        restart: 'Restart sidecar',
+        restartingAction: 'Restarting',
+        version: 'Version {{version}}',
+        pid: 'PID {{pid}}',
+        port: '127.0.0.1:{{port}}',
+        database: 'Database ready',
+      },
+      tasks: {
+        title: 'Tasks',
+        none: 'No active tasks',
+        active: '{{count}} active tasks',
+      },
+      pages: {
+        automationCreate: {
+          title: 'Create Automation',
+          description:
+            'Define parameters, validate settings, and save reusable Fluent automation presets.',
+          emptyTitle: 'Automation form not connected yet',
+          emptyDescription:
+            'M5 establishes the page shell. Business forms arrive in later milestones.',
+        },
+        myAutomations: {
+          title: 'My Automations',
+          description: 'View, apply, edit, and synchronize saved Fluent automation presets.',
+          emptyTitle: 'No automations yet',
+          emptyDescription:
+            'The real data table will be connected during the business feature phase.',
+        },
+        myModels: {
+          title: 'My Models',
+          description:
+            'Import Fluent cases or meshes, associate automations, and restore recent sessions.',
+          emptyTitle: 'No models yet',
+          emptyDescription:
+            'Secure file selection and the model library arrive in the model workflow phase.',
+        },
+        settings: {
+          title: 'Settings',
+          description:
+            'Manage appearance, language, credentials, and future Fluent connection options.',
+        },
+      },
+      settings: {
+        appearance: 'Appearance',
+        theme: 'Theme',
+        themeDescription: 'Choose light, dark, or follow the operating system.',
+        light: 'Light',
+        dark: 'Dark',
+        system: 'System',
+        language: 'Language',
+        languageDescription: 'Changes apply immediately to navigation, pages, and status messages.',
+        credentials: 'Fluent Credentials',
+        credentialAvailable: 'Secure storage available',
+        credentialUnavailable: 'Secure storage unavailable',
+        credentialConfigured: 'Password configured',
+        credentialNotConfigured: 'Password not configured',
+        stageNote: 'Connection settings and password editing arrive in the Fluent workflow phase.',
+      },
+      errors: {
+        bridgeUnavailableTitle: 'Desktop bridge unavailable',
+        bridgeUnavailableDescription: 'Run this page inside the Electron desktop application.',
+        sidecarErrorTitle: 'Sidecar service error',
+        sidecarErrorDescription: 'Review the sidecar status and try restarting it.',
+      },
+    },
+  },
+} as const

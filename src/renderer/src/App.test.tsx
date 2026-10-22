@@ -1,47 +1,102 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-import App from './App'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-describe('App', () => {
-  it('shows the ready sidecar and all planned modules', async () => {
-    const readyStatus = {
-      state: 'ready' as const,
-      message: 'FastAPI sidecar is ready.',
+import type { FluentAIApi } from '../../shared/contracts'
+import App from './App'
+import { useAppStore } from './store/appStore'
+
+const createMockApi = (): FluentAIApi => ({
+  platform: 'win32',
+  sidecar: {
+    getStatus: vi.fn().mockResolvedValue({
+      state: 'ready',
+      message: 'Sidecar ready',
       version: '0.1.0',
       pid: 4321,
       port: 61234,
-    }
-    const restart = vi.fn().mockResolvedValue(readyStatus)
+    }),
+    restart: vi.fn().mockResolvedValue({
+      state: 'ready',
+      message: 'Sidecar ready',
+      version: '0.1.0',
+      pid: 4322,
+      port: 61235,
+    }),
+    onStatusChanged: vi.fn(() => () => undefined),
+  },
+  automations: {
+    list: vi.fn().mockResolvedValue([]),
+    create: vi.fn(),
+    get: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  models: {
+    list: vi.fn().mockResolvedValue([]),
+    get: vi.fn(),
+    pickFile: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    associate: vi.fn(),
+    refresh: vi.fn(),
+    delete: vi.fn(),
+  },
+  settings: {
+    get: vi.fn().mockResolvedValue({ values: {} }),
+    update: vi.fn(),
+  },
+  jobs: {
+    list: vi.fn().mockResolvedValue([]),
+    get: vi.fn(),
+  },
+  syncLogs: {
+    list: vi.fn().mockResolvedValue([]),
+  },
+  credentials: {
+    getStatus: vi.fn().mockResolvedValue({ encryptionAvailable: true, configured: false }),
+    setFluentPassword: vi.fn(),
+    clearFluentPassword: vi.fn(),
+  },
+})
 
+describe('App', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useAppStore.setState({ themeMode: 'system', language: 'zh' })
+    window.location.hash = '#/automations/create'
     Object.defineProperty(window, 'fluentAI', {
       configurable: true,
-      value: {
-        platform: 'win32',
-        sidecar: {
-          getStatus: vi.fn().mockResolvedValue(readyStatus),
-          restart,
-          onStatusChanged: vi.fn(() => () => undefined),
-        },
-        credentials: {
-          getStatus: vi.fn().mockResolvedValue({ encryptionAvailable: true, configured: false }),
-          setFluentPassword: vi.fn(),
-          clearFluentPassword: vi.fn(),
-        },
-      },
+      value: createMockApi(),
     })
+  })
 
+  it('renders the four-module shell and navigates between routes', async () => {
     render(<App />)
 
-    expect(await screen.findByText('已就绪')).toBeInTheDocument()
-    expect(screen.getByText('PID 4321')).toBeInTheDocument()
-    expect(screen.getByText('127.0.0.1:61234')).toBeInTheDocument()
-    expect(await screen.findByText('凭据存储：可用')).toBeInTheDocument()
-    expect(screen.getByText('自动化创建')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '自动化创建' })).toBeInTheDocument()
     expect(screen.getByText('我的自动化')).toBeInTheDocument()
     expect(screen.getByText('我的模型')).toBeInTheDocument()
     expect(screen.getByText('设置')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '重启侧车' }))
-    await waitFor(() => expect(restart).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByText('我的模型'))
+    expect(await screen.findByRole('heading', { name: '我的模型' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('设置'))
+    expect(await screen.findByText('界面外观')).toBeInTheDocument()
+  })
+
+  it('switches theme and language immediately', async () => {
+    render(<App />)
+
+    fireEvent.click(await screen.findByText('设置'))
+    fireEvent.click(await screen.findByText('深色'))
+    expect(document.documentElement.dataset.theme).toBe('dark')
+
+    act(() => {
+      useAppStore.getState().setLanguage('en')
+    })
+
+    expect(await screen.findByText('Appearance')).toBeInTheDocument()
+    expect(screen.getByText('Create Automation')).toBeInTheDocument()
   })
 })

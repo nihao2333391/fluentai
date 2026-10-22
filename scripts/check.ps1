@@ -43,7 +43,7 @@ try {
   & $python scripts\check_m0_reports.py
   if ($LASTEXITCODE -ne 0) { throw 'M0 regression check failed.' }
 
-  Write-Host 'M4_CHECK_PASSED'
+  Write-Host 'M5_CHECK_PASSED'
 }
 finally {
   Pop-Location

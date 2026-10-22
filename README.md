@@ -9,20 +9,25 @@ Fluent AI is a Windows desktop application for managing reusable ANSYS Fluent au
 - **M2 - IPC and sidecar supervision: PASSED**
 - **M3 - Database and domain model: PASSED**
 - **M4 - Electron security and file capabilities: PASSED**
-- **M5 - UI framework and design system: NOT STARTED**
+- **M5 - UI framework and design system: PASSED**
+- **M6 - FluentAdapter and SettingCatalog: NOT STARTED**
 
-M4 completes the secure bridge between the Renderer and the M3 business API. Model paths must originate from a native file picker, Fluent passwords are encrypted through Electron safeStorage, and all business operations use typed preload IPC rather than direct HTTP access.
+The application now has a responsive four-module Ant Design shell with route navigation, persistent light/dark/system themes, Chinese/English localization, global sidecar and task status, and reusable loading, empty, error, and permission states.
 
 ## Architecture
 
 ```text
 React renderer
-    ↓ typed renderer service
-    ↓ narrow preload API
+    ├─ React Router 7 hash routes
+    ├─ Ant Design 5 + design tokens
+    ├─ Zustand persisted preferences
+    ├─ i18next Chinese/English resources
+    └─ typed Renderer service layer
+          ↓ narrow preload API
 Electron main process
     ├─ sidecar supervisor
     ├─ authenticated API proxy
-    ├─ native model-file picker and path registry
+    ├─ native model-file picker
     ├─ safeStorage credential vault
     └─ user-data database path
           ↓ 127.0.0.1 + bearer token
@@ -35,76 +40,81 @@ FastAPI sidecar
 ANSYS Fluent 2025 R2
 ```
 
-## Security Model
+## Four Top-Level Modules
 
-- `contextIsolation: true`
-- `nodeIntegration: false`
-- `sandbox: true`
-- CommonJS preload output
-- Content Security Policy
-- No raw `ipcRenderer` or arbitrary IPC channel exposed
-- Bearer token remains in the Electron main process
-- Renderer communicates with the sidecar only through typed IPC
-- Model file paths require a native file picker selection token
-- Selected paths are canonicalized and validated as regular, non-empty Fluent files
-- Fluent passwords are encrypted with Electron safeStorage
-- Existing passwords are never returned to the Renderer
-- External links open in the system browser
+- 自动化创建 / Create Automation
+- 我的自动化 / My Automations
+- 我的模型 / My Models
+- 设置 / Settings
 
-## M4 Capabilities
+M5 establishes the route, navigation, responsive layout, design system, state components, and settings controls. The individual automation and model business forms remain placeholders until their corresponding workflow milestones.
 
-### Native model file selection
+## UI Framework
 
-Supported files:
+| Capability             | Implementation                              |
+| ---------------------- | ------------------------------------------- |
+| Routing                | React Router 7 hash router                  |
+| Components             | Ant Design 5                                |
+| Icons                  | Ant Design Icons                            |
+| UI state               | Zustand 5 with persisted preferences        |
+| Localization           | i18next + react-i18next                     |
+| React 19 compatibility | `@ant-design/v5-patch-for-react-19`         |
+| Theme                  | Ant Design algorithms plus CSS variables    |
+| Responsive behavior    | Ant Design Layout/Sider and CSS breakpoints |
 
-- `.cas`
-- `.cas.h5`
-- `.msh`
-- `.msh.h5`
+### Theme
 
-The Renderer receives a short-lived selection token plus display metadata. The main process resolves the token to the canonical path only when creating or updating a model.
+Supported modes:
 
-### Model metadata refresh
+- light
+- dark
+- follow system
 
-`POST /api/models/{id}/refresh` re-reads the selected file and updates:
+Theme and language preferences persist in local storage under `fluent-ai-ui-preferences`.
 
-- file size
-- modification time
-- updated timestamp
+### Localization
 
-Missing, inaccessible, empty, directory, or unsupported paths are rejected.
+Chinese and English resources are kept key-for-key equivalent by an automated test. Ant Design locale providers switch together with the application language.
 
-### Encrypted Fluent credentials
+### Page states
 
-The main process stores the encrypted Fluent password at:
+Reusable components cover:
 
-`%APPDATA%\fluent-ai\secrets\fluent-credentials.json`
+- loading
+- empty
+- error with retry action
+- unavailable desktop bridge
+- permission/bridge unavailable state
 
-The Renderer can only:
+### Global status surfaces
 
-- query whether secure storage is available;
-- query whether a password is configured;
-- set or replace the password;
-- clear the password.
+The application header shows:
 
-It cannot read the existing password.
+- active job count, including no-active-task state;
+- FastAPI sidecar state;
+- sidecar version, PID, and random port in a popover;
+- manual sidecar restart.
 
-### Typed business IPC
+## Technology Baseline
 
-The preload API now exposes:
-
-- automations
-- models and file selection
-- settings
-- jobs
-- sync logs
-- credential status and management
-
-The Renderer service wrapper is in `src/renderer/src/services/fluentAi.ts`.
+| Layer         | Version                  |
+| ------------- | ------------------------ |
+| Node.js       | 24.21.0                  |
+| pnpm          | 12.5.1                   |
+| Electron      | 45.0.0                   |
+| electron-vite | 6.0.0                    |
+| Vite          | 8.3.5                    |
+| React         | 19.3.1                   |
+| React Router  | 7.18.4                   |
+| Ant Design    | 5.29.3                   |
+| Zustand       | 5.0.16                   |
+| i18next       | 26.5.4                   |
+| TypeScript    | 5.9.3                    |
+| Python        | 3.12.14                  |
+| FastAPI       | 0.159.1                  |
+| PyFluent      | ansys-fluent-core 0.42.1 |
 
 ## Development
-
-Install and run:
 
 ```powershell
 pnpm install
@@ -127,13 +137,14 @@ pnpm check
 Expected final marker:
 
 ```text
-M4_CHECK_PASSED
+M5_CHECK_PASSED
 ```
 
 ## Evidence
 
+- M5 verification: `docs/m5-verification.md`
+- M5 architecture decision: `docs/adr/0006-m5-ui-framework.md`
 - M4 verification: `docs/m4-verification.md`
-- M4 architecture decision: `docs/adr/0005-m4-secure-file-and-credentials.md`
 - M3 verification: `docs/m3-verification.md`
 - M2 verification: `docs/m2-verification.md`
 - M1 verification: `docs/m1-verification.md`
@@ -142,12 +153,11 @@ M4_CHECK_PASSED
 
 ## Next Milestone
 
-M5 will add:
+M6 will add:
 
-- React Router with four top-level modules;
-- Ant Design 5 theme and locale integration;
-- responsive application shell;
-- global sidecar and task status surfaces;
-- loading, empty, error, and permission states;
-- i18n foundation and theme switching;
-- frontend component and layout tests.
+- explicit Fluent 2025 R2 adapter implementation;
+- curated SettingCatalog with 10-20 validated settings;
+- typed read/write/apply operations;
+- readback validation and rollback reports;
+- FakeFluentAdapter contract tests;
+- integration tests against the real M0 Fluent environment.
