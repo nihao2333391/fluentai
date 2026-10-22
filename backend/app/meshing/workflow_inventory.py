@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
@@ -25,8 +26,16 @@ def _normalize_allowed_values(value: Any) -> list[Any] | None:
         except (ValueError, SyntaxError):
             return [value]
         return list(parsed) if isinstance(parsed, (list, tuple, set)) else [parsed]
-    if isinstance(value, (list, tuple, set)):
-        return list(value)
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        values = list(value)
+        if len(values) == 1 and isinstance(values[0], str) and values[0].strip().startswith("["):
+            try:
+                parsed = ast.literal_eval(values[0])
+            except (ValueError, SyntaxError):
+                return values
+            if isinstance(parsed, (list, tuple, set)):
+                return list(parsed)
+        return values
     return [value]
 
 
@@ -41,7 +50,7 @@ def _value_type(value: Any) -> str:
         return "float"
     if isinstance(value, str):
         return "string"
-    if isinstance(value, list):
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         return "list"
     if isinstance(value, dict):
         return "object"

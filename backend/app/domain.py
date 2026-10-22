@@ -246,3 +246,65 @@ class ModelOpenReport(BaseModel):
     model_id: int
     message: str
     connection: FluentStatus | None = None
+
+
+MeshingWorkflowType = Literal["watertight", "fault-tolerant"]
+type MeshingPresetValue = PresetValue | list["MeshingPresetValue"] | dict[str, "MeshingPresetValue"]
+
+
+class MeshingPresetItem(BaseModel):
+    """One Fluent Meshing workflow argument included in a preset."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    task_path: list[str] = Field(min_length=1, max_length=8)
+    argument_path: list[str] = Field(min_length=1, max_length=16)
+    value: MeshingPresetValue
+    required: bool = True
+
+
+class MeshingPresetDocument(BaseModel):
+    """Versioned Fluent Meshing workflow preset."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal[1] = 1
+    fluent_version: str = "25.2.0"
+    workflow_type: MeshingWorkflowType
+    items: list[MeshingPresetItem] = Field(default_factory=list)
+
+
+class MeshingAutomationCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    name: str = Field(min_length=1, max_length=120)
+    description: str = Field(default="", max_length=2_000)
+    model_family: str = Field(default="", max_length=200)
+    reference_model_id: int | None = Field(default=None, gt=0)
+    preset: MeshingPresetDocument
+    status: Literal["draft", "active"] = "draft"
+
+
+class MeshingAutomationUpdate(MeshingAutomationCreate):
+    pass
+
+
+class MeshingAutomationRead(MeshingAutomationCreate):
+    id: int
+    created_at: str
+    updated_at: str
+
+
+class MeshingPresetValidationReport(BaseModel):
+    valid: bool
+    errors: list[str] = Field(default_factory=list)
+    schema_id: str
+    item_count: int
+
+
+class MeshingSchemaSummary(BaseModel):
+    workflow_type: MeshingWorkflowType
+    schema_id: str
+    fluent_version: str
+    task_count: int
+    argument_count: int

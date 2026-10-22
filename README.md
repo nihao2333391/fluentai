@@ -177,7 +177,10 @@ Completed:
 - real enum option lists from Fluent 2025 R2;
 - Watertight schema: 11 tasks and 221 arguments;
 - Fault-tolerant schema: 25 tasks and 307 arguments;
-- task/argument edit paths and allowed-value metadata extracted from PyFluent.
+- task/argument edit paths and allowed-value metadata extracted from PyFluent;
+- independent Meshing automation database model;
+- Meshing preset task/argument validation;
+- authenticated Meshing automation CRUD APIs.
 
 Remaining M8 work:
 

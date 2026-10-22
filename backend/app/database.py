@@ -90,6 +90,28 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ('fluent_path', '', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
         """,
     ),
+    (
+        2,
+        """
+        CREATE TABLE meshing_automations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+            description TEXT NOT NULL DEFAULT '',
+            model_family TEXT NOT NULL DEFAULT '',
+            reference_model_id INTEGER REFERENCES models(id) ON DELETE SET NULL,
+            workflow_type TEXT NOT NULL
+                CHECK (workflow_type IN ('watertight', 'fault-tolerant')),
+            preset_json TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'draft'
+                CHECK (status IN ('draft', 'active')),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+
+        CREATE INDEX meshing_automations_workflow_type
+            ON meshing_automations(workflow_type, updated_at DESC);
+        """,
+    ),
 )
 
 
