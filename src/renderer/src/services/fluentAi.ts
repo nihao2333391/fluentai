@@ -1,9 +1,13 @@
 import type {
+  ApplyAutomationRequest,
   AutomationInput,
   FluentAIApi,
+  FluentConnectionConfig,
   ModelAssociationRequest,
   ModelCreateRequest,
   ModelUpdateRequest,
+  PresetDocument,
+  PresetItem,
   SettingsPayload,
 } from '../../../shared/contracts'
 
@@ -52,5 +56,19 @@ export const fluentAiService = {
     setFluentPassword: (password: string) =>
       getFluentAIApi().credentials.setFluentPassword(password),
     clearFluentPassword: () => getFluentAIApi().credentials.clearFluentPassword(),
+  },
+  fluent: {
+    status: () => getFluentAIApi().fluent.status(),
+    connect: (config: FluentConnectionConfig) => getFluentAIApi().fluent.connect(config),
+    disconnect: () => getFluentAIApi().fluent.disconnect(),
+    catalog: () => getFluentAIApi().fluent.catalog(),
+    readSettings: (settingIds: string[]) => getFluentAIApi().fluent.readSettings(settingIds),
+    writeSettings: (items: PresetItem[]) => getFluentAIApi().fluent.writeSettings(items),
+    validatePreset: (preset: PresetDocument) => getFluentAIApi().fluent.validatePreset(preset),
+    applyPreset: (preset: PresetDocument) => getFluentAIApi().fluent.applyPreset(preset),
+  },
+  workflows: {
+    applyAutomation: (automationId: number, payload: ApplyAutomationRequest) =>
+      getFluentAIApi().workflows.applyAutomation(automationId, payload),
   },
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { CredentialStatus } from '../../../shared/contracts'
+import { FluentConnectionCard } from '../components/FluentConnectionCard'
 import { PageContent } from '../components/PageState'
 import { useAppStore, type Language, type ThemeMode } from '../store/appStore'
 
@@ -73,6 +74,8 @@ export function SettingsPage() {
             </div>
           </Flex>
         </Card>
+
+        <FluentConnectionCard />
 
         <Card title={t('settings.credentials')}>
           <Flex align="center" justify="space-between" gap={24} wrap>

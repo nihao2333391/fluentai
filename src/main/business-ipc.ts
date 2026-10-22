@@ -3,14 +3,24 @@ import { BrowserWindow, ipcMain } from 'electron'
 import type {
   Automation,
   AutomationInput,
+  ApplyAutomationRequest,
   CredentialStatus,
+  FluentConnectionConfig,
+  FluentOperationReport,
+  FluentStatus,
   Job,
   Model,
   ModelAssociationRequest,
   ModelCreateRequest,
   ModelUpdateRequest,
+  PresetDocument,
+  PresetItem,
+  PresetValidationReport,
+  PresetValue,
+  SettingCatalogEntry,
   SettingsPayload,
   SyncLog,
+  WorkflowReport,
 } from '../shared/contracts'
 import type { CredentialStore } from './credential-store'
 import type { ElectronModelFilePicker } from './electron-model-files'
@@ -114,6 +124,52 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
 
   ipcMain.handle('sync-logs:list', (_event, limit = 100) =>
     sidecar.request<SyncLog[]>(`/api/sync-logs?limit=${Math.max(1, Math.min(limit, 500))}`),
+  )
+
+  ipcMain.handle('fluent:status', () => sidecar.request<FluentStatus>('/api/fluent/status'))
+  ipcMain.handle('fluent:connect', (_event, payload: FluentConnectionConfig) =>
+    sidecar.request<FluentStatus>('/api/fluent/connect', {
+      method: 'POST',
+      body: jsonBody(payload),
+    }),
+  )
+  ipcMain.handle('fluent:disconnect', () =>
+    sidecar.request<FluentStatus>('/api/fluent/disconnect', { method: 'POST' }),
+  )
+  ipcMain.handle('fluent:catalog', () =>
+    sidecar.request<SettingCatalogEntry[]>('/api/fluent/catalog'),
+  )
+  ipcMain.handle('fluent:read-settings', (_event, settingIds: string[]) =>
+    sidecar.request<Record<string, PresetValue>>('/api/fluent/settings/read', {
+      method: 'POST',
+      body: jsonBody({ setting_ids: settingIds }),
+    }),
+  )
+  ipcMain.handle('fluent:write-settings', (_event, items: PresetItem[]) =>
+    sidecar.request<FluentOperationReport>('/api/fluent/settings/write', {
+      method: 'POST',
+      body: jsonBody({ items }),
+    }),
+  )
+  ipcMain.handle('fluent:validate-preset', (_event, preset: PresetDocument) =>
+    sidecar.request<PresetValidationReport>('/api/fluent/presets/validate', {
+      method: 'POST',
+      body: jsonBody(preset),
+    }),
+  )
+  ipcMain.handle('fluent:apply-preset', (_event, preset: PresetDocument) =>
+    sidecar.request<FluentOperationReport>('/api/fluent/presets/apply', {
+      method: 'POST',
+      body: jsonBody(preset),
+    }),
+  )
+  ipcMain.handle(
+    'workflows:apply-automation',
+    (_event, automationId: number, payload: ApplyAutomationRequest) =>
+      sidecar.request<WorkflowReport>(`/api/automations/${automationId}/apply`, {
+        method: 'POST',
+        body: jsonBody(payload),
+      }),
   )
 
   ipcMain.handle('credentials:status', (): Promise<CredentialStatus> => credentials.getStatus())

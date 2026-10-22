@@ -1,0 +1,168 @@
+{
+  "status": "passed",
+  "catalog_size": 20,
+  "connection": {
+    "connected": true,
+    "mode": "launch",
+    "version": "Ansys Fluent 2025 R2",
+    "pid": 17176,
+    "host": "localhost",
+    "port": 59464
+  },
+  "model_id": 1,
+  "model_open": {
+    "status": "success",
+    "model_id": 1,
+    "message": "Model loaded into Fluent.",
+    "connection": {
+      "connected": true,
+      "mode": "launch",
+      "version": "Ansys Fluent 2025 R2",
+      "pid": 17176,
+      "host": "localhost",
+      "port": 59464
+    }
+  },
+  "original_area": 1.0,
+  "automation_id": 1,
+  "workflow": {
+    "status": "success",
+    "automation_id": 1,
+    "model_id": 1,
+    "job_id": "f98de486-3184-4360-b102-e061d2062167",
+    "message": "Automation applied and verified.",
+    "connection": {
+      "connected": true,
+      "mode": "launch",
+      "version": "Ansys Fluent 2025 R2",
+      "pid": 17176,
+      "host": "localhost",
+      "port": 59464
+    },
+    "apply_report": {
+      "operation": "apply",
+      "status": "success",
+      "results": [
+        {
+          "setting_id": "reference.area",
+          "expected": 1.05,
+          "actual": 1.05,
+          "success": true,
+          "message": ""
+        }
+      ],
+      "rollback_attempted": false,
+      "rollback_succeeded": null,
+      "rollback_results": []
+    },
+    "sync_log_id": 1
+  },
+  "applied_area": 1.05,
+  "restore_report": {
+    "operation": "write",
+    "status": "success",
+    "results": [
+      {
+        "setting_id": "reference.area",
+        "expected": 1.0,
+        "actual": 1.0,
+        "success": true,
+        "message": ""
+      }
+    ],
+    "rollback_attempted": false,
+    "rollback_succeeded": null,
+    "rollback_results": []
+  },
+  "final_area": 1.0,
+  "jobs": [
+    {
+      "id": "f98de486-3184-4360-b102-e061d2062167",
+      "job_type": "apply-automation",
+      "status": "succeeded",
+      "progress": 100,
+      "message": "Automation applied successfully.",
+      "payload": {
+        "automation_id": 1,
+        "model_id": 1
+      },
+      "result": {
+        "sync_log_id": 1,
+        "applied_settings": 1
+      },
+      "error": null,
+      "created_at": "2026-10-22T09:18:40.741649+00:00",
+      "updated_at": "2026-10-22T09:18:46.393534+00:00",
+      "started_at": "2026-10-22T09:18:40.768727+00:00",
+      "finished_at": "2026-10-22T09:18:46.393534+00:00"
+    }
+  ],
+  "sync_logs": [
+    {
+      "direction": "write",
+      "target": "Fluent",
+      "automation_id": null,
+      "model_id": null,
+      "payload": {
+        "operation": "write",
+        "status": "success",
+        "results": [
+          {
+            "setting_id": "reference.area",
+            "expected": 1.0,
+            "actual": 1.0,
+            "success": true,
+            "message": ""
+          }
+        ],
+        "rollback_attempted": false,
+        "rollback_succeeded": null,
+        "rollback_results": []
+      },
+      "status": "success",
+      "message": "1 setting write(s).",
+      "id": 2,
+      "created_at": "2026-10-22T09:18:46.425526+00:00"
+    },
+    {
+      "direction": "apply",
+      "target": "Fluent",
+      "automation_id": 1,
+      "model_id": 1,
+      "payload": {
+        "automation_name": "M7 reference area update",
+        "model_name": "M7 validation case",
+        "file_path": "D:\\Fluent AI\\ansys-runs\\compat-smoke-20261021-170520\\01_mesh.cas.h5",
+        "report": {
+          "operation": "apply",
+          "status": "success",
+          "results": [
+            {
+              "setting_id": "reference.area",
+              "expected": 1.05,
+              "actual": 1.05,
+              "success": true,
+              "message": ""
+            }
+          ],
+          "rollback_attempted": false,
+          "rollback_succeeded": null,
+          "rollback_results": []
+        }
+      },
+      "status": "success",
+      "message": "Automation applied and verified.",
+      "id": 1,
+      "created_at": "2026-10-22T09:18:46.366521+00:00"
+    }
+  ],
+  "disconnect": {
+    "connected": false,
+    "mode": null,
+    "version": null,
+    "pid": null,
+    "host": null,
+    "port": null
+  },
+  "sidecar_exit_code": 0
+}

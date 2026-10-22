@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import sys
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -16,6 +18,11 @@ from app.domain import (
 )
 from app.fluent.catalog import FLUENT_252_CATALOG, FluentSettingCatalog
 from app.fluent.comparison import preset_values_equal
+
+
+def _debug(message: str) -> None:
+    if os.environ.get("FLUENT_AI_DEBUG") == "1":
+        print(f"[fluent-debug] {message}", file=sys.stderr, flush=True)
 
 
 class PyFluentAdapter:
@@ -35,10 +42,12 @@ class PyFluentAdapter:
         self._connection_mode = connection_mode
 
     def connect(self, config: FluentConnectionConfig) -> FluentStatus:
+        _debug(f"connect start mode={config.mode}")
         if self._session is not None and self._is_active():
             self.disconnect()
 
         pyfluent = self._pyfluent_module or self._load_pyfluent()
+        _debug("pyfluent module ready")
         if config.mode == "launch":
             launch_kwargs: dict[str, Any] = {
                 "product_version": config.product_version,
@@ -55,7 +64,9 @@ class PyFluentAdapter:
             }
             if config.fluent_path:
                 launch_kwargs["fluent_path"] = config.fluent_path
+            _debug("launch_fluent start")
             self._session = pyfluent.launch_fluent(**launch_kwargs)
+            _debug("launch_fluent returned")
         else:
             if config.server_info_file:
                 self._session = pyfluent.connect_to_fluent(
@@ -76,7 +87,9 @@ class PyFluentAdapter:
                 )
 
         self._connection_mode = config.mode
-        return self.status()
+        status = self.status()
+        _debug(f"connect complete connected={status.connected}")
+        return status
 
     def disconnect(self) -> None:
         session = self._session

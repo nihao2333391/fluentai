@@ -11,17 +11,54 @@ Fluent AI is a Windows desktop application for managing reusable ANSYS Fluent au
 - **M4 - Electron security and file capabilities: PASSED**
 - **M5 - UI framework and design system: PASSED**
 - **M6 - FluentAdapter and SettingCatalog: PASSED**
-- **M7 - First end-to-end vertical slice: NOT STARTED**
+- **M7 - First end-to-end vertical slice: PASSED**
+- **M8 - Complete automation and model workflows: NOT STARTED**
 
-M6 adds a real Fluent 2025 R2 PyFluent adapter, a curated catalog of 20 validated settings, typed read/write/apply operations, readback verification, and rollback reporting.
+The application now supports a real, persisted vertical workflow:
+
+```text
+launch or attach Fluent
+→ connect and show status
+→ import a model through the native picker
+→ load the model into Fluent
+→ create a validated automation preset
+→ select the model
+→ apply the preset
+→ verify each setting by readback
+→ persist a job and sync log
+→ restore the previous value
+```
+
+## Real Fluent Evidence
+
+The M7 validation ran through the real sidecar HTTP API and Fluent 2025 R2:
+
+- Catalog exposed 20 settings;
+- Fluent launched and reported a real PID and port;
+- model file imported into SQLite;
+- model loaded into Fluent;
+- automation created with `reference.area = 1.05`;
+- workflow applied the automation;
+- readback returned `1.05`;
+- previous value `1.0` restored;
+- job status reached `succeeded` with 100% progress;
+- apply and write sync logs were persisted;
+- Fluent disconnected cleanly;
+- sidecar exited with code 0.
+
+Evidence:
+
+- `docs/poc/reports/m7_workflow.json`
+- `docs/m7-verification.md`
 
 ## Architecture
 
 ```text
 React renderer
     ├─ four-module Ant Design shell
-    ├─ typed Renderer service layer
-    └─ persisted theme and language
+    ├─ real model import and automation forms
+    ├─ workflow apply controls
+    └─ typed Renderer service layer
           ↓ narrow preload API
 Electron main process
     ├─ sidecar supervisor
@@ -33,111 +70,66 @@ Electron main process
 FastAPI sidecar
     ├─ authentication
     ├─ business API
-    ├─ SQLite migrations and repositories
-    └─ Fluent service layer
-          ├─ FluentSettingCatalog 25.2
-          ├─ PyFluentAdapter
-          └─ FakeFluentAdapter
-               ↓
+    ├─ FluentService dedicated execution thread
+    ├─ SQLite repositories
+    ├─ jobs and sync logs
+    └─ PyFluentAdapter
+          ↓
 ANSYS Fluent 2025 R2
 ```
 
-## M6 FluentAdapter
+## Vertical-Slice Capabilities
 
-`PyFluentAdapter` supports:
+### Fluent connection
 
-- launch mode;
-- attach mode by host/port or server-info file;
-- session status and version information;
-- case loading;
-- case saving;
-- reading catalog settings;
-- writing settings with immediate readback verification;
-- applying a versioned preset document;
-- rollback after partial write failure;
-- per-setting success and diagnostic results.
+- launch and attach configuration;
+- dedicated single-thread executor for PyFluent;
+- main-thread PyFluent preload in the sidecar to avoid worker-thread import deadlocks;
+- connection status with version, PID, host, and port;
+- explicit disconnect.
 
-The sidecar API and UI do not yet expose Fluent operations. M7 will connect the adapter through authenticated routes and the first end-to-end workflow.
+### Model library
 
-## Validated SettingCatalog 25.2
+- native Electron file picker;
+- secure selection token;
+- model persistence with size and timestamp;
+- model load into Fluent;
+- metadata refresh API.
 
-The catalog contains 20 settings verified against Fluent 2025 R2:
+### Automation creation
 
-- solver time;
-- solver type;
-- velocity formulation;
-- energy equation;
-- viscous model;
-- k-omega model;
-- low-Re correction;
-- curvature correction;
-- corner-flow correction;
-- six residual criteria;
-- reference area;
-- reference density;
-- reference length;
-- reference velocity;
-- reference viscosity.
+- real SettingCatalog selector;
+- typed preset rows;
+- backend validation before persistence;
+- duplicate-name protection;
+- preset stored as versioned JSON.
 
-Each setting has:
+### Apply workflow
 
-- stable setting ID;
-- display name;
-- value type;
-- getter and setter;
-- allowed values or numeric range;
-- description.
+- choose a persisted model;
+- connect automatically when needed;
+- load the model;
+- apply the preset;
+- per-setting readback verification;
+- best-effort rollback on partial failure;
+- task lifecycle persisted in `jobs`;
+- apply/write results persisted in `sync_logs`;
+- recent sync logs shown in the automation page.
 
-## Readback and rollback
+## Fluent API
 
-Writes are evaluated as follows:
+- `GET /api/fluent/status`
+- `POST /api/fluent/connect`
+- `POST /api/fluent/disconnect`
+- `GET /api/fluent/catalog`
+- `POST /api/fluent/settings/read`
+- `POST /api/fluent/settings/write`
+- `POST /api/fluent/presets/validate`
+- `POST /api/fluent/presets/apply`
+- `POST /api/models/{id}/open`
+- `POST /api/automations/{id}/apply`
 
-```text
-validate all requested values
-→ capture original values
-→ apply each setting
-→ read every value back
-→ compare with numeric tolerance
-→ stop and rollback on failure
-→ verify rollback values
-→ return a structured report
-```
-
-No arbitrary Python/TUI execution is exposed through this adapter.
-
-## Real Fluent Evidence
-
-Validated against Ansys Fluent 2025 R2:
-
-- all 20 catalog settings read successfully;
-- three settings applied through `apply_preset`;
-- all three readback values matched;
-- original values restored through `write_settings`;
-- all 20 values matched the original state;
-- adapter disconnected cleanly;
-- no Fluent process remained.
-
-Evidence:
-
-- `docs/poc/reports/m6_fluent_adapter.json`
-- `docs/m6-verification.md`
-
-## Technology Baseline
-
-| Layer        | Version                  |
-| ------------ | ------------------------ |
-| Node.js      | 24.21.0                  |
-| pnpm         | 12.5.1                   |
-| Electron     | 45.0.0                   |
-| React        | 19.3.1                   |
-| React Router | 7.18.4                   |
-| Ant Design   | 5.29.3                   |
-| Zustand      | 5.0.16                   |
-| i18next      | 26.5.4                   |
-| TypeScript   | 5.9.3                    |
-| Python       | 3.12.14                  |
-| FastAPI      | 0.159.1                  |
-| PyFluent     | ansys-fluent-core 0.42.1 |
+All endpoints require the per-launch bearer token.
 
 ## Development and Verification
 
@@ -149,22 +141,21 @@ pnpm check
 Expected final marker:
 
 ```text
-M6_CHECK_PASSED
+M7_CHECK_PASSED
 ```
 
-Run the real Fluent adapter validation:
+Run the real end-to-end workflow:
 
 ```powershell
 & 'D:\Fluent AI\fluent-ai-app\.venv\Scripts\python.exe' `
-  'D:\Fluent AI\fluent-ai-app\scripts\validate_m6_fluent.py'
+  'D:\Fluent AI\fluent-ai-app\scripts\validate_m7_workflow.py'
 ```
-
-The validation launches Fluent, reads all catalog settings, applies three safe changes, verifies readback, restores the original state, writes the report, and closes the session.
 
 ## Evidence
 
+- M7 verification: `docs/m7-verification.md`
+- M7 architecture decision: `docs/adr/0008-m7-vertical-slice.md`
 - M6 verification: `docs/m6-verification.md`
-- M6 architecture decision: `docs/adr/0007-m6-fluent-adapter.md`
 - M5 verification: `docs/m5-verification.md`
 - M4 verification: `docs/m4-verification.md`
 - M3 verification: `docs/m3-verification.md`
@@ -175,11 +166,12 @@ The validation launches Fluent, reads all catalog settings, applies three safe c
 
 ## Next Milestone
 
-M7 will add:
+M8 will add:
 
-- FastAPI Fluent connection/status/read/write/apply endpoints;
-- adapter lifecycle owned by the sidecar;
-- preview and validation APIs;
-- renderer workflows for applying a preset;
-- first persisted model+automation end-to-end path;
-- structured sync logs and job progress.
+- full automation edit and duplicate workflows;
+- richer model-to-automation associations;
+- recent-session restore;
+- detailed job progress and cancellation;
+- sync-log details and filtering;
+- connection settings hardening;
+- broader error recovery and UI regression coverage.

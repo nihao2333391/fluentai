@@ -12,8 +12,11 @@ from app import __version__
 from app.api.router import api_router
 from app.auth import require_bearer_token
 from app.database import Database
+from app.fluent.base import FluentAdapter
+from app.fluent.pyfluent_adapter import PyFluentAdapter
 from app.repositories.errors import RepositoryConflictError, RepositoryNotFoundError
 from app.schemas import HealthResponse, ReadyResponse, ShutdownResponse
+from app.services.fluent_service import FluentService
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -28,7 +31,11 @@ def resolve_database_path(database_path: Path | str | None = None) -> Path:
     return PROJECT_ROOT / ".runtime" / "data" / "fluent-ai.db"
 
 
-def create_app(auth_token: str | None = None, database_path: Path | str | None = None) -> FastAPI:
+def create_app(
+    auth_token: str | None = None,
+    database_path: Path | str | None = None,
+    fluent_adapter: FluentAdapter | None = None,
+) -> FastAPI:
     """Create a sidecar application with authentication and persistence."""
     app = FastAPI(
         title="Fluent AI Sidecar",
@@ -40,6 +47,7 @@ def create_app(auth_token: str | None = None, database_path: Path | str | None =
     app.state.auth_token = auth_token
     app.state.request_shutdown = None
     app.state.database = database
+    app.state.fluent_service = FluentService(database, fluent_adapter or PyFluentAdapter())
 
     @app.exception_handler(RepositoryNotFoundError)
     def handle_not_found(_request: Request, exc: RepositoryNotFoundError) -> JSONResponse:

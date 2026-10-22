@@ -2,8 +2,14 @@
 
 from fastapi import APIRouter, Response, status
 
-from app.api.deps import DatabaseDependency
-from app.domain import AutomationCreate, AutomationRead, AutomationUpdate
+from app.api.deps import DatabaseDependency, FluentServiceDependency
+from app.domain import (
+    ApplyAutomationRequest,
+    AutomationCreate,
+    AutomationRead,
+    AutomationUpdate,
+    WorkflowReport,
+)
 from app.repositories.automations import AutomationRepository
 
 router = APIRouter(tags=["automations"])
@@ -34,6 +40,15 @@ def update_automation(
     database: DatabaseDependency,
 ) -> AutomationRead:
     return AutomationRepository(database).update(automation_id, payload)
+
+
+@router.post("/{automation_id}/apply", response_model=WorkflowReport)
+def apply_automation(
+    automation_id: int,
+    payload: ApplyAutomationRequest,
+    fluent: FluentServiceDependency,
+) -> WorkflowReport:
+    return fluent.apply_automation(automation_id, payload)
 
 
 @router.delete("/{automation_id}", status_code=status.HTTP_204_NO_CONTENT)

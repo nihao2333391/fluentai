@@ -190,6 +190,100 @@ export interface CredentialsApi {
   clearFluentPassword: () => Promise<CredentialStatus>
 }
 
+export type FluentLaunchMode = 'launch' | 'attach'
+export type FluentUiMode = 'no_gui' | 'no_graphics' | 'hidden_gui' | 'gui'
+
+export interface FluentConnectionConfig {
+  mode: FluentLaunchMode
+  fluent_path?: string | null
+  product_version: string
+  processor_count: number
+  ui_mode: FluentUiMode
+  start_timeout: number
+  cleanup_on_exit: boolean
+  host: string
+  port?: number | null
+  password?: string | null
+  server_info_file?: string | null
+}
+
+export interface FluentStatus {
+  connected: boolean
+  mode: FluentLaunchMode | null
+  version: string | null
+  pid: number | null
+  host: string | null
+  port: number | null
+}
+
+export interface SettingCatalogEntry {
+  setting_id: string
+  display_name: string
+  value_type: PresetType
+  allowed_values: PresetValue[] | null
+  minimum: number | null
+  maximum: number | null
+  description: string
+}
+
+export interface SettingWriteResult {
+  setting_id: string
+  expected: PresetValue
+  actual: PresetValue
+  success: boolean
+  message: string
+}
+
+export interface FluentOperationReport {
+  operation: 'write' | 'apply'
+  status: 'success' | 'failed'
+  results: SettingWriteResult[]
+  rollback_attempted: boolean
+  rollback_succeeded: boolean | null
+  rollback_results: SettingWriteResult[]
+}
+
+export interface PresetValidationReport {
+  valid: boolean
+  errors: string[]
+  normalized_items: PresetItem[]
+}
+
+export interface ApplyAutomationRequest {
+  model_id: number
+  connection?: FluentConnectionConfig | null
+  load_case: boolean
+}
+
+export interface WorkflowReport {
+  status: 'success' | 'failed'
+  automation_id: number
+  model_id: number
+  job_id: string
+  message: string
+  connection: FluentStatus | null
+  apply_report: FluentOperationReport | null
+  sync_log_id: number | null
+}
+
+export interface FluentApi {
+  status: () => Promise<FluentStatus>
+  connect: (config: FluentConnectionConfig) => Promise<FluentStatus>
+  disconnect: () => Promise<FluentStatus>
+  catalog: () => Promise<SettingCatalogEntry[]>
+  readSettings: (settingIds: string[]) => Promise<Record<string, PresetValue>>
+  writeSettings: (items: PresetItem[]) => Promise<FluentOperationReport>
+  validatePreset: (preset: PresetDocument) => Promise<PresetValidationReport>
+  applyPreset: (preset: PresetDocument) => Promise<FluentOperationReport>
+}
+
+export interface WorkflowsApi {
+  applyAutomation: (
+    automationId: number,
+    payload: ApplyAutomationRequest,
+  ) => Promise<WorkflowReport>
+}
+
 export interface FluentAIApi {
   readonly platform: string
   readonly sidecar: SidecarApi
@@ -199,4 +293,6 @@ export interface FluentAIApi {
   readonly jobs: JobsApi
   readonly syncLogs: SyncLogsApi
   readonly credentials: CredentialsApi
+  readonly fluent: FluentApi
+  readonly workflows: WorkflowsApi
 }

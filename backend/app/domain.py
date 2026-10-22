@@ -190,3 +190,58 @@ class FluentOperationReport(BaseModel):
     rollback_attempted: bool = False
     rollback_succeeded: bool | None = None
     rollback_results: list[SettingWriteResult] = Field(default_factory=list)
+
+
+class SettingCatalogEntry(BaseModel):
+    """Renderer-safe description of one supported Fluent setting."""
+
+    setting_id: str
+    display_name: str
+    value_type: Literal["int", "float", "bool", "string", "enum"]
+    allowed_values: list[PresetValue] | None = None
+    minimum: float | None = None
+    maximum: float | None = None
+    description: str = ""
+
+
+class SettingReadRequest(BaseModel):
+    setting_ids: list[str] = Field(min_length=1, max_length=100)
+
+
+class SettingWriteRequest(BaseModel):
+    items: list[PresetItem] = Field(min_length=1, max_length=100)
+
+
+class PresetValidationReport(BaseModel):
+    valid: bool
+    errors: list[str] = Field(default_factory=list)
+    normalized_items: list[PresetItem] = Field(default_factory=list)
+
+
+class ApplyAutomationRequest(BaseModel):
+    model_id: int = Field(gt=0)
+    connection: FluentConnectionConfig | None = None
+    load_case: bool = True
+
+
+class WorkflowReport(BaseModel):
+    status: Literal["success", "failed"]
+    automation_id: int
+    model_id: int
+    job_id: str
+    message: str
+    connection: FluentStatus | None = None
+    apply_report: FluentOperationReport | None = None
+    sync_log_id: int | None = None
+
+
+class OpenModelRequest(BaseModel):
+    connection: FluentConnectionConfig | None = None
+    load_case: bool = True
+
+
+class ModelOpenReport(BaseModel):
+    status: Literal["success", "failed"]
+    model_id: int
+    message: str
+    connection: FluentStatus | None = None

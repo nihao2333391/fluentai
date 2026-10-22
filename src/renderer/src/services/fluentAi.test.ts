@@ -46,6 +46,19 @@ describe('fluentAiService', () => {
         setFluentPassword: vi.fn(),
         clearFluentPassword: vi.fn(),
       },
+      fluent: {
+        status: vi.fn(),
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        catalog: vi.fn(),
+        readSettings: vi.fn(),
+        writeSettings: vi.fn(),
+        validatePreset: vi.fn(),
+        applyPreset: vi.fn(),
+      },
+      workflows: {
+        applyAutomation: vi.fn(),
+      },
     } satisfies FluentAIApi
 
     Object.defineProperty(window, 'fluentAI', { configurable: true, value: api })

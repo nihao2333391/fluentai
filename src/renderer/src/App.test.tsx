@@ -57,6 +57,36 @@ const createMockApi = (): FluentAIApi => ({
     setFluentPassword: vi.fn(),
     clearFluentPassword: vi.fn(),
   },
+  fluent: {
+    status: vi.fn().mockResolvedValue({
+      connected: false,
+      mode: null,
+      version: null,
+      pid: null,
+      host: null,
+      port: null,
+    }),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    catalog: vi.fn().mockResolvedValue([
+      {
+        setting_id: 'residual.continuity',
+        display_name: 'Residual criterion: continuity',
+        value_type: 'float',
+        allowed_values: null,
+        minimum: 1e-12,
+        maximum: 1,
+        description: 'Continuity residual',
+      },
+    ]),
+    readSettings: vi.fn(),
+    writeSettings: vi.fn(),
+    validatePreset: vi.fn().mockResolvedValue({ valid: true, errors: [], normalized_items: [] }),
+    applyPreset: vi.fn(),
+  },
+  workflows: {
+    applyAutomation: vi.fn(),
+  },
 })
 
 describe('App', () => {

@@ -6,6 +6,7 @@ stdout, and then calls the authenticated readiness endpoint.
 
 import asyncio
 import contextlib
+import faulthandler
 import json
 import os
 import socket
@@ -16,9 +17,13 @@ from typing import cast
 import uvicorn
 
 from app import __version__
+from app.fluent.pyfluent_adapter import PyFluentAdapter
 from app.main import app
 
 STARTUP_TIMEOUT_SECONDS = 20.0
+
+if os.environ.get("FLUENT_AI_DEBUG") == "1":
+    faulthandler.dump_traceback_later(25, repeat=False)
 
 
 def _emit(event: str, **payload: object) -> None:
@@ -58,6 +63,15 @@ async def serve() -> int:
         return 2
 
     app.state.auth_token = token
+    if os.environ.get("FLUENT_AI_DEBUG") == "1":
+        print(
+            "[fluent-debug] preloading PyFluent in sidecar main thread", file=sys.stderr, flush=True
+        )
+    import ansys.fluent.core as pyfluent  # type: ignore[import-untyped]
+
+    app.state.fluent_service.adapter = PyFluentAdapter(pyfluent_module=pyfluent)
+    if os.environ.get("FLUENT_AI_DEBUG") == "1":
+        print("[fluent-debug] PyFluent preload complete", file=sys.stderr, flush=True)
     config = uvicorn.Config(
         app,
         host="127.0.0.1",
@@ -99,6 +113,7 @@ async def serve() -> int:
     )
 
     await server_task
+    app.state.fluent_service.disconnect()
     return 0
 
 

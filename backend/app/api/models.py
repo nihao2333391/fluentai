@@ -4,12 +4,14 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Response, status
 
-from app.api.deps import DatabaseDependency
+from app.api.deps import DatabaseDependency, FluentServiceDependency
 from app.domain import (
     ModelAutomationAssociate,
     ModelCreate,
+    ModelOpenReport,
     ModelRead,
     ModelUpdate,
+    OpenModelRequest,
 )
 from app.repositories.models import ModelRepository
 
@@ -49,6 +51,15 @@ def update_model(
 ) -> ModelRead:
     _validate_model_suffix(payload.file_path)
     return ModelRepository(database).update(model_id, payload)
+
+
+@router.post("/{model_id}/open", response_model=ModelOpenReport)
+def open_model(
+    model_id: int,
+    payload: OpenModelRequest,
+    fluent: FluentServiceDependency,
+) -> ModelOpenReport:
+    return fluent.open_model(model_id, payload)
 
 
 @router.post("/{model_id}/refresh", response_model=ModelRead)

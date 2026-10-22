@@ -16,23 +16,26 @@ export function TaskStatusSurface() {
     }
 
     let active = true
-    void window.fluentAI.jobs
-      .list(20)
-      .then((jobs) => {
+    const refresh = async (): Promise<void> => {
+      try {
+        const jobs = await window.fluentAI!.jobs.list(20)
         if (active) {
           setActiveCount(
             jobs.filter((job) => job.status === 'queued' || job.status === 'running').length,
           )
         }
-      })
-      .catch(() => {
+      } catch {
         if (active) {
           setActiveCount(0)
         }
-      })
+      }
+    }
+    void refresh()
+    const timer = window.setInterval(() => void refresh(), 2_000)
 
     return () => {
       active = false
+      window.clearInterval(timer)
     }
   }, [status.state])
 

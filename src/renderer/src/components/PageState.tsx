@@ -4,15 +4,19 @@ import type { ReactNode } from 'react'
 interface PageHeaderProps {
   title: string
   description: string
+  actions?: ReactNode
   children?: ReactNode
 }
 
-export function PageContent({ title, description, children }: PageHeaderProps) {
+export function PageContent({ title, description, actions, children }: PageHeaderProps) {
   return (
     <section className="module-page">
       <div className="module-page-heading">
-        <Typography.Title level={2}>{title}</Typography.Title>
-        <Typography.Paragraph type="secondary">{description}</Typography.Paragraph>
+        <div>
+          <Typography.Title level={2}>{title}</Typography.Title>
+          <Typography.Paragraph type="secondary">{description}</Typography.Paragraph>
+        </div>
+        {actions ? <div className="module-page-actions">{actions}</div> : null}
       </div>
       {children}
     </section>

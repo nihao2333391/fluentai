@@ -252,3 +252,88 @@ select {
     width: 100%;
   }
 }
+
+.module-page-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.module-page-actions {
+  flex: none;
+  padding-top: 4px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.preset-row {
+  width: 100%;
+}
+
+.preset-setting {
+  flex: 1 1 360px;
+  min-width: 260px;
+  margin-bottom: 0 !important;
+}
+
+.preset-value {
+  flex: 0 1 240px;
+  min-width: 180px;
+  margin-bottom: 0 !important;
+}
+
+.form-actions {
+  margin-top: 24px;
+  margin-bottom: 0 !important;
+}
+
+.data-table-card {
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: var(--app-panel);
+}
+
+.model-select {
+  margin-top: 8px;
+}
+
+.connection-host-input {
+  width: 190px;
+}
+
+.connection-port-input {
+  width: 130px;
+}
+
+@media (max-width: 760px) {
+  .module-page-heading {
+    flex-direction: column;
+  }
+
+  .module-page-actions {
+    width: 100%;
+  }
+
+  .module-page-actions .ant-space {
+    width: 100%;
+  }
+
+  .module-page-actions .ant-btn {
+    flex: 1;
+  }
+
+  .preset-row {
+    align-items: stretch !important;
+    flex-direction: column;
+  }
+
+  .preset-setting,
+  .preset-value {
+    width: 100%;
+    min-width: 0;
+  }
+}

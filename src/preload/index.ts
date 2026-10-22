@@ -1,9 +1,13 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 import type {
+  ApplyAutomationRequest,
   Automation,
   AutomationInput,
   CredentialStatus,
+  FluentConnectionConfig,
+  FluentOperationReport,
+  FluentStatus,
   FluentAIApi,
   Job,
   Model,
@@ -11,9 +15,15 @@ import type {
   ModelCreateRequest,
   ModelUpdateRequest,
   PickedModelFile,
+  PresetDocument,
+  PresetItem,
+  PresetValidationReport,
+  PresetValue,
+  SettingCatalogEntry,
   SettingsPayload,
   SidecarStatus,
   SyncLog,
+  WorkflowReport,
 } from '../shared/contracts'
 
 const invoke = <T>(channel: string, ...args: unknown[]): Promise<T> =>
@@ -70,6 +80,24 @@ const api: FluentAIApi = Object.freeze({
     setFluentPassword: (password: string) =>
       invoke<CredentialStatus>('credentials:set-fluent-password', password),
     clearFluentPassword: () => invoke<CredentialStatus>('credentials:clear-fluent-password'),
+  }),
+  fluent: Object.freeze({
+    status: () => invoke<FluentStatus>('fluent:status'),
+    connect: (config: FluentConnectionConfig) => invoke<FluentStatus>('fluent:connect', config),
+    disconnect: () => invoke<FluentStatus>('fluent:disconnect'),
+    catalog: () => invoke<SettingCatalogEntry[]>('fluent:catalog'),
+    readSettings: (settingIds: string[]) =>
+      invoke<Record<string, PresetValue>>('fluent:read-settings', settingIds),
+    writeSettings: (items: PresetItem[]) =>
+      invoke<FluentOperationReport>('fluent:write-settings', items),
+    validatePreset: (preset: PresetDocument) =>
+      invoke<PresetValidationReport>('fluent:validate-preset', preset),
+    applyPreset: (preset: PresetDocument) =>
+      invoke<FluentOperationReport>('fluent:apply-preset', preset),
+  }),
+  workflows: Object.freeze({
+    applyAutomation: (automationId: number, payload: ApplyAutomationRequest) =>
+      invoke<WorkflowReport>('workflows:apply-automation', automationId, payload),
   }),
 })
 
