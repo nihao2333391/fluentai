@@ -154,3 +154,98 @@ footer {
     flex-direction: column;
   }
 }
+
+.sidecar-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 20px;
+  padding: 24px 28px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  background: rgba(10, 23, 42, 0.78);
+}
+
+.panel-label {
+  margin: 0 0 10px;
+  color: #67b7ff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.sidecar-panel h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.panel-message {
+  max-width: 720px;
+  margin: 10px 0 0;
+  color: #91a3bc;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.sidecar-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 14px;
+  color: #647895;
+  font-size: 12px;
+}
+
+.restart-button {
+  flex: none;
+  min-width: 112px;
+  padding: 11px 18px;
+  border: 1px solid rgba(103, 183, 255, 0.4);
+  border-radius: 12px;
+  color: #d8efff;
+  background: rgba(20, 92, 160, 0.24);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    opacity 160ms ease;
+}
+
+.restart-button:hover:not(:disabled) {
+  border-color: rgba(103, 183, 255, 0.75);
+  background: rgba(20, 92, 160, 0.4);
+}
+
+.restart-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.status--stopped,
+.status--error {
+  border-color: rgba(248, 113, 113, 0.38);
+  color: #fca5a5;
+  background: rgba(127, 29, 29, 0.2);
+}
+
+.status--starting,
+.status--restarting {
+  border-color: rgba(251, 191, 36, 0.38);
+  color: #fcd34d;
+  background: rgba(120, 53, 15, 0.2);
+}
+
+.status--ready {
+  border-color: rgba(52, 211, 153, 0.38);
+  color: #6ee7b7;
+  background: rgba(6, 78, 59, 0.22);
+}
+
+@media (max-width: 760px) {
+  .sidecar-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

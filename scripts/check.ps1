@@ -23,6 +23,10 @@ try {
   & pnpm build
   if ($LASTEXITCODE -ne 0) { throw 'Electron build failed.' }
 
+  $rendererLeak = Get-ChildItem -LiteralPath (Join-Path $root 'out\renderer') -Recurse -File |
+    Select-String -Pattern 'FLUENT_AI_SIDECAR_TOKEN|Authorization: Bearer'
+  if ($rendererLeak) { throw 'Sidecar authentication material leaked into the renderer bundle.' }
+
   & $python -m ruff check backend
   if ($LASTEXITCODE -ne 0) { throw 'Python lint failed.' }
 
@@ -39,7 +43,7 @@ try {
   & $python scripts\check_m0_reports.py
   if ($LASTEXITCODE -ne 0) { throw 'M0 regression check failed.' }
 
-  Write-Host 'M1_CHECK_PASSED'
+  Write-Host 'M2_CHECK_PASSED'
 }
 finally {
   Pop-Location

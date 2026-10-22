@@ -1,9 +1,9 @@
+import type { FluentAIApi } from '../../shared/contracts'
+
 export {}
 
 declare global {
   interface Window {
-    fluentAI?: {
-      readonly platform: string
-    }
+    fluentAI?: FluentAIApi
   }
 }

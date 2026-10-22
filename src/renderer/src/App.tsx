@@ -1,3 +1,7 @@
+import { useEffect, useState } from 'react'
+
+import type { SidecarStatus } from '../../shared/contracts'
+
 const modules = [
   {
     name: '自动化创建',
@@ -17,8 +21,74 @@ const modules = [
   },
 ]
 
+const statusLabels: Record<SidecarStatus['state'], string> = {
+  stopped: '未启动',
+  starting: '启动中',
+  ready: '已就绪',
+  restarting: '重启中',
+  error: '异常',
+}
+
+const initialStatus: SidecarStatus = {
+  state: 'starting',
+  message: '正在连接 Electron preload API...',
+}
+
 export default function App() {
+  const [sidecarStatus, setSidecarStatus] = useState<SidecarStatus>(() =>
+    window.fluentAI?.sidecar
+      ? initialStatus
+      : {
+          state: 'error',
+          message: 'Electron preload API is unavailable.',
+        },
+  )
+  const [restarting, setRestarting] = useState(false)
   const platform = window.fluentAI?.platform ?? 'browser'
+
+  useEffect(() => {
+    const sidecar = window.fluentAI?.sidecar
+    if (!sidecar) {
+      return
+    }
+
+    let active = true
+    void sidecar.getStatus().then((status) => {
+      if (active) {
+        setSidecarStatus(status)
+      }
+    })
+
+    const unsubscribe = sidecar.onStatusChanged((status) => {
+      if (active) {
+        setSidecarStatus(status)
+      }
+    })
+
+    return () => {
+      active = false
+      unsubscribe()
+    }
+  }, [])
+
+  const restartSidecar = async (): Promise<void> => {
+    const sidecar = window.fluentAI?.sidecar
+    if (!sidecar || restarting) {
+      return
+    }
+
+    setRestarting(true)
+    try {
+      setSidecarStatus(await sidecar.restart())
+    } catch (error) {
+      setSidecarStatus({
+        state: 'error',
+        message: error instanceof Error ? error.message : String(error),
+      })
+    } finally {
+      setRestarting(false)
+    }
+  }
 
   return (
     <main className="app-shell">
@@ -27,12 +97,35 @@ export default function App() {
           <p className="eyebrow">FLUENT AI</p>
           <h1>桌面应用基础框架已就绪</h1>
           <p className="summary">
-            Electron、React 与 FastAPI 侧车的基础工程已经建立。当前页面仅用于验证 M1
-            开发环境，不包含业务功能。
+            Electron、React 与 FastAPI 侧车已经联通。M2 聚焦本地进程监管、安全握手和状态恢复；
+            业务页面将在后续阶段实现。
           </p>
         </div>
-        <span className="status">M1 Foundation</span>
+        <span className={`status status--${sidecarStatus.state}`}>
+          Sidecar {statusLabels[sidecarStatus.state]}
+        </span>
       </header>
+
+      <section className="sidecar-panel" aria-label="FastAPI 侧车状态">
+        <div>
+          <p className="panel-label">LOCAL FASTAPI SIDECAR</p>
+          <h2>{statusLabels[sidecarStatus.state]}</h2>
+          <p className="panel-message">{sidecarStatus.message ?? '等待状态更新...'}</p>
+          <div className="sidecar-meta">
+            {sidecarStatus.version ? <span>版本 {sidecarStatus.version}</span> : null}
+            {sidecarStatus.pid ? <span>PID {sidecarStatus.pid}</span> : null}
+            {sidecarStatus.port ? <span>127.0.0.1:{sidecarStatus.port}</span> : null}
+          </div>
+        </div>
+        <button
+          type="button"
+          className="restart-button"
+          disabled={restarting || sidecarStatus.state === 'starting'}
+          onClick={() => void restartSidecar()}
+        >
+          {restarting ? '正在重启...' : '重启侧车'}
+        </button>
+      </section>
 
       <section className="module-grid" aria-label="计划中的一级模块">
         {modules.map((module) => (
@@ -46,7 +139,7 @@ export default function App() {
 
       <footer>
         <span>运行平台：{platform}</span>
-        <span>下一阶段：接口契约与侧车通信</span>
+        <span>下一阶段：数据库与领域模型</span>
       </footer>
     </main>
   )

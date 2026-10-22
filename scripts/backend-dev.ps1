@@ -6,6 +6,11 @@ if (-not (Test-Path -LiteralPath $python)) {
   throw "Python environment not found: $python. Run the setup steps in README.md."
 }
 
+if (-not $env:FLUENT_AI_SIDECAR_TOKEN) {
+  $env:FLUENT_AI_SIDECAR_TOKEN = [guid]::NewGuid().ToString('N')
+  Write-Host "Development sidecar token: $env:FLUENT_AI_SIDECAR_TOKEN"
+}
+
 Push-Location $root
 try {
   & $python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8765 --reload
