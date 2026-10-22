@@ -1,5 +1,7 @@
 """Authenticated Fluent Meshing automation and schema endpoints."""
 
+from typing import Any, Literal
+
 from fastapi import APIRouter, HTTPException, Response, status
 
 from app.api.deps import DatabaseDependency
@@ -30,6 +32,19 @@ def _validate_preset(preset: MeshingPresetDocument) -> MeshingPresetValidationRe
 @router.get("/meshing/schemas", response_model=list[MeshingSchemaSummary])
 def list_meshing_schemas() -> list[MeshingSchemaSummary]:
     return MESHING_SCHEMA_INDEX.summaries()
+
+
+@router.get("/meshing/schemas/{workflow_type}")
+def get_meshing_schema(
+    workflow_type: Literal["watertight", "fault-tolerant"],
+) -> dict[str, Any]:
+    schema = MESHING_SCHEMA_INDEX.schemas.get(workflow_type)
+    if schema is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Unknown Meshing workflow type: {workflow_type}",
+        )
+    return schema
 
 
 @router.post("/meshing/presets/validate", response_model=MeshingPresetValidationReport)

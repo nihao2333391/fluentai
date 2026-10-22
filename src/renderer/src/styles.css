@@ -396,3 +396,85 @@ select {
     min-width: 0;
   }
 }
+
+.meshing-workflow-tabs {
+  margin-top: 10px;
+}
+
+.meshing-workflow-tabs .ant-tabs-nav {
+  min-width: 220px;
+}
+
+.task-type-label {
+  font-size: 10px;
+}
+
+.meshing-argument-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 12px 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--app-panel-strong) 76%, transparent);
+}
+
+.meshing-argument-row.is-included {
+  border-color: rgba(22, 119, 255, 0.45);
+  background: color-mix(in srgb, var(--app-panel-strong) 72%, rgba(22, 119, 255, 0.12));
+}
+
+.meshing-argument-control {
+  flex: 0 1 320px;
+  min-width: 190px;
+}
+
+.meshing-argument-path {
+  max-width: 640px;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.advanced-options-collapse {
+  border-radius: 10px;
+}
+
+.meshing-name-field {
+  min-width: 260px;
+}
+
+.meshing-family-field {
+  min-width: 230px;
+}
+
+.meshing-model-field {
+  min-width: 250px;
+}
+
+.meshing-child-name-field {
+  max-width: 420px;
+  margin-bottom: 0;
+}
+
+.reload-meshing {
+  margin-left: 10px;
+}
+
+@media (max-width: 900px) {
+  .meshing-workflow-tabs .ant-tabs-nav {
+    min-width: 150px;
+  }
+
+  .meshing-argument-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .meshing-argument-control {
+    width: 100%;
+    min-width: 0;
+  }
+}

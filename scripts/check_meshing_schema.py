@@ -23,10 +23,21 @@ def _walk(tasks: list[dict]):
         yield from _walk(task.get("children") or [])
 
 
+def _argument_tree(arguments: list[dict]):
+    for argument in arguments:
+        yield argument
+        yield from _argument_tree(argument.get("children") or [])
+
+
 def _counts(schema: dict) -> tuple[int, int, int, int]:
     tasks = list(_walk(schema.get("tasks") or []))
     arguments = [
-        argument for task in tasks for argument in (task.get("arguments") or [])
+        argument
+        for task in tasks
+        for argument in [
+            *_argument_tree(task.get("arguments") or []),
+            *_argument_tree((task.get("child_template") or {}).get("arguments") or []),
+        ]
     ]
     editable = [
         argument for argument in arguments if argument.get("editable") is not False
@@ -49,15 +60,20 @@ def main() -> int:
     expected = {
         "watertight": {
             "tasks": 11,
-            "min_arguments": 220,
-            "min_editable": 210,
+            "min_arguments": 500,
+            "min_editable": 450,
             "min_allowed": 40,
+            "unsupported_compound": set(),
         },
         "fault-tolerant": {
             "tasks": 25,
-            "min_arguments": 300,
-            "min_editable": 280,
+            "min_arguments": 550,
+            "min_editable": 500,
             "min_allowed": 60,
+            "unsupported_compound": {
+                "Identify Construction Surfaces",
+                "Create Local Refinement Regions",
+            },
         },
     }
     for workflow_type, requirement in expected.items():
@@ -78,6 +94,7 @@ def main() -> int:
                 failures.append(
                     f"{workflow_type}: only {allowed_count} arguments with allowed values"
                 )
+            unsupported_compound: set[str] = set()
             for task in _walk(schema.get("tasks") or []):
                 for argument in task.get("arguments") or []:
                     if argument.get("name") == "<arguments>" and argument.get("error"):
@@ -87,6 +104,28 @@ def main() -> int:
                             f"{workflow_type}: incomplete argument {task.get('display_name')} / {argument.get('name')}"
                         )
                         break
+                if task.get("task_type") != "Compound":
+                    continue
+                if task.get("supports_child_template") is True:
+                    template_arguments = (task.get("child_template") or {}).get(
+                        "arguments"
+                    ) or []
+                    if not template_arguments:
+                        failures.append(
+                            f"{workflow_type}: empty compound template for {task.get('display_name')}"
+                        )
+                else:
+                    unsupported_compound.add(str(task.get("display_name")))
+                    if not task.get("child_template_error"):
+                        failures.append(
+                            f"{workflow_type}: missing compound template reason for "
+                            f"{task.get('display_name')}"
+                        )
+            if unsupported_compound != requirement["unsupported_compound"]:
+                failures.append(
+                    f"{workflow_type}: unsupported compound tasks changed: "
+                    f"{sorted(unsupported_compound)}"
+                )
         except Exception as exc:  # noqa: BLE001
             failures.append(f"{workflow_type}: {type(exc).__name__}: {exc}")
 
@@ -118,10 +157,14 @@ def main() -> int:
         return 1
 
     print("M8_SCHEMA_CHECK_PASSED")
-    print(" - Watertight: 11 tasks, 221 arguments")
-    print(" - Fault-tolerant: 25 tasks, 307 arguments")
+    for workflow_type in ("watertight", "fault-tolerant"):
+        schema = _load(f"fluent-meshing-25.2-{workflow_type}.schema.json")
+        task_count, argument_count, _, _ = _counts(schema)
+        print(f" - {workflow_type}: {task_count} tasks, {argument_count} arguments")
     print(" - task and argument edit paths present")
     print(" - allowed-value metadata present")
+    print(" - consecutive compound child templates captured or explicitly blocked")
+    print(" - nested argument trees preserved")
     print(" - conditional and compound task tree preserved")
     return 0
 

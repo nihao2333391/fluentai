@@ -9,6 +9,13 @@ import type {
   FluentOperationReport,
   FluentStatus,
   Job,
+  MeshingAutomation,
+  MeshingAutomationInput,
+  MeshingPresetDocument,
+  MeshingPresetValidationReport,
+  MeshingSchemaSummary,
+  MeshingWorkflowSchema,
+  MeshingWorkflowType,
   Model,
   ModelAssociationRequest,
   ModelCreateRequest,
@@ -124,6 +131,47 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
 
   ipcMain.handle('sync-logs:list', (_event, limit = 100) =>
     sidecar.request<SyncLog[]>(`/api/sync-logs?limit=${Math.max(1, Math.min(limit, 500))}`),
+  )
+
+  ipcMain.handle('meshing:schemas', () =>
+    sidecar.request<MeshingSchemaSummary[]>('/api/meshing/schemas'),
+  )
+  ipcMain.handle('meshing:schema', (_event, workflowType: MeshingWorkflowType) =>
+    sidecar.request<MeshingWorkflowSchema>(`/api/meshing/schemas/${workflowType}`),
+  )
+  ipcMain.handle('meshing:validate-preset', (_event, preset: MeshingPresetDocument) =>
+    sidecar.request<MeshingPresetValidationReport>('/api/meshing/presets/validate', {
+      method: 'POST',
+      body: jsonBody(preset),
+    }),
+  )
+  ipcMain.handle('meshing-automations:list', () =>
+    sidecar.request<MeshingAutomation[]>('/api/meshing-automations'),
+  )
+  ipcMain.handle('meshing-automations:create', (_event, payload: MeshingAutomationInput) =>
+    sidecar.request<MeshingAutomation>('/api/meshing-automations', {
+      method: 'POST',
+      body: jsonBody(payload),
+    }),
+  )
+  ipcMain.handle('meshing-automations:get', (_event, id: number) =>
+    sidecar.request<MeshingAutomation>(`/api/meshing-automations/${id}`),
+  )
+  ipcMain.handle(
+    'meshing-automations:update',
+    (_event, id: number, payload: MeshingAutomationInput) =>
+      sidecar.request<MeshingAutomation>(`/api/meshing-automations/${id}`, {
+        method: 'PUT',
+        body: jsonBody(payload),
+      }),
+  )
+  ipcMain.handle('meshing-automations:delete', (_event, id: number) =>
+    sidecar.request<void>(`/api/meshing-automations/${id}`, { method: 'DELETE' }),
+  )
+  ipcMain.handle('meshing-automations:validate', (_event, id: number) =>
+    sidecar.request<MeshingPresetValidationReport>(`/api/meshing-automations/${id}/validate`, {
+      method: 'POST',
+    }),
   )
 
   ipcMain.handle('fluent:status', () => sidecar.request<FluentStatus>('/api/fluent/status'))

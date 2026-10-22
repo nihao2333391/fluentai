@@ -64,18 +64,40 @@ def _child_names(obj: Any) -> list[str]:
         return []
 
 
+def _resolve_child_object(obj: Any, source_name: str) -> Any | None:
+    for candidate in (source_name, camel_to_snake_case(source_name)):
+        try:
+            child = getattr(obj, candidate)
+        except Exception:
+            continue
+        if isinstance(child, dict) or callable(child) or hasattr(child, "get_state"):
+            return child
+    return None
+
+
 def _describe_argument(
     name: str,
-    obj: Any,
+    obj: Any | None,
     current: Any,
     edit_path: str,
     *,
     depth: int = 0,
+    source_name: str | None = None,
+    fallback_read_only: bool | None = None,
+    fallback_active: bool | None = None,
+    fallback_exposure_level: str | int | None = None,
 ) -> dict[str, Any]:
     allowed = _normalize_allowed_values(_safe_call(getattr(obj, "allowed_values", None)))
     default = _safe_call(getattr(obj, "default_value", None))
     read_only = _safe_call(getattr(obj, "is_read_only", None))
     active = _safe_call(getattr(obj, "is_active", None))
+    exposure_level = _safe_call(getattr(obj, "exposure_level", None))
+    if read_only is None:
+        read_only = fallback_read_only
+    if active is None:
+        active = fallback_active
+    if exposure_level is None:
+        exposure_level = fallback_exposure_level
     result: dict[str, Any] = {
         "name": name,
         "edit_path": edit_path,
@@ -86,22 +108,25 @@ def _describe_argument(
         "read_only": read_only,
         "editable": not bool(read_only),
         "active": active,
+        "exposure_level": exposure_level,
         "children": [],
     }
+    if source_name is not None and source_name != name:
+        result["source_name"] = source_name
     if isinstance(current, dict) and depth < 6:
         state_by_snake = {camel_to_snake_case(str(key)): value for key, value in current.items()}
-        for child_name in _child_names(obj):
-            try:
-                child = getattr(obj, child_name)
-            except Exception:
+        source_names = _child_names(obj) if obj is not None else []
+        for child_source_name in current:
+            if str(child_source_name) not in source_names:
+                source_names.append(str(child_source_name))
+        seen_children: set[str] = set()
+        for source_child_name in source_names:
+            child_name = camel_to_snake_case(source_child_name)
+            if child_name in seen_children or child_name not in state_by_snake:
                 continue
-            if callable(child) and child_name not in state_by_snake:
-                continue
-            if child_name not in state_by_snake and not hasattr(child, "get_state"):
-                continue
-            child_current = state_by_snake.get(
-                child_name, _safe_call(getattr(child, "get_state", None))
-            )
+            seen_children.add(child_name)
+            child = _resolve_child_object(obj, source_child_name) if obj is not None else None
+            child_current = state_by_snake[child_name]
             result["children"].append(
                 _describe_argument(
                     child_name,
@@ -109,6 +134,10 @@ def _describe_argument(
                     child_current,
                     f"{edit_path}.{child_name}",
                     depth=depth + 1,
+                    source_name=source_child_name,
+                    fallback_read_only=read_only,
+                    fallback_active=active,
+                    fallback_exposure_level=exposure_level,
                 )
             )
     return result

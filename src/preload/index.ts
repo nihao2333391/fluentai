@@ -10,6 +10,13 @@ import type {
   FluentStatus,
   FluentAIApi,
   Job,
+  MeshingAutomation,
+  MeshingAutomationInput,
+  MeshingPresetDocument,
+  MeshingPresetValidationReport,
+  MeshingSchemaSummary,
+  MeshingWorkflowSchema,
+  MeshingWorkflowType,
   Model,
   ModelAssociationRequest,
   ModelCreateRequest,
@@ -80,6 +87,24 @@ const api: FluentAIApi = Object.freeze({
     setFluentPassword: (password: string) =>
       invoke<CredentialStatus>('credentials:set-fluent-password', password),
     clearFluentPassword: () => invoke<CredentialStatus>('credentials:clear-fluent-password'),
+  }),
+  meshing: Object.freeze({
+    schemas: () => invoke<MeshingSchemaSummary[]>('meshing:schemas'),
+    schema: (workflowType: MeshingWorkflowType) =>
+      invoke<MeshingWorkflowSchema>('meshing:schema', workflowType),
+    validatePreset: (preset: MeshingPresetDocument) =>
+      invoke<MeshingPresetValidationReport>('meshing:validate-preset', preset),
+  }),
+  meshingAutomations: Object.freeze({
+    list: () => invoke<MeshingAutomation[]>('meshing-automations:list'),
+    create: (payload: MeshingAutomationInput) =>
+      invoke<MeshingAutomation>('meshing-automations:create', payload),
+    get: (id: number) => invoke<MeshingAutomation>('meshing-automations:get', id),
+    update: (id: number, payload: MeshingAutomationInput) =>
+      invoke<MeshingAutomation>('meshing-automations:update', id, payload),
+    delete: (id: number) => invoke<void>('meshing-automations:delete', id),
+    validate: (id: number) =>
+      invoke<MeshingPresetValidationReport>('meshing-automations:validate', id),
   }),
   fluent: Object.freeze({
     status: () => invoke<FluentStatus>('fluent:status'),

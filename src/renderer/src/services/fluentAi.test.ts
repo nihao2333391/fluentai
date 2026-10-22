@@ -59,6 +59,24 @@ describe('fluentAiService', () => {
       workflows: {
         applyAutomation: vi.fn(),
       },
+      meshing: {
+        schemas: vi.fn().mockResolvedValue([]),
+        schema: vi.fn().mockResolvedValue({ tasks: [] }),
+        validatePreset: vi.fn().mockResolvedValue({
+          valid: true,
+          errors: [],
+          schema_id: 'fluent-meshing-25.2-watertight',
+          item_count: 0,
+        }),
+      },
+      meshingAutomations: {
+        list: vi.fn().mockResolvedValue([]),
+        create: vi.fn(),
+        get: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+        validate: vi.fn(),
+      },
     } satisfies FluentAIApi
 
     Object.defineProperty(window, 'fluentAI', { configurable: true, value: api })

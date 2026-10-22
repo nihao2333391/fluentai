@@ -53,7 +53,11 @@ class MeshingSchemaIndex:
         summaries: list[MeshingSchemaSummary] = []
         for workflow_type, schema in self.schemas.items():
             tasks = list(self._task_index[workflow_type].values())
-            argument_count = sum(len(task.get("arguments") or []) for task in tasks)
+            argument_count = sum(
+                _count_arguments(task.get("arguments") or [])
+                + _count_arguments((task.get("child_template") or {}).get("arguments") or [])
+                for task in tasks
+            )
             summaries.append(
                 MeshingSchemaSummary(
                     workflow_type=workflow_type,
@@ -107,13 +111,27 @@ class MeshingSchemaIndex:
         if task is None:
             raise ValueError(f"Unknown Meshing task path: {'.'.join(task_path)}")
 
+        compound_child_name = (item.compound_child_name or "").strip()
+        if item.compound_child_name is not None and not compound_child_name:
+            raise ValueError(f"Compound child name cannot be empty for task {'.'.join(task_path)}")
+
+        template = task.get("child_template")
+        if compound_child_name:
+            if task.get("task_type") != "Compound" or not isinstance(template, dict):
+                raise ValueError(
+                    f"Task {'.'.join(task_path)} does not support compound child presets"
+                )
+            candidates = list(template.get("arguments") or [])
+        else:
+            candidates = list(task.get("arguments") or [])
+
         argument: dict[str, Any] | None = None
-        candidates: list[dict[str, Any]] = list(task.get("arguments") or [])
         for part in argument_path:
             argument = next((entry for entry in candidates if entry.get("name") == part), None)
             if argument is None:
+                scope = "compound child" if compound_child_name else "task"
                 raise ValueError(
-                    "Unknown Meshing argument path: "
+                    f"Unknown Meshing {scope} argument path: "
                     f"{'.'.join(task_path)}.{'.'.join(argument_path)}"
                 )
             candidates = list(argument.get("children") or [])
@@ -121,9 +139,12 @@ class MeshingSchemaIndex:
         if argument is None:
             raise ValueError(f"Empty Meshing argument path for task {'.'.join(task_path)}")
         if argument.get("editable") is False or argument.get("read_only") is True:
-            raise ValueError(
-                f"Meshing argument is read-only: {'.'.join(task_path)}.{'.'.join(argument_path)}"
+            owner = (
+                f"{'.'.join(task_path)}[{compound_child_name}]"
+                if compound_child_name
+                else ".".join(task_path)
             )
+            raise ValueError(f"Meshing argument is read-only: {owner}.{'.'.join(argument_path)}")
 
         allowed = argument.get("allowed_values")
         if allowed is not None and item.value not in allowed:
@@ -156,6 +177,10 @@ def _matches_type(value: Any, expected_type: Any) -> bool:
     if expected_type == "object":
         return isinstance(value, dict)
     return True
+
+
+def _count_arguments(arguments: list[dict[str, Any]]) -> int:
+    return sum(1 + _count_arguments(argument.get("children") or []) for argument in arguments)
 
 
 MESHING_SCHEMA_INDEX = MeshingSchemaIndex.from_directory()

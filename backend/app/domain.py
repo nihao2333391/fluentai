@@ -261,6 +261,7 @@ class MeshingPresetItem(BaseModel):
     argument_path: list[str] = Field(min_length=1, max_length=16)
     value: MeshingPresetValue
     required: bool = True
+    compound_child_name: str | None = Field(default=None, max_length=120)
 
 
 class MeshingPresetDocument(BaseModel):

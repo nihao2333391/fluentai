@@ -287,6 +287,118 @@ export interface WorkflowsApi {
   ) => Promise<WorkflowReport>
 }
 
+export type MeshingWorkflowType = 'watertight' | 'fault-tolerant'
+export type MeshingPresetValue =
+  PresetValue | MeshingPresetValue[] | { [key: string]: MeshingPresetValue }
+
+export interface MeshingSchemaArgument {
+  name: string
+  source_name?: string
+  edit_path: string
+  value_type: string
+  current_value: unknown
+  allowed_values: MeshingPresetValue[] | null
+  default_value: unknown
+  read_only: boolean | null
+  editable?: boolean
+  active: boolean | null
+  exposure_level: string | number | null
+  children: MeshingSchemaArgument[]
+  error?: string
+  note?: string
+}
+
+export interface MeshingSchemaTask {
+  python_name: string
+  display_name: string
+  command_name: string
+  task_type: 'Simple' | 'Compound' | 'Conditional' | 'Compound Child' | string
+  check_point: string
+  state: string
+  task_list: string[] | string | null
+  inactive_task_list: string[] | string | null
+  inactive_tasks: string[]
+  insertable_tasks: string[]
+  arguments: MeshingSchemaArgument[]
+  children: MeshingSchemaTask[]
+  supports_child_template?: boolean
+  child_template?: MeshingSchemaTask | null
+  child_template_error?: string
+  child_template_warning?: string
+  template?: boolean
+  template_task_path?: string[]
+  template_source?: 'fluent_add_child_and_update' | 'parent_command_arguments' | string
+}
+
+export interface MeshingWorkflowSchema {
+  schema_version: number
+  fluent_version: string
+  workflow_type: MeshingWorkflowType
+  display_name?: string
+  generated_at_utc: string
+  tasks: MeshingSchemaTask[]
+}
+
+export interface MeshingSchemaSummary {
+  workflow_type: MeshingWorkflowType
+  schema_id: string
+  fluent_version: string
+  task_count: number
+  argument_count: number
+}
+
+export interface MeshingPresetItem {
+  task_path: string[]
+  argument_path: string[]
+  value: MeshingPresetValue
+  required: boolean
+  compound_child_name: string | null
+}
+
+export interface MeshingPresetDocument {
+  schema_version: 1
+  fluent_version: string
+  workflow_type: MeshingWorkflowType
+  items: MeshingPresetItem[]
+}
+
+export interface MeshingAutomationInput {
+  name: string
+  description: string
+  model_family: string
+  reference_model_id: number | null
+  preset: MeshingPresetDocument
+  status: 'draft' | 'active'
+}
+
+export interface MeshingAutomation extends MeshingAutomationInput {
+  id: number
+  created_at: string
+  updated_at: string
+}
+
+export interface MeshingPresetValidationReport {
+  valid: boolean
+  errors: string[]
+  schema_id: string
+  item_count: number
+}
+
+export interface MeshingApi {
+  schemas: () => Promise<MeshingSchemaSummary[]>
+  schema: (workflowType: MeshingWorkflowType) => Promise<MeshingWorkflowSchema>
+  validatePreset: (preset: MeshingPresetDocument) => Promise<MeshingPresetValidationReport>
+}
+
+export interface MeshingAutomationsApi {
+  list: () => Promise<MeshingAutomation[]>
+  create: (payload: MeshingAutomationInput) => Promise<MeshingAutomation>
+  get: (id: number) => Promise<MeshingAutomation>
+  update: (id: number, payload: MeshingAutomationInput) => Promise<MeshingAutomation>
+  delete: (id: number) => Promise<void>
+  validate: (id: number) => Promise<MeshingPresetValidationReport>
+}
+
 export interface FluentAIApi {
   readonly platform: string
   readonly sidecar: SidecarApi
@@ -298,4 +410,6 @@ export interface FluentAIApi {
   readonly credentials: CredentialsApi
   readonly fluent: FluentApi
   readonly workflows: WorkflowsApi
+  readonly meshing: MeshingApi
+  readonly meshingAutomations: MeshingAutomationsApi
 }

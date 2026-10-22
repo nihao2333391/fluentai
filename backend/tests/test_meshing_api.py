@@ -33,6 +33,14 @@ def test_meshing_schema_and_automation_api(
     assert schemas.status_code == 200
     assert {item["workflow_type"] for item in schemas.json()} == {"watertight", "fault-tolerant"}
 
+    watertight = app_client.get("/api/meshing/schemas/watertight", headers=auth_headers)
+    assert watertight.status_code == 200
+    local_sizing = next(
+        task for task in watertight.json()["tasks"] if task["display_name"] == "Add Local Sizing"
+    )
+    assert local_sizing["supports_child_template"] is True
+    assert local_sizing["child_template"]["arguments"]
+
     created = app_client.post(
         "/api/meshing-automations", headers=auth_headers, json=_payload("Venturi A")
     )

@@ -5,6 +5,7 @@ import {
   SettingOutlined,
   ThunderboltOutlined,
   DatabaseOutlined,
+  PartitionOutlined,
 } from '@ant-design/icons'
 import { Alert, Button, Flex, Layout, Menu, Typography } from 'antd'
 import { useMemo, useState } from 'react'
@@ -47,6 +48,11 @@ export function AppLayout() {
             icon: <DatabaseOutlined />,
             label: t('nav.myModels'),
           },
+          {
+            key: '/meshing',
+            icon: <PartitionOutlined />,
+            label: t('nav.meshingAutomations'),
+          },
         ],
       },
       {
@@ -71,7 +77,9 @@ export function AppLayout() {
       ? '/automations'
       : location.pathname.startsWith('/models')
         ? '/models'
-        : '/settings'
+        : location.pathname.startsWith('/meshing')
+          ? '/meshing'
+          : '/settings'
 
   return (
     <Layout className="app-layout">
