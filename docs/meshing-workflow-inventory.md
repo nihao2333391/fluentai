@@ -177,3 +177,25 @@ The implementation will therefore use:
 - Stop before generation commands.
 - Validate every required boundary, face zone, region and local-sizing scope name against the target model.
 - Never use fuzzy or silent name substitution.
+
+## Generated Schema Files
+
+- `docs/meshing/fluent-meshing-25.2-watertight.schema.json`
+- `docs/meshing/fluent-meshing-25.2-fault-tolerant.schema.json`
+- `docs/meshing/schema-generation-summary.json`
+
+Generation result:
+
+- Watertight: 11 top-level tasks, 221 arguments.
+- Fault-tolerant: 25 top-level tasks, 307 arguments.
+- Watertight: 45 parameters expose allowed values.
+- Fault-tolerant: 69 parameters expose allowed values.
+
+### Remaining PyFluent API Limitation
+
+Two Fault-tolerant compound tasks currently raise `RecursionError` while PyFluent creates their command arguments:
+
+- Identify Construction Surfaces
+- Create Local Refinement Regions
+
+They are retained in the schema as explicit unavailable-argument markers. They must not be filled with guessed fields. These tasks require either a future PyFluent fix or a workflow-reference-derived schema with readback verification before they can be safely exposed for editing.

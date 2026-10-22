@@ -173,9 +173,11 @@ Run the real end-to-end workflow:
 
 Completed:
 
-- Fluent-style grouped preset editor;
+- Fluent-style Solver preset editor;
 - real enum option lists from Fluent 2025 R2;
-- per-setting include controls and type-specific widgets.
+- Watertight schema: 11 tasks and 221 arguments;
+- Fault-tolerant schema: 25 tasks and 307 arguments;
+- task/argument edit paths and allowed-value metadata extracted from PyFluent.
 
 Remaining M8 work:
 

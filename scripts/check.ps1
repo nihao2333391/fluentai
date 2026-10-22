@@ -49,7 +49,10 @@ try {
   & $python scripts\check_m7_workflow.py
   if ($LASTEXITCODE -ne 0) { throw 'M7 real workflow check failed.' }
 
-  Write-Host 'M7_CHECK_PASSED'
+  & $python scripts\check_meshing_schema.py
+  if ($LASTEXITCODE -ne 0) { throw 'M8 Meshing schema check failed.' }
+
+  Write-Host 'M8_SCHEMA_CHECK_PASSED'
 }
 finally {
   Pop-Location

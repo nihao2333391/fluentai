@@ -1,5 +1,7 @@
 # Known Issues and Current Boundaries
 
+- PyFluent 0.42.1 raises `RecursionError` while extracting command arguments for `Identify Construction Surfaces` and `Create Local Refinement Regions`; these two FTM tasks remain explicitly unavailable until PyFluent is fixed or a reference-derived adapter is validated.
+
 1. The Fluent-style preset editor currently covers General, Models, Solution criteria, and Reference Values. Materials, cell zones, boundary conditions, solver methods, monitors, initialization, and calculation activities still need to be mapped.
 2. Job execution is synchronous. Progress is persisted but not streamed in real time, and cancellation is not implemented.
 3. Attach mode is supported by the adapter and settings but the M7 real workflow validation uses launch mode.
