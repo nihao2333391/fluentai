@@ -22,7 +22,7 @@ def _pump(stream: IO[str] | None, queue: Queue[str], prefix: str) -> None:
 
 
 def _start_sidecar(
-    *, parent_pipe: bool = False
+    data_directory: Path, *, parent_pipe: bool = False
 ) -> tuple[subprocess.Popen[str], Queue[str], list[str]]:
     env = os.environ.copy()
     env.update(
@@ -30,6 +30,7 @@ def _start_sidecar(
             "FLUENT_AI_SIDECAR_TOKEN": TOKEN,
             "PYTHONPATH": str(BACKEND_ROOT),
             "PYTHONUNBUFFERED": "1",
+            "FLUENT_AI_DATA_DIR": str(data_directory),
         }
     )
     if parent_pipe:
@@ -98,8 +99,9 @@ def _stop_process(process: subprocess.Popen[str]) -> None:
             process.wait(timeout=5)
 
 
-def test_sidecar_process_handshake_readiness_and_shutdown() -> None:
-    process, messages, transcript = _start_sidecar()
+def test_sidecar_process_handshake_readiness_and_shutdown(tmp_path: Path) -> None:
+    data_directory = tmp_path / "data"
+    process, messages, transcript = _start_sidecar(data_directory)
     try:
         handshake = _wait_for_handshake(process, messages, transcript)
         assert handshake["event"] == "sidecar_ready"
@@ -123,6 +125,23 @@ def test_sidecar_process_handshake_readiness_and_shutdown() -> None:
             ready = client.get(f"{base_url}/api/system/ready", headers=headers)
             assert ready.status_code == 200
             assert ready.json()["status"] == "ready"
+            assert ready.json()["database"] == "ready"
+            assert (data_directory / "fluent-ai.db").is_file()
+
+            automation = client.post(
+                f"{base_url}/api/automations",
+                headers=headers,
+                json={
+                    "name": "Process smoke automation",
+                    "description": "M3 process integration",
+                    "status": "draft",
+                    "preset": {"schema_version": 1, "items": []},
+                },
+            )
+            assert automation.status_code == 201
+            listed = client.get(f"{base_url}/api/automations", headers=headers)
+            assert listed.status_code == 200
+            assert listed.json()[0]["name"] == "Process smoke automation"
 
             shutdown = client.post(f"{base_url}/api/system/shutdown", headers=headers)
             assert shutdown.status_code == 202
@@ -132,8 +151,8 @@ def test_sidecar_process_handshake_readiness_and_shutdown() -> None:
         _stop_process(process)
 
 
-def test_sidecar_exits_when_parent_pipe_closes() -> None:
-    process, messages, transcript = _start_sidecar(parent_pipe=True)
+def test_sidecar_exits_when_parent_pipe_closes(tmp_path: Path) -> None:
+    process, messages, transcript = _start_sidecar(tmp_path / "data", parent_pipe=True)
     try:
         _wait_for_handshake(process, messages, transcript)
         assert process.stdin is not None

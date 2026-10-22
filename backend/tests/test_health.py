@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from app.main import create_app
@@ -6,8 +8,8 @@ TOKEN = "test-sidecar-token"
 AUTH_HEADERS = {"Authorization": f"Bearer {TOKEN}"}
 
 
-def test_health_is_public() -> None:
-    client = TestClient(create_app(TOKEN))
+def test_health_is_public(tmp_path: Path) -> None:
+    client = TestClient(create_app(TOKEN, tmp_path / "health.db"))
 
     response = client.get("/health")
 
@@ -19,8 +21,8 @@ def test_health_is_public() -> None:
     assert payload["timestamp"]
 
 
-def test_ready_requires_bearer_token() -> None:
-    client = TestClient(create_app(TOKEN))
+def test_ready_requires_bearer_token(tmp_path: Path) -> None:
+    client = TestClient(create_app(TOKEN, tmp_path / "ready.db"))
 
     response = client.get("/api/system/ready")
 
@@ -28,8 +30,8 @@ def test_ready_requires_bearer_token() -> None:
     assert response.headers["www-authenticate"] == "Bearer"
 
 
-def test_ready_returns_authenticated_metadata() -> None:
-    client = TestClient(create_app(TOKEN))
+def test_ready_returns_authenticated_metadata(tmp_path: Path) -> None:
+    client = TestClient(create_app(TOKEN, tmp_path / "ready-auth.db"))
 
     response = client.get("/api/system/ready", headers=AUTH_HEADERS)
 
@@ -38,4 +40,5 @@ def test_ready_returns_authenticated_metadata() -> None:
     assert payload["status"] == "ready"
     assert payload["service"] == "fluent-ai-sidecar"
     assert isinstance(payload["pid"], int)
+    assert payload["database"] == "ready"
     assert payload["pid"] > 0

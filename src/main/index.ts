@@ -11,6 +11,7 @@ let quitAfterSidecarStop = false
 const sidecar = new SidecarManager({
   appRoot: app.getAppPath(),
   pythonExecutable: process.env.FLUENT_AI_PYTHON,
+  dataDirectory: join(app.getPath('userData'), 'data'),
 })
 
 const broadcastSidecarStatus = (status: SidecarStatus): void => {

@@ -10,6 +10,7 @@ import type { SidecarHandshake, SidecarReadyResponse, SidecarStatus } from '../s
 interface SidecarManagerOptions {
   appRoot: string
   pythonExecutable?: string
+  dataDirectory?: string
   startTimeoutMs?: number
   stopTimeoutMs?: number
   maxAutoRestarts?: number
@@ -25,6 +26,7 @@ export class SidecarManager extends EventEmitter {
   private readonly appRoot: string
   private readonly backendDirectory: string
   private readonly pythonExecutable?: string
+  private readonly dataDirectory?: string
   private readonly startTimeoutMs: number
   private readonly stopTimeoutMs: number
   private readonly maxAutoRestarts: number
@@ -47,6 +49,7 @@ export class SidecarManager extends EventEmitter {
     this.appRoot = options.appRoot
     this.backendDirectory = join(options.appRoot, 'backend')
     this.pythonExecutable = options.pythonExecutable
+    this.dataDirectory = options.dataDirectory
     this.startTimeoutMs = options.startTimeoutMs ?? DEFAULT_START_TIMEOUT_MS
     this.stopTimeoutMs = options.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS
     this.maxAutoRestarts = options.maxAutoRestarts ?? DEFAULT_MAX_AUTO_RESTARTS
@@ -133,6 +136,7 @@ export class SidecarManager extends EventEmitter {
           ...process.env,
           FLUENT_AI_SIDECAR_TOKEN: token,
           FLUENT_AI_PARENT_PIPE: '1',
+          FLUENT_AI_DATA_DIR: this.dataDirectory,
           PYTHONPATH: this.backendDirectory,
           PYTHONUNBUFFERED: '1',
         },
@@ -269,7 +273,11 @@ export class SidecarManager extends EventEmitter {
       throw new Error(`Sidecar readiness request failed with HTTP ${response.status}.`)
     }
     const payload = (await response.json()) as SidecarReadyResponse
-    if (payload.status !== 'ready' || payload.service !== 'fluent-ai-sidecar') {
+    if (
+      payload.status !== 'ready' ||
+      payload.service !== 'fluent-ai-sidecar' ||
+      payload.database !== 'ready'
+    ) {
       throw new Error('Sidecar returned an invalid readiness response.')
     }
     return payload

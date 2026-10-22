@@ -6,26 +6,29 @@ Fluent AI is a Windows desktop application for managing reusable ANSYS Fluent au
 
 - **M0 - Fluent feasibility: PASSED**
 - **M1 - Engineering foundation: PASSED**
-- **M2 - IPC contracts and sidecar supervision: PASSED**
-- **M3 - Database and domain model: NOT STARTED**
+- **M2 - IPC and sidecar supervision: PASSED**
+- **M3 - Database and domain model: PASSED**
+- **M4 - Electron security and file capabilities: NOT STARTED**
 
-The desktop app now starts and supervises its local FastAPI sidecar automatically. Electron and the sidecar communicate through a random localhost port and a per-launch bearer token. The token remains in the Electron main process and is not exposed to the renderer.
+The application now starts a supervised FastAPI sidecar, initializes a versioned SQLite database, and exposes authenticated CRUD APIs for automations, models, associations, settings, jobs, and synchronization logs.
 
 ## Architecture
 
 ```text
 React renderer
-    ↓ typed preload API
+    ↓ typed preload IPC
 Electron main process
     ├─ sidecar supervisor
     ├─ random port + bearer token
+    ├─ user-data database path
     └─ narrow IPC handlers
           ↓ 127.0.0.1
 FastAPI sidecar
-    ├─ /health                  public liveness
-    ├─ /api/system/ready        authenticated readiness
-    └─ /api/system/shutdown     authenticated graceful stop
-          ↓ future PyFluent gateway
+    ├─ bearer authentication
+    ├─ authenticated business API
+    ├─ SQLite migrations and repositories
+    └─ FakeFluentAdapter
+          ↓ future FluentAdapter
 ANSYS Fluent 2025 R2
 ```
 
@@ -44,102 +47,72 @@ ANSYS Fluent 2025 R2
 | FastAPI       | 0.159.1                  |
 | PyFluent      | ansys-fluent-core 0.42.1 |
 
-## M2 Sidecar Behavior
+## Persistence
 
-- Electron spawns `.venv\Scripts\python.exe -m app.sidecar`.
-- The sidecar binds to `127.0.0.1` on an operating-system assigned random port.
-- Python emits a one-line JSON readiness handshake on stdout.
-- Electron verifies `/api/system/ready` with the generated bearer token.
-- The renderer receives only status, version, PID, and port through preload IPC.
-- Manual restart is available from the renderer.
-- Unexpected sidecar exit is detected and retried up to two times with backoff.
-- Normal app exit requests authenticated shutdown and confirms process termination.
-- If Electron exits abnormally, closing the parent stdin pipe stops the sidecar.
-- Renderer production output is checked for accidental token or Authorization-string leakage.
+SQLite is owned exclusively by the Python sidecar.
 
-## Security Defaults
+- Production data path: `%APPDATA%\fluent-ai\data\fluent-ai.db`
+- Development fallback: `.runtime\data\fluent-ai.db`
+- WAL journal mode
+- Foreign keys enabled
+- Connection per operation
+- Versioned migrations in `schema_migrations`
 
-- `contextIsolation: true`
-- `nodeIntegration: false`
-- `sandbox: true`
-- CommonJS preload output for sandbox compatibility
-- Content Security Policy in the renderer
-- No token or raw IPC renderer object exposed to the renderer
-- Sidecar binds to loopback only
-- External links open in the system browser
+Tables:
 
-## Repository Layout
+- `automations`
+- `models`
+- `model_automations`
+- `app_settings`
+- `jobs`
+- `sync_logs`
+- `schema_migrations`
 
-```text
-src/
-  main/                 Electron lifecycle, sidecar supervisor, IPC
-  preload/              contextBridge API
-  renderer/             React application
-  shared/               typed IPC contracts
-backend/
-  app/                  FastAPI app, auth, schemas, sidecar entry
-  tests/                unit and process integration tests
-scripts/
-  check.ps1             Unified verification
-  fluent_poc.py         M0 Fluent feasibility probe
-  check_m0_reports.py   M0 evidence gate
-docs/
-  adr/                  Architecture decisions
-  poc/                  Fluent integration evidence
-```
+Automation presets are versioned JSON documents with typed setting items. Models and automations use a many-to-many association, with at most one default automation per model.
 
-## Setup
+## Authenticated Business API
 
-### Frontend
+- `/api/automations`
+- `/api/automations/{id}`
+- `/api/models`
+- `/api/models/{id}`
+- `/api/models/{id}/associate`
+- `/api/settings`
+- `/api/jobs`
+- `/api/jobs/{id}`
+- `/api/sync-logs`
+
+All business endpoints require the per-launch bearer token. FastAPI also exposes `/docs` and `/openapi.json` on the loopback listener for development.
+
+## Development
+
+Install dependencies:
 
 ```powershell
 pnpm install
 pnpm setup:electron
-```
 
-If the Electron binary download is unavailable:
-
-```powershell
-$env:ELECTRON_MIRROR = 'https://npmmirror.com/mirrors/electron/'
-pnpm setup:electron
-```
-
-### Python sidecar
-
-```powershell
 & 'C:\Users\MECH\AppData\Roaming\uv\python\cpython-3.12.14-windows-x86_64-none\python.exe' `
   -m venv .venv
-
 & '.\.venv\Scripts\python.exe' -m pip install --upgrade pip
 & '.\.venv\Scripts\python.exe' -m pip install -r backend\requirements-dev.txt
 ```
 
-## Development
-
-Start the complete desktop application, including automatic sidecar startup:
+Run the complete desktop app:
 
 ```powershell
 pnpm dev
 ```
 
-The window displays the current sidecar state. If the sidecar is ready, it also shows version, PID, and the random localhost port.
-
-Start only the FastAPI sidecar:
+Run only the sidecar in development:
 
 ```powershell
 pnpm backend:dev
 ```
 
-The development script generates and prints a temporary token. Authenticated readiness can then be checked with:
-
-```powershell
-$headers = @{ Authorization = "Bearer <printed-token>" }
-Invoke-RestMethod http://127.0.0.1:8765/api/system/ready -Headers $headers
-```
+The development script prints a temporary bearer token. Use it for authenticated readiness or API requests.
 
 ## Verification
-
-Run the complete M2 gate:
 
 ```powershell
 pnpm check
@@ -148,31 +121,33 @@ pnpm check
 Expected final marker:
 
 ```text
-M2_CHECK_PASSED
+M3_CHECK_PASSED
 ```
 
-Build production assets:
+Run the M3 database/API tests directly:
 
 ```powershell
-pnpm build
+$env:PYTHONPATH = 'D:\Fluent AI\fluent-ai-app\backend'
+& 'D:\Fluent AI\fluent-ai-app\.venv\Scripts\python.exe' `
+  -m pytest -q 'D:\Fluent AI\fluent-ai-app\backend\tests'
 ```
 
 ## Evidence
 
+- M3 verification: `docs/m3-verification.md`
+- M3 architecture decision: `docs/adr/0004-m3-persistence.md`
 - M2 verification: `docs/m2-verification.md`
-- M2 architecture decision: `docs/adr/0003-m2-sidecar-lifecycle.md`
 - M1 verification: `docs/m1-verification.md`
 - M0 Fluent report: `docs/poc/fluent-2025R2.md`
-- Raw M0 reports: `docs/poc/reports/`
 - Known boundaries: `docs/KNOWN_ISSUES.md`
 
 ## Next Milestone
 
-M3 will add:
+M4 will add:
 
-- SQLite schema and migrations;
-- automation and model repositories;
-- model-to-automation associations;
-- application settings;
-- jobs and sync-log persistence;
-- FakeFluentAdapter-based domain tests.
+- secure Electron file pickers and path validation;
+- model file metadata refresh;
+- encrypted handling for future Fluent credentials;
+- IPC methods for business operations;
+- typed renderer service layer;
+- file-related error and permission tests.

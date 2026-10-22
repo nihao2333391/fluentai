@@ -16,7 +16,7 @@ from typing import cast
 import uvicorn
 
 from app import __version__
-from app.main import create_app
+from app.main import app
 
 STARTUP_TIMEOUT_SECONDS = 20.0
 
@@ -57,7 +57,7 @@ async def serve() -> int:
         _emit("sidecar_error", message="FLUENT_AI_SIDECAR_TOKEN is required")
         return 2
 
-    app = create_app(token)
+    app.state.auth_token = token
     config = uvicorn.Config(
         app,
         host="127.0.0.1",

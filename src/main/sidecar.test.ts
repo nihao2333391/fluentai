@@ -1,6 +1,7 @@
 // @vitest-environment node
 
-import { existsSync } from 'node:fs'
+import { existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -25,9 +26,11 @@ const resolvePython = (): string => {
 
 describe('SidecarManager', () => {
   it('starts, reports an authenticated ready state, restarts, and stops', async () => {
+    const dataDirectory = mkdtempSync(join(tmpdir(), 'fluent-ai-sidecar-'))
     const manager = new SidecarManager({
       appRoot,
       pythonExecutable: resolvePython(),
+      dataDirectory,
       startTimeoutMs: 20_000,
     })
     const states: string[] = []
@@ -54,14 +57,17 @@ describe('SidecarManager', () => {
     } finally {
       unsubscribe()
       await manager.stop()
+      rmSync(dataDirectory, { recursive: true, force: true })
     }
 
     expect(manager.getStatus().state).toBe('stopped')
   }, 45_000)
   it('automatically restarts after an unexpected sidecar exit', async () => {
+    const dataDirectory = mkdtempSync(join(tmpdir(), 'fluent-ai-sidecar-restart-'))
     const manager = new SidecarManager({
       appRoot,
       pythonExecutable: resolvePython(),
+      dataDirectory,
       startTimeoutMs: 20_000,
       maxAutoRestarts: 1,
     })
@@ -87,6 +93,7 @@ describe('SidecarManager', () => {
       expect(restarted.pid).not.toBe(firstReady.pid)
     } finally {
       await manager.stop()
+      rmSync(dataDirectory, { recursive: true, force: true })
     }
   }, 45_000)
 })

@@ -13,6 +13,7 @@ export interface SidecarReadyResponse {
   service: 'fluent-ai-sidecar'
   version: string
   pid: number
+  database: 'ready'
   timestamp: string
 }
 

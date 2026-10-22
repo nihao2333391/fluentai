@@ -21,6 +21,7 @@ class ReadyResponse(BaseModel):
     service: Literal["fluent-ai-sidecar"] = "fluent-ai-sidecar"
     version: str
     pid: int
+    database: Literal["ready"] = "ready"
     timestamp: str
 
 

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from app.main import create_app
@@ -5,8 +7,8 @@ from app.main import create_app
 TOKEN = "test-sidecar-token"
 
 
-def test_wrong_token_is_rejected() -> None:
-    client = TestClient(create_app(TOKEN))
+def test_wrong_token_is_rejected(tmp_path: Path) -> None:
+    client = TestClient(create_app(TOKEN, tmp_path / "wrong-token.db"))
 
     response = client.get(
         "/api/system/ready",
@@ -16,8 +18,8 @@ def test_wrong_token_is_rejected() -> None:
     assert response.status_code == 401
 
 
-def test_missing_configured_token_returns_service_unavailable() -> None:
-    client = TestClient(create_app(None))
+def test_missing_configured_token_returns_service_unavailable(tmp_path: Path) -> None:
+    client = TestClient(create_app(None, tmp_path / "no-token.db"))
 
     response = client.get(
         "/api/system/ready",
@@ -27,8 +29,8 @@ def test_missing_configured_token_returns_service_unavailable() -> None:
     assert response.status_code == 503
 
 
-def test_shutdown_requires_auth_and_invokes_callback() -> None:
-    app = create_app(TOKEN)
+def test_shutdown_requires_auth_and_invokes_callback(tmp_path: Path) -> None:
+    app = create_app(TOKEN, tmp_path / "shutdown.db")
     called = False
 
     def request_shutdown() -> None:

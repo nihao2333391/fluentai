@@ -1,15 +1,17 @@
 # Project Progress
 
-| Milestone                        | Status      | Summary                                                                                          |
-| -------------------------------- | ----------- | ------------------------------------------------------------------------------------------------ |
-| M0 - Fluent feasibility          | PASSED      | launch, GUI launch, attach, case load, 6 settings read, write/restore verified, cleanup verified |
-| M1 - Engineering foundation      | PASSED      | Electron + React + TypeScript shell, FastAPI skeleton, linting, typing, tests and CI             |
-| M2 - IPC and sidecar supervision | PASSED      | random-port handshake, bearer auth, typed preload IPC, status UI, restart and graceful cleanup   |
-| M3 - Database and domain model   | NOT STARTED | Awaiting approval after M2 review                                                                |
+| Milestone                                    | Status      | Summary                                                                                    |
+| -------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------ |
+| M0 - Fluent feasibility                      | PASSED      | launch, GUI launch, attach, case load, settings read/write/restore and cleanup verified    |
+| M1 - Engineering foundation                  | PASSED      | Electron, React, TypeScript, FastAPI, linting, typing, tests and CI                        |
+| M2 - IPC and sidecar supervision             | PASSED      | random-port handshake, bearer auth, typed preload IPC, status UI and lifecycle recovery    |
+| M3 - Database and domain model               | PASSED      | SQLite migrations, repositories, authenticated CRUD APIs, jobs, logs and FakeFluentAdapter |
+| M4 - Electron security and file capabilities | NOT STARTED | Awaiting approval after M3 review                                                          |
 
 ## Evidence
 
 - M0: `docs/poc/fluent-2025R2.md`
 - M1: `docs/m1-verification.md`
 - M2: `docs/m2-verification.md`
+- M3: `docs/m3-verification.md`
 - Decisions: `docs/adr/`
