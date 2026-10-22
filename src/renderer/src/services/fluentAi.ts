@@ -9,6 +9,7 @@ import type {
   MeshingWorkflowType,
   ModelAssociationRequest,
   ModelCreateRequest,
+  OpenModelRequest,
   ModelUpdateRequest,
   PresetDocument,
   PresetItem,
@@ -41,6 +42,7 @@ export const fluentAiService = {
       getFluentAIApi().models.update(id, payload),
     associate: (id: number, payload: ModelAssociationRequest) =>
       getFluentAIApi().models.associate(id, payload),
+    open: (id: number, payload: OpenModelRequest) => getFluentAIApi().models.open(id, payload),
     refresh: (id: number) => getFluentAIApi().models.refresh(id),
     delete: (id: number) => getFluentAIApi().models.delete(id),
   },

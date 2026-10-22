@@ -15,6 +15,8 @@ export const appRoutes = [
     children: [
       { index: true, element: <Navigate to="/automations/create" replace /> },
       { path: 'automations/create', element: <AutomationCreatePage /> },
+      { path: 'automations/:id/edit', element: <AutomationCreatePage /> },
+      { path: 'automations/:id/duplicate', element: <AutomationCreatePage /> },
       { path: 'automations', element: <MyAutomationsPage /> },
       { path: 'models', element: <MyModelsPage /> },
       { path: 'meshing', element: <MeshingAutomationsPage /> },

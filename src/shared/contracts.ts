@@ -110,6 +110,18 @@ export interface ModelAssociationRequest {
   isDefault: boolean
 }
 
+export interface OpenModelRequest {
+  connection?: FluentConnectionConfig | null
+  load_case: boolean
+}
+
+export interface ModelOpenReport {
+  status: 'success' | 'failed'
+  model_id: number
+  message: string
+  connection: FluentStatus | null
+}
+
 export interface SettingsPayload {
   values: Record<string, string>
 }
@@ -162,6 +174,7 @@ export interface ModelsApi {
   create: (payload: ModelCreateRequest) => Promise<Model>
   update: (id: number, payload: ModelUpdateRequest) => Promise<Model>
   associate: (id: number, payload: ModelAssociationRequest) => Promise<Model>
+  open: (id: number, payload: OpenModelRequest) => Promise<ModelOpenReport>
   refresh: (id: number) => Promise<Model>
   delete: (id: number) => Promise<void>
 }

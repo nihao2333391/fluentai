@@ -22,7 +22,9 @@ import type {
   Model,
   ModelAssociationRequest,
   ModelCreateRequest,
+  ModelOpenReport,
   ModelUpdateRequest,
+  OpenModelRequest,
   PickedModelFile,
   PresetDocument,
   PresetItem,
@@ -70,6 +72,8 @@ const api: FluentAIApi = Object.freeze({
       invoke<Model>('models:update', id, payload),
     associate: (id: number, payload: ModelAssociationRequest) =>
       invoke<Model>('models:associate', id, payload),
+    open: (id: number, payload: OpenModelRequest) =>
+      invoke<ModelOpenReport>('models:open', id, payload),
     refresh: (id: number) => invoke<Model>('models:refresh', id),
     delete: (id: number) => invoke<void>('models:delete', id),
   }),

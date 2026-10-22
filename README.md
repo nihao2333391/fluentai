@@ -12,7 +12,8 @@ Fluent AI is a Windows desktop application for managing reusable ANSYS Fluent au
 - **M5 - UI framework and design system: PASSED**
 - **M6 - FluentAdapter and SettingCatalog: PASSED**
 - **M7 - First end-to-end vertical slice: PASSED**
-- **M8 - Complete automation and model workflows: IN PROGRESS**
+- **M8 - Complete Meshing automation and apply workflows: PASSED**
+- **M9 - Delivery lifecycle and packaging: IN PROGRESS**
 
 The application now supports a real, persisted vertical workflow:
 
@@ -143,10 +144,11 @@ pnpm dev
 pnpm check
 ```
 
-Expected final marker:
+Expected final markers:
 
 ```text
-M7_CHECK_PASSED
+M8_SCHEMA_CHECK_PASSED
+M8_APPLY_CHECK_PASSED
 ```
 
 Run the real end-to-end workflow:
@@ -169,28 +171,28 @@ Run the real end-to-end workflow:
 - M0 Fluent report: `docs/poc/fluent-2025R2.md`
 - Known boundaries: `docs/KNOWN_ISSUES.md`
 
-## M8 Progress
+## M8 and M9 Progress
 
 Completed:
 
 - Fluent-style Solver preset editor;
 - real enum option lists from Fluent 2025 R2;
-- Watertight schema: 11 tasks and 221 arguments;
-- Fault-tolerant schema: 25 tasks and 307 arguments;
+- Watertight schema: 11 tasks and 562 arguments including nested templates;
+- Fault-tolerant schema: 25 tasks and 635 arguments including nested templates;
 - task/argument edit paths and allowed-value metadata extracted from PyFluent;
 - independent Meshing automation database model;
 - Meshing preset task/argument validation;
 - authenticated Meshing automation CRUD APIs.
+- exact live-name validation before any Meshing write;
+- Watertight and Fault-tolerant geometry import;
+- named compound-child creation and multiple local-sizing controls;
+- readback verification and strict stop-before-mesh behavior;
+- Solver automation edit and duplicate workflows;
+- model association and direct open-in-Fluent actions.
 
-Remaining M8 work:
+M9 remaining work:
 
-- Materials and cell-zone branches;
-- boundary-condition and named-zone selectors;
-- solver methods and controls;
-- monitors, initialization and calculation activities;
-- full automation edit and duplicate workflows;
-- richer model-to-automation associations;
 - recent-session restore;
 - detailed job progress and cancellation;
 - sync-log details and filtering;
-- broader error recovery and UI regression coverage.
+- production installer packaging and bundled sidecar strategy.

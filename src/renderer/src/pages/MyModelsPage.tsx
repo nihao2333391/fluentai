@@ -1,10 +1,16 @@
-import { DatabaseOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
-import { App, Button, Space, Table, Tag, Typography } from 'antd'
+import {
+  ApiOutlined,
+  DatabaseOutlined,
+  LinkOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons'
+import { App, Button, Checkbox, Modal, Select, Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { Model } from '../../../shared/contracts'
+import type { Automation, Model } from '../../../shared/contracts'
 import { EmptyState, ErrorState, LoadingState, PageContent } from '../components/PageState'
 import { fluentAiService } from '../services/fluentAi'
 import { useSidecarStore } from '../store/sidecarStore'
@@ -15,22 +21,36 @@ const formatBytes = (bytes: number): string => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+const isSolverModel = (model: Model): boolean =>
+  ['.cas', '.cas.h5', '.msh', '.msh.h5'].some((extension) =>
+    model.file_path.toLocaleLowerCase().endsWith(extension),
+  )
+
 export function MyModelsPage() {
   const { t } = useTranslation()
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
   const sidecarState = useSidecarStore((state) => state.status.state)
   const [models, setModels] = useState<Model[]>([])
+  const [automations, setAutomations] = useState<Automation[]>([])
   const [loading, setLoading] = useState(true)
   const [importing, setImporting] = useState(false)
+  const [openingModelId, setOpeningModelId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [associateModel, setAssociateModel] = useState<Model | null>(null)
+  const [selectedAutomationId, setSelectedAutomationId] = useState<number | null>(null)
+  const [isDefaultAutomation, setIsDefaultAutomation] = useState(true)
+  const [savingAssociation, setSavingAssociation] = useState(false)
 
-  const fetchModels = (): Promise<Model[]> => fluentAiService.models.list()
+  const fetchData = (): Promise<[Model[], Automation[]]> =>
+    Promise.all([fluentAiService.models.list(), fluentAiService.automations.list()])
 
-  const loadModels = async (): Promise<void> => {
+  const loadData = async (): Promise<void> => {
     setLoading(true)
     setError(null)
     try {
-      setModels(await fetchModels())
+      const [nextModels, nextAutomations] = await fetchData()
+      setModels(nextModels)
+      setAutomations(nextAutomations)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError))
     } finally {
@@ -43,9 +63,12 @@ export function MyModelsPage() {
       return
     }
     let active = true
-    void fetchModels()
-      .then((items) => {
-        if (active) setModels(items)
+    void fetchData()
+      .then(([nextModels, nextAutomations]) => {
+        if (active) {
+          setModels(nextModels)
+          setAutomations(nextAutomations)
+        }
       })
       .catch((loadError: unknown) => {
         if (active) {
@@ -72,13 +95,68 @@ export function MyModelsPage() {
         tags: [],
       })
       message.success(t('pages.myModels.imported'))
-      await loadModels()
+      await loadData()
     } catch (importError) {
       message.error(importError instanceof Error ? importError.message : String(importError))
     } finally {
       setImporting(false)
     }
   }
+
+  const openModel = async (model: Model): Promise<void> => {
+    setOpeningModelId(model.id)
+    try {
+      const report = await fluentAiService.models.open(model.id, { load_case: true })
+      if (report.status === 'success') {
+        message.success(t('pages.myModels.opened'))
+      } else {
+        modal.error({ title: t('pages.myModels.openFailed'), content: report.message })
+      }
+    } catch (openError) {
+      modal.error({
+        title: t('pages.myModels.openFailed'),
+        content: openError instanceof Error ? openError.message : String(openError),
+      })
+    } finally {
+      setOpeningModelId(null)
+    }
+  }
+
+  const openAssociation = (model: Model): void => {
+    setAssociateModel(model)
+    setSelectedAutomationId(model.default_automation_id)
+    setIsDefaultAutomation(true)
+  }
+
+  const saveAssociation = async (): Promise<void> => {
+    if (!associateModel) return
+    if (!selectedAutomationId) {
+      message.warning(t('pages.myModels.selectAutomationRequired'))
+      return
+    }
+    setSavingAssociation(true)
+    try {
+      await fluentAiService.models.associate(associateModel.id, {
+        automationId: selectedAutomationId,
+        isDefault: isDefaultAutomation,
+      })
+      message.success(t('pages.myModels.associated'))
+      setAssociateModel(null)
+      await loadData()
+    } catch (associationError) {
+      message.error(
+        associationError instanceof Error ? associationError.message : String(associationError),
+      )
+    } finally {
+      setSavingAssociation(false)
+    }
+  }
+
+  const automationName = (automationId: number | null): string | null =>
+    automationId === null
+      ? null
+      : (automations.find((automation) => automation.id === automationId)?.name ??
+        `#${automationId}`)
 
   const columns: ColumnsType<Model> = [
     {
@@ -106,19 +184,44 @@ export function MyModelsPage() {
       render: (size: number) => formatBytes(size),
     },
     {
-      title: 'Automation',
+      title: t('pages.myModels.selectAutomation'),
       dataIndex: 'default_automation_id',
       key: 'default_automation_id',
-      width: 130,
-      render: (automationId: number | null) =>
-        automationId ? <Tag color="blue">#{automationId}</Tag> : <Tag>None</Tag>,
+      width: 170,
+      render: (automationId: number | null) => {
+        const name = automationName(automationId)
+        return name ? <Tag color="blue">{name}</Tag> : <Tag>None</Tag>
+      },
     },
     {
       title: t('pages.myModels.created'),
       dataIndex: 'created_at',
       key: 'created_at',
-      width: 210,
+      width: 190,
       render: (value: string) => new Date(value).toLocaleString(),
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 130,
+      render: (_, record) => (
+        <Space size={4}>
+          <Button
+            type="text"
+            icon={<ApiOutlined />}
+            disabled={!isSolverModel(record)}
+            loading={openingModelId === record.id}
+            aria-label={t('common.open')}
+            onClick={() => void openModel(record)}
+          />
+          <Button
+            type="text"
+            icon={<LinkOutlined />}
+            aria-label={t('pages.myModels.automate')}
+            onClick={() => openAssociation(record)}
+          />
+        </Space>
+      ),
     },
   ]
 
@@ -128,7 +231,7 @@ export function MyModelsPage() {
       description={t('pages.myModels.description')}
       actions={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={() => void loadModels()}>
+          <Button icon={<ReloadOutlined />} onClick={() => void loadData()}>
             {t('common.reload')}
           </Button>
           <Button
@@ -147,7 +250,7 @@ export function MyModelsPage() {
           title={t('errors.sidecarErrorTitle')}
           description={t('errors.sidecarErrorDescription')}
           retryLabel={t('common.reload')}
-          onRetry={() => void loadModels()}
+          onRetry={() => void loadData()}
         />
       ) : loading ? (
         <LoadingState />
@@ -156,7 +259,7 @@ export function MyModelsPage() {
           title={t('errors.sidecarErrorTitle')}
           description={error}
           retryLabel={t('common.reload')}
-          onRetry={() => void loadModels()}
+          onRetry={() => void loadData()}
         />
       ) : models.length === 0 ? (
         <EmptyState
@@ -173,6 +276,35 @@ export function MyModelsPage() {
           locale={{ emptyText: <DatabaseOutlined /> }}
         />
       )}
+
+      <Modal
+        open={associateModel !== null}
+        title={`${t('pages.myModels.automate')}: ${associateModel?.name ?? ''}`}
+        okText={t('common.save')}
+        cancelText={t('common.cancel')}
+        confirmLoading={savingAssociation}
+        onOk={() => void saveAssociation()}
+        onCancel={() => setAssociateModel(null)}
+      >
+        <Space direction="vertical" size={16} className="full-width">
+          <Select
+            className="full-width"
+            value={selectedAutomationId}
+            onChange={setSelectedAutomationId}
+            placeholder={t('pages.myModels.selectAutomation')}
+            options={automations.map((automation) => ({
+              value: automation.id,
+              label: automation.name,
+            }))}
+          />
+          <Checkbox
+            checked={isDefaultAutomation}
+            onChange={(event) => setIsDefaultAutomation(event.target.checked)}
+          >
+            {t('pages.myModels.selectAutomation')}
+          </Checkbox>
+        </Space>
+      </Modal>
     </PageContent>
   )
 }

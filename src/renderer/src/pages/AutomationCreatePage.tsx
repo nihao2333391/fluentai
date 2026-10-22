@@ -20,11 +20,12 @@ import {
   Tag,
   Typography,
 } from 'antd'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useMatch, useNavigate } from 'react-router-dom'
 
 import type {
+  Automation,
   FluentSettingGroup,
   PresetDocument,
   PresetItem,
@@ -81,11 +82,27 @@ export function AutomationCreatePage() {
   const { t } = useTranslation()
   const { message } = App.useApp()
   const navigate = useNavigate()
+  const editMatch = useMatch('/automations/:id/edit')
+  const duplicateMatch = useMatch('/automations/:id/duplicate')
+  const sourceAutomationId = Number(editMatch?.params.id ?? duplicateMatch?.params.id ?? 0)
+  const isEditing = editMatch !== null
+  const isDuplicating = duplicateMatch !== null
+  const pageTitle = isEditing
+    ? t('pages.automationCreate.editTitle')
+    : isDuplicating
+      ? t('pages.automationCreate.duplicateTitle')
+      : t('pages.automationCreate.title')
+  const pageDescription = isEditing
+    ? t('pages.automationCreate.editDescription')
+    : isDuplicating
+      ? t('pages.automationCreate.duplicateDescription')
+      : t('pages.automationCreate.description')
   const [form] = Form.useForm<AutomationFormValues>()
   const sidecarState = useSidecarStore((state) => state.status.state)
   const [catalog, setCatalog] = useState<SettingCatalogEntry[]>([])
   const [included, setIncluded] = useState<Record<string, boolean>>({})
   const [values, setValues] = useState<Record<string, PresetValue>>({})
+  const [sourceAutomation, setSourceAutomation] = useState<Automation | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -103,13 +120,40 @@ export function AutomationCreatePage() {
     })
   }
 
-  const fetchCatalog = async (): Promise<SettingCatalogEntry[]> => fluentAiService.fluent.catalog()
+  const fetchPageData = useCallback(async (): Promise<
+    [SettingCatalogEntry[], Automation | null]
+  > => {
+    const [entries, automation] = await Promise.all([
+      fluentAiService.fluent.catalog(),
+      sourceAutomationId > 0
+        ? fluentAiService.automations.get(sourceAutomationId)
+        : Promise.resolve(null),
+    ])
+    return [entries, automation]
+  }, [sourceAutomationId])
 
-  const loadCatalog = async (): Promise<void> => {
+  const loadPage = async (): Promise<void> => {
     setLoading(true)
     setError(null)
     try {
-      initializeCatalog(await fetchCatalog())
+      const [entries, automation] = await fetchPageData()
+      initializeCatalog(entries)
+      if (automation) {
+        setSourceAutomation(automation)
+        const presetBySetting = Object.fromEntries(
+          automation.preset.items.map((item) => [item.setting_id, item.value]),
+        )
+        setValues((current) => ({ ...current, ...presetBySetting }))
+        setIncluded(
+          Object.fromEntries(automation.preset.items.map((item) => [item.setting_id, true])),
+        )
+        form.setFieldsValue({
+          name: isDuplicating
+            ? t('pages.automationCreate.copyName', { name: automation.name })
+            : automation.name,
+          description: automation.description,
+        })
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError))
     } finally {
@@ -120,10 +164,26 @@ export function AutomationCreatePage() {
   useEffect(() => {
     if (sidecarState !== 'ready') return
     let active = true
-    void fetchCatalog()
-      .then((entries) => {
+    void fetchPageData()
+      .then(([entries, automation]) => {
         if (active) {
           initializeCatalog(entries)
+          if (automation) {
+            setSourceAutomation(automation)
+            const presetBySetting = Object.fromEntries(
+              automation.preset.items.map((item) => [item.setting_id, item.value]),
+            )
+            setValues((current) => ({ ...current, ...presetBySetting }))
+            setIncluded(
+              Object.fromEntries(automation.preset.items.map((item) => [item.setting_id, true])),
+            )
+            form.setFieldsValue({
+              name: isDuplicating
+                ? t('pages.automationCreate.copyName', { name: automation.name })
+                : automation.name,
+              description: automation.description,
+            })
+          }
         }
       })
       .catch((loadError: unknown) => {
@@ -137,7 +197,7 @@ export function AutomationCreatePage() {
     return () => {
       active = false
     }
-  }, [sidecarState])
+  }, [fetchPageData, form, isDuplicating, sidecarState, t])
 
   const includedCount = Object.values(included).filter(Boolean).length
 
@@ -176,13 +236,23 @@ export function AutomationCreatePage() {
         message.error(validation.errors.join('; '))
         return
       }
-      await fluentAiService.automations.create({
+      const payload = {
         name: formValues.name,
         description: formValues.description ?? '',
-        status: 'draft',
+        status: isEditing ? (sourceAutomation?.status ?? 'draft') : 'draft',
         preset,
-      })
-      message.success(t('pages.automationCreate.created'))
+      } as const
+      if (isEditing && sourceAutomationId > 0) {
+        await fluentAiService.automations.update(sourceAutomationId, payload)
+        message.success(t('pages.automationCreate.updated'))
+      } else {
+        await fluentAiService.automations.create(payload)
+        message.success(
+          isDuplicating
+            ? t('pages.automationCreate.duplicated')
+            : t('pages.automationCreate.created'),
+        )
+      }
       navigate('/automations')
     } catch (saveError) {
       message.error(saveError instanceof Error ? saveError.message : String(saveError))
@@ -256,15 +326,12 @@ export function AutomationCreatePage() {
 
   if (sidecarState === 'error') {
     return (
-      <PageContent
-        title={t('pages.automationCreate.title')}
-        description={t('pages.automationCreate.description')}
-      >
+      <PageContent title={pageTitle} description={pageDescription}>
         <ErrorState
           title={t('errors.sidecarErrorTitle')}
           description={t('errors.sidecarErrorDescription')}
           retryLabel={t('common.reload')}
-          onRetry={() => void loadCatalog()}
+          onRetry={() => void loadPage()}
         />
       </PageContent>
     )
@@ -272,10 +339,7 @@ export function AutomationCreatePage() {
 
   if (loading) {
     return (
-      <PageContent
-        title={t('pages.automationCreate.title')}
-        description={t('pages.automationCreate.description')}
-      >
+      <PageContent title={pageTitle} description={pageDescription}>
         <LoadingState />
       </PageContent>
     )
@@ -283,15 +347,12 @@ export function AutomationCreatePage() {
 
   if (error) {
     return (
-      <PageContent
-        title={t('pages.automationCreate.title')}
-        description={t('pages.automationCreate.description')}
-      >
+      <PageContent title={pageTitle} description={pageDescription}>
         <ErrorState
           title={t('errors.sidecarErrorTitle')}
           description={error}
           retryLabel={t('common.reload')}
-          onRetry={() => void loadCatalog()}
+          onRetry={() => void loadPage()}
         />
       </PageContent>
     )
@@ -339,8 +400,8 @@ export function AutomationCreatePage() {
 
   return (
     <PageContent
-      title={t('pages.automationCreate.title')}
-      description={t('pages.automationCreate.description')}
+      title={pageTitle}
+      description={pageDescription}
       actions={
         <Tag color="blue">
           {t('pages.automationCreate.selectedSettings', { count: includedCount })}
@@ -374,7 +435,9 @@ export function AutomationCreatePage() {
             <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving}>
               {saving
                 ? t('pages.automationCreate.saving')
-                : t('pages.automationCreate.saveAutomation')}
+                : isEditing
+                  ? t('pages.automationCreate.updateAutomation')
+                  : t('pages.automationCreate.saveAutomation')}
             </Button>
           </Form.Item>
         </Form>

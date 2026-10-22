@@ -1,8 +1,15 @@
-import { DeleteOutlined, PlayCircleOutlined, ReloadOutlined } from '@ant-design/icons'
+import {
+  CopyOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  PlayCircleOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons'
 import { Alert, App, Button, Card, List, Modal, Select, Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 import type { Automation, Model, SyncLog } from '../../../shared/contracts'
 import { EmptyState, ErrorState, LoadingState, PageContent } from '../components/PageState'
@@ -12,6 +19,7 @@ import { useSidecarStore } from '../store/sidecarStore'
 export function MyAutomationsPage() {
   const { t } = useTranslation()
   const { message, modal } = App.useApp()
+  const navigate = useNavigate()
   const sidecarState = useSidecarStore((state) => state.status.state)
   const [automations, setAutomations] = useState<Automation[]>([])
   const [models, setModels] = useState<Model[]>([])
@@ -72,7 +80,8 @@ export function MyAutomationsPage() {
 
   const openApply = (automation: Automation): void => {
     setApplyAutomation(automation)
-    setSelectedModelId(models[0]?.id ?? null)
+    const associatedModel = models.find((model) => model.automation_ids.includes(automation.id))
+    setSelectedModelId(associatedModel?.id ?? models[0]?.id ?? null)
   }
 
   const applySelected = async (): Promise<void> => {
@@ -155,9 +164,9 @@ export function MyAutomationsPage() {
     {
       title: '',
       key: 'actions',
-      width: 140,
+      width: 210,
       render: (_, record) => (
-        <Space>
+        <Space size={4}>
           <Button
             type="primary"
             size="small"
@@ -166,6 +175,18 @@ export function MyAutomationsPage() {
           >
             {t('common.apply')}
           </Button>
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            onClick={() => navigate(`/automations/${record.id}/edit`)}
+            aria-label={t('common.edit')}
+          />
+          <Button
+            type="text"
+            icon={<CopyOutlined />}
+            onClick={() => navigate(`/automations/${record.id}/duplicate`)}
+            aria-label={t('common.duplicate')}
+          />
           <Button
             danger
             type="text"

@@ -21,7 +21,9 @@ import type {
   Model,
   ModelAssociationRequest,
   ModelCreateRequest,
+  ModelOpenReport,
   ModelUpdateRequest,
+  OpenModelRequest,
   PresetDocument,
   PresetItem,
   PresetValidationReport,
@@ -107,6 +109,12 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
         automation_id: payload.automationId,
         is_default: payload.isDefault,
       }),
+    }),
+  )
+  ipcMain.handle('models:open', (_event, id: number, payload: OpenModelRequest) =>
+    sidecar.request<ModelOpenReport>(`/api/models/${id}/open`, {
+      method: 'POST',
+      body: jsonBody(payload),
     }),
   )
   ipcMain.handle('models:refresh', (_event, id: number) =>
