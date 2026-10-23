@@ -11,6 +11,7 @@ from app.api import (
     session,
     settings,
     sync_logs,
+    system,
 )
 from app.auth import require_bearer_token
 
@@ -23,3 +24,4 @@ api_router.include_router(settings.router, prefix="/settings")
 api_router.include_router(jobs.router, prefix="/jobs")
 api_router.include_router(sync_logs.router, prefix="/sync-logs")
 api_router.include_router(session.router, prefix="/session")
+api_router.include_router(system.router, prefix="/system")

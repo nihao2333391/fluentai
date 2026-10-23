@@ -1,5 +1,6 @@
 """FastAPI application factory for the Fluent AI sidecar."""
 
+import contextlib
 import os
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -48,6 +49,8 @@ def create_app(
     )
     database = Database(resolve_database_path(database_path))
     database.initialize()
+    with contextlib.suppress(Exception):
+        database.ensure_daily_backup()
     app.state.auth_token = auth_token
     app.state.request_shutdown = None
     app.state.database = database

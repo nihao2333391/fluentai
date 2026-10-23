@@ -364,3 +364,25 @@ class RecentSessionRead(BaseModel):
     automation: AutomationRead | None = None
     meshing_automation: MeshingAutomationRead | None = None
     updated_at: str | None = None
+
+
+class DatabaseBackupInfo(BaseModel):
+    name: str
+    path: str
+    size: int
+    created_at: str
+
+
+class DatabaseBackupList(BaseModel):
+    backups: list[DatabaseBackupInfo] = Field(default_factory=list)
+
+
+class RestoreDatabaseRequest(BaseModel):
+    backup_name: str = Field(min_length=1, max_length=200)
+
+
+class RestoreDatabaseReport(BaseModel):
+    status: Literal["success", "failed"]
+    backup_name: str
+    safety_backup: DatabaseBackupInfo | None = None
+    message: str

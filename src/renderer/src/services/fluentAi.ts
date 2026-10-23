@@ -62,6 +62,11 @@ export const fluentAiService = {
   session: {
     recent: () => getFluentAIApi().session.recent(),
   },
+  system: {
+    listBackups: () => getFluentAIApi().system.listBackups(),
+    createBackup: () => getFluentAIApi().system.createBackup(),
+    restoreBackup: (backupName: string) => getFluentAIApi().system.restoreBackup(backupName),
+  },
   credentials: {
     getStatus: () => getFluentAIApi().credentials.getStatus(),
     setFluentPassword: (password: string) =>

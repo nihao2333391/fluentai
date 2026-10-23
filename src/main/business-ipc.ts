@@ -6,6 +6,8 @@ import type {
   ApplyAutomationRequest,
   ApplyMeshingAutomationRequest,
   CredentialStatus,
+  DatabaseBackupInfo,
+  DatabaseBackupList,
   FluentConnectionConfig,
   FluentOperationReport,
   FluentStatus,
@@ -29,6 +31,7 @@ import type {
   PresetValidationReport,
   PresetValue,
   RecentSession,
+  RestoreDatabaseReport,
   SettingCatalogEntry,
   SettingsPayload,
   SyncLog,
@@ -158,6 +161,19 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
   })
 
   ipcMain.handle('session:recent', () => sidecar.request<RecentSession>('/api/session/recent'))
+
+  ipcMain.handle('system:list-backups', () =>
+    sidecar.request<DatabaseBackupList>('/api/system/backups'),
+  )
+  ipcMain.handle('system:create-backup', () =>
+    sidecar.request<DatabaseBackupInfo>('/api/system/backups', { method: 'POST' }),
+  )
+  ipcMain.handle('system:restore-backup', (_event, backupName: string) =>
+    sidecar.request<RestoreDatabaseReport>('/api/system/restore', {
+      method: 'POST',
+      body: jsonBody({ backup_name: backupName }),
+    }),
+  )
 
   ipcMain.handle('meshing:schemas', () =>
     sidecar.request<MeshingSchemaSummary[]>('/api/meshing/schemas'),

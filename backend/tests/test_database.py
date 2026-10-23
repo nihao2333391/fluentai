@@ -56,3 +56,23 @@ def test_migration_upgrade_from_v1_adds_meshing_table(tmp_path: Path) -> None:
         ).fetchone()
     assert latest == 3
     assert table is not None
+
+
+def test_database_backup_and_restore(tmp_path: Path) -> None:
+    database = Database(tmp_path / "backup.db")
+    database.initialize()
+    with database.connect() as connection:
+        connection.execute("UPDATE app_settings SET value = 'before' WHERE key = 'language'")
+    backup = database.create_backup("test")
+    backup_size = backup["size"]
+    assert isinstance(backup_size, int) and backup_size > 0
+    with database.connect() as connection:
+        connection.execute("UPDATE app_settings SET value = 'after' WHERE key = 'language'")
+    safety, _restored = database.restore_backup(str(backup["name"]))
+    assert safety["name"] != backup["name"]
+    with database.connect() as connection:
+        value = connection.execute(
+            "SELECT value FROM app_settings WHERE key = 'language'"
+        ).fetchone()[0]
+    assert value == "before"
+    assert len(database.list_backups()) >= 2

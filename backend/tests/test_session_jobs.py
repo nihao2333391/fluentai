@@ -94,3 +94,25 @@ def test_sync_log_filters(
     assert filtered.status_code == 200
     assert len(filtered.json()) == 1
     assert filtered.json()[0]["target"] == "Fluent Meshing"
+
+
+def test_database_backup_api(
+    app_client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    created = app_client.post("/api/system/backups", headers=auth_headers)
+    assert created.status_code == 201
+    backup = created.json()
+    assert backup["size"] > 0
+
+    listed = app_client.get("/api/system/backups", headers=auth_headers)
+    assert listed.status_code == 200
+    assert backup["name"] in {item["name"] for item in listed.json()["backups"]}
+
+    restored = app_client.post(
+        "/api/system/restore",
+        headers=auth_headers,
+        json={"backup_name": backup["name"]},
+    )
+    assert restored.status_code == 200
+    assert restored.json()["status"] == "success"

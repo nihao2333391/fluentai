@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
 MIGRATIONS: tuple[tuple[int, str], ...] = (
@@ -176,3 +177,100 @@ class Database:
                     """,
                     (version,),
                 )
+
+    def backup_directory(self) -> Path:
+        return self.path.parent / "backups"
+
+    def list_backups(self) -> list[dict[str, object]]:
+        directory = self.backup_directory()
+        if not directory.exists():
+            return []
+        backups: list[dict[str, object]] = []
+        for path in sorted(directory.glob("fluent-ai-*.db"), reverse=True):
+            stat = path.stat()
+            backups.append(
+                {
+                    "name": path.name,
+                    "path": str(path),
+                    "size": stat.st_size,
+                    "created_at": datetime.fromtimestamp(stat.st_mtime, UTC).isoformat(),
+                }
+            )
+        return backups
+
+    def create_backup(self, label: str = "manual") -> dict[str, object]:
+        if not self.path.is_file():
+            raise FileNotFoundError(f"Database does not exist: {self.path}")
+        directory = self.backup_directory()
+        directory.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S-%f")
+        safe_label = "".join(char for char in label if char.isalnum() or char in "-_") or "manual"
+        destination = directory / f"fluent-ai-{stamp}-{safe_label}.db"
+        source_connection = sqlite3.connect(self.path, timeout=5.0)
+        destination_connection = sqlite3.connect(destination, timeout=5.0)
+        try:
+            source_connection.backup(destination_connection)
+            destination_connection.commit()
+            integrity = destination_connection.execute("PRAGMA integrity_check").fetchone()
+        finally:
+            destination_connection.close()
+            source_connection.close()
+        if not integrity or str(integrity[0]) != "ok":
+            destination.unlink(missing_ok=True)
+            raise RuntimeError(f"Backup integrity check failed: {destination}")
+        self._prune_backups(keep=10)
+        stat = destination.stat()
+        return {
+            "name": destination.name,
+            "path": str(destination),
+            "size": stat.st_size,
+            "created_at": datetime.fromtimestamp(stat.st_mtime, UTC).isoformat(),
+        }
+
+    def ensure_daily_backup(self) -> dict[str, object] | None:
+        directory = self.backup_directory()
+        if directory.exists():
+            newest = max(
+                (path.stat().st_mtime for path in directory.glob("fluent-ai-*.db")),
+                default=0,
+            )
+            if datetime.now(UTC).timestamp() - newest < 86_400:
+                return None
+        return self.create_backup("daily")
+
+    def restore_backup(self, backup_name: str) -> tuple[dict[str, object], dict[str, object]]:
+        directory = self.backup_directory().resolve()
+        backup_path = (directory / backup_name).resolve()
+        if backup_path.parent != directory or backup_path.suffix.lower() != ".db":
+            raise ValueError("Invalid database backup name.")
+        if not backup_path.is_file():
+            raise FileNotFoundError(f"Database backup does not exist: {backup_name}")
+
+        safety_backup = self.create_backup("pre-restore")
+        source_connection = sqlite3.connect(backup_path, timeout=5.0)
+        destination_connection = sqlite3.connect(self.path, timeout=5.0)
+        try:
+            integrity = source_connection.execute("PRAGMA integrity_check").fetchone()
+            if not integrity or str(integrity[0]) != "ok":
+                raise RuntimeError(f"Backup integrity check failed: {backup_name}")
+            source_connection.backup(destination_connection)
+            destination_connection.commit()
+        finally:
+            destination_connection.close()
+            source_connection.close()
+        self.initialize()
+        return safety_backup, {
+            "name": backup_path.name,
+            "path": str(backup_path),
+            "size": backup_path.stat().st_size,
+            "created_at": datetime.fromtimestamp(backup_path.stat().st_mtime, UTC).isoformat(),
+        }
+
+    def _prune_backups(self, keep: int) -> None:
+        backups = sorted(
+            self.backup_directory().glob("fluent-ai-*.db"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        for stale in backups[keep:]:
+            stale.unlink(missing_ok=True)

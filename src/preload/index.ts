@@ -6,6 +6,8 @@ import type {
   Automation,
   AutomationInput,
   CredentialStatus,
+  DatabaseBackupInfo,
+  DatabaseBackupList,
   FluentConnectionConfig,
   FluentOperationReport,
   FluentStatus,
@@ -31,6 +33,7 @@ import type {
   PresetValidationReport,
   PresetValue,
   RecentSession,
+  RestoreDatabaseReport,
   SettingCatalogEntry,
   SettingsPayload,
   SidecarStatus,
@@ -93,6 +96,12 @@ const api: FluentAIApi = Object.freeze({
   }),
   session: Object.freeze({
     recent: () => invoke<RecentSession>('session:recent'),
+  }),
+  system: Object.freeze({
+    listBackups: () => invoke<DatabaseBackupList>('system:list-backups'),
+    createBackup: () => invoke<DatabaseBackupInfo>('system:create-backup'),
+    restoreBackup: (backupName: string) =>
+      invoke<RestoreDatabaseReport>('system:restore-backup', backupName),
   }),
   credentials: Object.freeze({
     getStatus: () => invoke<CredentialStatus>('credentials:status'),

@@ -14,6 +14,7 @@ Fluent AI is a Windows desktop application for managing reusable ANSYS Fluent au
 - **M7 - First end-to-end vertical slice: PASSED**
 - **M8 - Complete Meshing automation and apply workflows: PASSED**
 - **M9 - Delivery lifecycle and packaging: PASSED**
+- **M10 - Product hardening: IN PROGRESS**
 
 The application now supports a real, persisted vertical workflow:
 
@@ -174,7 +175,7 @@ Artifact:
 release\FluentAI-0.1.0-x64-Setup.exe
 ```
 
-Current installer boundary: it is not Authenticode-signed and still uses the default Electron icon.
+Current installer boundary: it is not Authenticode-signed. The Fluent AI application icon is included.
 
 ## Evidence
 
@@ -211,6 +212,9 @@ Completed:
 - standalone Python sidecar staged into Electron resources;
 - Windows NSIS installer with silent install/uninstall smoke verification;
 - installed application verified to load the real renderer and reach sidecar readiness.
+- formal application icon;
+- daily and manual SQLite backups with integrity checks and safety restore;
+- sidecar development-dependency pruning.
 
 M9 completion includes:
 

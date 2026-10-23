@@ -1,20 +1,31 @@
-import { CheckCircleOutlined, LockOutlined, WarningOutlined } from '@ant-design/icons'
-import { Card, Flex, Radio, Select, Space, Tag, Typography } from 'antd'
+import {
+  CheckCircleOutlined,
+  CloudDownloadOutlined,
+  DatabaseOutlined,
+  LockOutlined,
+  ReloadOutlined,
+  WarningOutlined,
+} from '@ant-design/icons'
+import { App, Button, Card, Flex, List, Radio, Select, Space, Tag, Typography } from 'antd'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { CredentialStatus } from '../../../shared/contracts'
+import type { CredentialStatus, DatabaseBackupInfo } from '../../../shared/contracts'
 import { FluentConnectionCard } from '../components/FluentConnectionCard'
 import { PageContent } from '../components/PageState'
+import { fluentAiService } from '../services/fluentAi'
 import { useAppStore, type Language, type ThemeMode } from '../store/appStore'
 
 export function SettingsPage() {
   const { t } = useTranslation()
+  const { message, modal } = App.useApp()
   const themeMode = useAppStore((state) => state.themeMode)
   const language = useAppStore((state) => state.language)
   const setThemeMode = useAppStore((state) => state.setThemeMode)
   const setLanguage = useAppStore((state) => state.setLanguage)
   const [credentialStatus, setCredentialStatus] = useState<CredentialStatus | null>(null)
+  const [backups, setBackups] = useState<DatabaseBackupInfo[]>([])
+  const [backupBusy, setBackupBusy] = useState(false)
 
   useEffect(() => {
     if (!window.fluentAI) {
@@ -30,6 +41,59 @@ export function SettingsPage() {
       active = false
     }
   }, [])
+
+  const loadBackups = async (): Promise<void> => {
+    const result = await fluentAiService.system.listBackups()
+    setBackups(result.backups.slice(0, 5))
+  }
+
+  useEffect(() => {
+    if (!window.fluentAI) return
+    let active = true
+    void fluentAiService.system
+      .listBackups()
+      .then((result) => {
+        if (active) setBackups(result.backups.slice(0, 5))
+      })
+      .catch(() => {
+        if (active) setBackups([])
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const createBackup = async (): Promise<void> => {
+    setBackupBusy(true)
+    try {
+      const backup = await fluentAiService.system.createBackup()
+      message.success(t('settings.backupCreated', { name: backup.name }))
+      await loadBackups()
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : String(error))
+    } finally {
+      setBackupBusy(false)
+    }
+  }
+
+  const restoreBackup = (backup: DatabaseBackupInfo): void => {
+    modal.confirm({
+      title: t('settings.restoreTitle'),
+      content: t('settings.restoreDescription', { name: backup.name }),
+      okText: t('settings.restore'),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        setBackupBusy(true)
+        try {
+          const report = await fluentAiService.system.restoreBackup(backup.name)
+          message.success(report.message)
+          await loadBackups()
+        } finally {
+          setBackupBusy(false)
+        }
+      },
+    })
+  }
 
   return (
     <PageContent title={t('pages.settings.title')} description={t('pages.settings.description')}>
@@ -76,6 +140,58 @@ export function SettingsPage() {
         </Card>
 
         <FluentConnectionCard />
+
+        <Card
+          title={t('settings.dataSafety')}
+          extra={
+            <Space>
+              <Button icon={<ReloadOutlined />} onClick={() => void loadBackups()}>
+                {t('common.reload')}
+              </Button>
+              <Button
+                type="primary"
+                icon={<DatabaseOutlined />}
+                loading={backupBusy}
+                onClick={() => void createBackup()}
+              >
+                {t('settings.createBackup')}
+              </Button>
+            </Space>
+          }
+        >
+          <Typography.Paragraph type="secondary">
+            {t('settings.dataSafetyDescription')}
+          </Typography.Paragraph>
+          <List
+            size="small"
+            dataSource={backups}
+            locale={{ emptyText: t('settings.noBackups') }}
+            renderItem={(backup) => (
+              <List.Item
+                actions={[
+                  <Button
+                    key="restore"
+                    danger
+                    type="text"
+                    icon={<CloudDownloadOutlined />}
+                    disabled={backupBusy}
+                    onClick={() => restoreBackup(backup)}
+                  >
+                    {t('settings.restore')}
+                  </Button>,
+                ]}
+              >
+                <Space direction="vertical" size={2}>
+                  <Typography.Text strong>{backup.name}</Typography.Text>
+                  <Typography.Text type="secondary">
+                    {new Date(backup.created_at).toLocaleString()} ·{' '}
+                    {(backup.size / 1024).toFixed(1)} KB
+                  </Typography.Text>
+                </Space>
+              </List.Item>
+            )}
+          />
+        </Card>
 
         <Card title={t('settings.credentials')}>
           <Flex align="center" justify="space-between" gap={24} wrap>

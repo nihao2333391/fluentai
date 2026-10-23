@@ -21,6 +21,7 @@ compression: normal
 
 win:
   executableName: FluentAI
+  icon: build-resources/icon.png
   target:
     - target: nsis
       arch:

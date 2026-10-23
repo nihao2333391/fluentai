@@ -73,6 +73,48 @@ Get-ChildItem -LiteralPath $output -Recurse -File |
   Remove-Item -LiteralPath $_.FullName -Force
 }
 
+$runtimePrune = @(
+  "python\Lib\test",
+  "python\Lib\idlelib",
+  "python\Lib\turtledemo",
+  "python\Lib\ensurepip",
+  "python\Lib\venv",
+  "python\Lib\site-packages",
+  "python\include",
+  "python\libs",
+  "python\Scripts",
+  "python\tcl"
+)
+foreach ($relative in $runtimePrune) {
+  $target = Join-Path $output $relative
+  if (Test-Path -LiteralPath $target) {
+    Remove-Item -LiteralPath $target -Recurse -Force
+  }
+}
+
+$developmentPackages = @(
+  "_pytest",
+  "pytest",
+  "mypy",
+  "mypyc",
+  "mypy_extensions",
+  "ruff",
+  "pandas_stubs",
+  "types_pytz",
+  "pip"
+)
+Get-ChildItem -LiteralPath $siteDestination -Force |
+  Where-Object {
+    $_.PSIsContainer -and (
+      $developmentPackages -contains $_.Name -or
+      $_.Name -match "^pytest[-_]" -or
+      $_.Name -match "^types[-_]"
+    )
+  } |
+  ForEach-Object {
+    Remove-Item -LiteralPath $_.FullName -Recurse -Force
+  }
+
 $manifest = [ordered]@{
   name = "fluent-ai-sidecar"
   python_version = "3.12.14"

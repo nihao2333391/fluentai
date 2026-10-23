@@ -62,6 +62,11 @@ const createMockApi = (): FluentAIApi => ({
       updated_at: null,
     }),
   },
+  system: {
+    listBackups: vi.fn().mockResolvedValue({ backups: [] }),
+    createBackup: vi.fn(),
+    restoreBackup: vi.fn(),
+  },
   credentials: {
     getStatus: vi.fn().mockResolvedValue({ encryptionAvailable: true, configured: false }),
     setFluentPassword: vi.fn(),

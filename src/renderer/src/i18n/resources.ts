@@ -204,6 +204,15 @@ export const resources = {
         disconnected: '未连接',
         saveConnection: '保存连接设置',
         connectionSaved: '连接设置已保存',
+        dataSafety: '数据安全',
+        dataSafetyDescription:
+          '应用启动时自动创建每日数据库备份，最多保留最近 10 份。恢复前会先创建安全备份。',
+        createBackup: '立即备份',
+        backupCreated: '数据库备份已创建：{{name}}',
+        noBackups: '暂无数据库备份',
+        restore: '恢复',
+        restoreTitle: '恢复数据库备份',
+        restoreDescription: '确定要从 {{name}} 恢复吗？当前数据会先自动备份。',
       },
       errors: {
         bridgeUnavailableTitle: '桌面桥不可用',
@@ -430,6 +439,15 @@ export const resources = {
         disconnected: 'Disconnected',
         saveConnection: 'Save connection settings',
         connectionSaved: 'Connection settings saved',
+        dataSafety: 'Data safety',
+        dataSafetyDescription:
+          'A daily database backup is created at startup and the latest 10 backups are retained. Restore creates a safety backup first.',
+        createBackup: 'Back up now',
+        backupCreated: 'Database backup created: {{name}}',
+        noBackups: 'No database backups yet',
+        restore: 'Restore',
+        restoreTitle: 'Restore database backup',
+        restoreDescription: 'Restore from {{name}}? The current database will be backed up first.',
       },
       errors: {
         bridgeUnavailableTitle: 'Desktop bridge unavailable',

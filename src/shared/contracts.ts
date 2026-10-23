@@ -465,6 +465,30 @@ export interface SessionApi {
   recent: () => Promise<RecentSession>
 }
 
+export interface DatabaseBackupInfo {
+  name: string
+  path: string
+  size: number
+  created_at: string
+}
+
+export interface DatabaseBackupList {
+  backups: DatabaseBackupInfo[]
+}
+
+export interface RestoreDatabaseReport {
+  status: 'success' | 'failed'
+  backup_name: string
+  safety_backup: DatabaseBackupInfo | null
+  message: string
+}
+
+export interface SystemApi {
+  listBackups: () => Promise<DatabaseBackupList>
+  createBackup: () => Promise<DatabaseBackupInfo>
+  restoreBackup: (backupName: string) => Promise<RestoreDatabaseReport>
+}
+
 export interface MeshingApi {
   schemas: () => Promise<MeshingSchemaSummary[]>
   schema: (workflowType: MeshingWorkflowType) => Promise<MeshingWorkflowSchema>
@@ -490,6 +514,7 @@ export interface FluentAIApi {
   readonly jobs: JobsApi
   readonly syncLogs: SyncLogsApi
   readonly session: SessionApi
+  readonly system: SystemApi
   readonly credentials: CredentialsApi
   readonly fluent: FluentApi
   readonly workflows: WorkflowsApi
