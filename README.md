@@ -2,6 +2,16 @@
 
 Fluent AI is a Windows desktop application for managing reusable ANSYS Fluent automation presets, model references, Fluent connections, and verified setting synchronization.
 
+## Repository
+
+Team development repository:
+
+```text
+https://gitee.com/alcohol-free-beverage-station/fluent-ai-for-aic2026
+```
+
+See `CONTRIBUTING.md` for clone, branch, Pull Request, and validation instructions.
+
 ## Current Status
 
 - **M0 - Fluent feasibility: PASSED**
@@ -15,6 +25,7 @@ Fluent AI is a Windows desktop application for managing reusable ANSYS Fluent au
 - **M8 - Complete Meshing automation and apply workflows: PASSED**
 - **M9 - Delivery lifecycle and packaging: PASSED**
 - **M10 - Product hardening: IN PROGRESS**
+- **M11 - Meshing connection, direct read/write, and FDL UI metadata: PASSED**
 
 The application now supports a real, persisted vertical workflow:
 
@@ -51,7 +62,7 @@ The M7 validation ran through the real sidecar HTTP API and Fluent 2025 R2:
 Evidence:
 
 - `docs/poc/reports/m7_workflow.json`
-- `docs/m7-verification.md`
+- `docs/verification/m7-verification.md`
 
 ## Architecture
 
@@ -190,15 +201,15 @@ The release pipeline writes `release-manifest.json` and a SHA-256 checksum, and 
 
 ## Evidence
 
-- M7 verification: `docs/m7-verification.md`
-- M9.2 packaging: `docs/m9.2-verification.md`
+- M7 verification: `docs/verification/m7-verification.md`
+- M9.2 packaging: `docs/verification/m9.2-verification.md`
 - M7 architecture decision: `docs/adr/0008-m7-vertical-slice.md`
-- M6 verification: `docs/m6-verification.md`
-- M5 verification: `docs/m5-verification.md`
-- M4 verification: `docs/m4-verification.md`
-- M3 verification: `docs/m3-verification.md`
-- M2 verification: `docs/m2-verification.md`
-- M1 verification: `docs/m1-verification.md`
+- M6 verification: `docs/verification/m6-verification.md`
+- M5 verification: `docs/verification/m5-verification.md`
+- M4 verification: `docs/verification/m4-verification.md`
+- M3 verification: `docs/verification/m3-verification.md`
+- M2 verification: `docs/verification/m2-verification.md`
+- M1 verification: `docs/verification/m1-verification.md`
 - M0 Fluent report: `docs/poc/fluent-2025R2.md`
 - Known boundaries: `docs/KNOWN_ISSUES.md`
 

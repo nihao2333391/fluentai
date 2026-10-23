@@ -191,7 +191,7 @@ Generation result after nested templates:
 - Watertight: 3/3 compound tasks expose a child template.
 - Fault-tolerant: 10/12 compound tasks expose a child template; the two remaining tasks are explicitly blocked.
 
-Real apply verification is recorded in `docs/m8.4-verification.md`. The verified native geometry route uses the reference PMDB file; apply stops before surface or volume mesh generation.
+Real apply verification is recorded in `docs/verification/m8.4-verification.md`. The verified native geometry route uses the reference PMDB file; apply stops before surface or volume mesh generation.
 
 ### Remaining PyFluent API Limitation
 

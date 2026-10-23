@@ -8,4 +8,6 @@ coverage
 .venv
 .runtime
 docs/poc/reports
+docs/meshing/ui-audit/Fluent_Meshing_UI_Audit_2025R2.xlsx
+docs/meshing/ui-audit/meshing-workflow-map.html
 requirements-m0.lock.txt

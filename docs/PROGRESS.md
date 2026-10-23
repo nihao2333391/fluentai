@@ -13,27 +13,31 @@
 | M8 - Fluent Meshing workflow automation | PASSED      | Watertight/Fault-tolerant schemas, independent DB/API, full preset editor, exact name validation, compound-child creation, real Fluent apply/readback and stop-before-mesh behavior verified     |
 | M9 - Delivery lifecycle and packaging   | PASSED      | Automation lifecycle, model association, recent-session restore, detailed jobs/cancellation, filtered logs, bundled Python sidecar, NSIS installer and installed-app smoke verification complete |
 | M10 - Product hardening                 | IN PROGRESS | Branding, backup recovery, sidecar pruning, 39 static Solver settings, dynamic materials/boundaries, monitors and signing-ready release pipeline complete; external certificate remains          |
+| M11 - Meshing UI and direct I/O         | PASSED      | FDL task/option ordering, display text, advanced grouping, Meshing connection, direct read/write, 427-parameter real-Fluent readback and interface verification complete                         |
 
 ## Evidence
 
 - M0: `docs/poc/fluent-2025R2.md`
-- M1: `docs/m1-verification.md`
-- M2: `docs/m2-verification.md`
-- M3: `docs/m3-verification.md`
-- M4: `docs/m4-verification.md`
-- M5: `docs/m5-verification.md`
-- M6: `docs/m6-verification.md`
-- M7: `docs/m7-verification.md`
-- M8.2: `docs/m8.2-verification.md`
-- M8.3: `docs/m8.3-verification.md`
-- M8.4: `docs/m8.4-verification.md`
-- M9.1: `docs/m9.1-verification.md`
-- M9.2: `docs/m9.2-verification.md`
-- M9.3: `docs/m9.3-verification.md`
-- M10.1: `docs/m10.1-verification.md`
-- M10.2: `docs/m10.2-verification.md`
-- M10.3: `docs/m10.3-verification.md`
-- M10.4: `docs/m10.4-verification.md`
-- M10.5: `docs/m10.5-verification.md`
-- M10.6: `docs/m10.6-verification.md`
+- M1: `docs/verification/m1-verification.md`
+- M2: `docs/verification/m2-verification.md`
+- M3: `docs/verification/m3-verification.md`
+- M4: `docs/verification/m4-verification.md`
+- M5: `docs/verification/m5-verification.md`
+- M6: `docs/verification/m6-verification.md`
+- M7: `docs/verification/m7-verification.md`
+- M8.2: `docs/verification/m8.2-verification.md`
+- M8.3: `docs/verification/m8.3-verification.md`
+- M8.4: `docs/verification/m8.4-verification.md`
+- M9.1: `docs/verification/m9.1-verification.md`
+- M9.2: `docs/verification/m9.2-verification.md`
+- M9.3: `docs/verification/m9.3-verification.md`
+- M10.1: `docs/verification/m10.1-verification.md`
+- M10.2: `docs/verification/m10.2-verification.md`
+- M10.3: `docs/verification/m10.3-verification.md`
+- M10.4: `docs/verification/m10.4-verification.md`
+- M10.5: `docs/verification/m10.5-verification.md`
+- M10.6: `docs/verification/m10.6-verification.md`
+- M11 interface plan: `docs/meshing/FLUENT_MESHING_INTERFACE_PLAN.md`
+- M11 real interface report: `docs/poc/reports/meshing-interface-check.json`
+- M11 UI audit: `docs/meshing/ui-audit/MESHING_UI_FULL_AUDIT.md`
 - Decisions: `docs/adr/`
