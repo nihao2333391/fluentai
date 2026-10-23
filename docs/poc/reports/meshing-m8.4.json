@@ -1,13 +1,13 @@
 {
   "status": "passed",
-  "started_at_utc": "2026-10-23T01:02:33.225083+00:00",
+  "started_at_utc": "2026-10-23T01:26:58.492476+00:00",
   "connection": {
     "connected": true,
     "mode": "launch",
     "version": "Ansys Fluent 2025 R2",
-    "pid": 18208,
+    "pid": 19852,
     "host": "localhost",
-    "port": 49895
+    "port": 57523
   },
   "missing_name_report": {
     "workflow_type": "watertight",
@@ -300,5 +300,5 @@
     "error": null
   },
   "marker": "M8_APPLY_CHECK_PASSED",
-  "finished_at_utc": "2026-10-23T01:03:19.403433+00:00"
+  "finished_at_utc": "2026-10-23T01:27:37.557103+00:00"
 }

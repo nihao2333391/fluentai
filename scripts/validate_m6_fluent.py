@@ -102,26 +102,36 @@ def main() -> int:
             "residual.continuity": continuity + 0.0001,
             "reference.area": area * 1.05,
             "reference.density": density * 1.05,
+            "methods.flow_scheme": "SIMPLE"
+            if initial["methods.flow_scheme"] != "SIMPLE"
+            else "SIMPLEC",
+            "methods.gradient_scheme": "green-gauss-cell-based"
+            if initial["methods.gradient_scheme"] != "green-gauss-cell-based"
+            else "least-square-cell-based",
+            "controls.flow_equations": bool(initial["controls.flow_equations"]),
+            "initialization.type": "standard"
+            if initial["initialization.type"] != "standard"
+            else "hybrid",
+            "initialization.reference_frame": "absolute"
+            if initial["initialization.reference_frame"] != "absolute"
+            else "relative",
+            "run_calculation.iterations": int(initial["run_calculation.iterations"])
+            + 1,
+            "run_calculation.reporting_interval": int(
+                initial["run_calculation.reporting_interval"]
+            )
+            + 1,
         }
         apply_report = adapter.apply_preset(
             PresetDocument(
                 fluent_version="25.2.0",
                 items=[
                     PresetItem(
-                        setting_id="residual.continuity",
-                        type="float",
-                        value=desired["residual.continuity"],
-                    ),
-                    PresetItem(
-                        setting_id="reference.area",
-                        type="float",
-                        value=desired["reference.area"],
-                    ),
-                    PresetItem(
-                        setting_id="reference.density",
-                        type="float",
-                        value=desired["reference.density"],
-                    ),
+                        setting_id=setting_id,
+                        type=FLUENT_252_CATALOG.get(setting_id).value_type,
+                        value=value,
+                    )
+                    for setting_id, value in desired.items()
                 ],
             )
         )
@@ -140,7 +150,7 @@ def main() -> int:
             [
                 PresetItem(
                     setting_id=setting_id,
-                    type="float",
+                    type=FLUENT_252_CATALOG.get(setting_id).value_type,
                     value=initial[setting_id],
                 )
                 for setting_id in desired
@@ -156,7 +166,7 @@ def main() -> int:
             preset_values_equal(initial[setting_id], final[setting_id])
             for setting_id in setting_ids
         )
-        passed = len(initial) == 20 and apply_verified and restored
+        passed = len(initial) == 27 and apply_verified and restored
         report.update(
             {
                 "status": "passed" if passed else "failed",

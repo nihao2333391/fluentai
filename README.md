@@ -35,7 +35,7 @@ launch or attach Fluent
 
 The M7 validation ran through the real sidecar HTTP API and Fluent 2025 R2:
 
-- Catalog exposed 20 settings;
+- Catalog exposed 27 settings;
 - Fluent launched and reported a real PID and port;
 - model file imported into SQLite;
 - model loaded into Fluent;
@@ -215,6 +215,7 @@ Completed:
 - formal application icon;
 - daily and manual SQLite backups with integrity checks and safety restore;
 - sidecar development-dependency pruning.
+- Solver Methods, Initialization and Run Calculation branches with real read/write/restore verification.
 
 M9 completion includes:
 

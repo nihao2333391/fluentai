@@ -1,17 +1,17 @@
 {
   "status": "passed",
-  "started_at_utc": "2026-10-22T08:40:00.208201+00:00",
+  "started_at_utc": "2026-10-23T01:22:33.291543+00:00",
   "case": "D:\\Fluent AI\\ansys-runs\\compat-smoke-20261021-170520\\01_mesh.cas.h5",
   "fluent_executable": "D:\\Ansys2025R2\\ANSYS Inc\\v252\\fluent\\ntbin\\win64\\fluent.exe",
   "catalog_version": "25.2.0",
-  "catalog_size": 20,
+  "catalog_size": 27,
   "connection_status": {
     "connected": true,
     "mode": "launch",
     "version": "Ansys Fluent 2025 R2",
-    "pid": 8104,
+    "pid": 32668,
     "host": "localhost",
-    "port": 59518
+    "port": 49699
   },
   "initial_values": {
     "solver.time": "steady",
@@ -23,6 +23,13 @@
     "viscous.low_re_correction": false,
     "viscous.curvature_correction": false,
     "viscous.corner_flow_correction": false,
+    "methods.flow_scheme": "Coupled",
+    "methods.gradient_scheme": "least-square-cell-based",
+    "controls.flow_equations": true,
+    "initialization.type": "hybrid",
+    "initialization.reference_frame": "relative",
+    "run_calculation.iterations": 0,
+    "run_calculation.reporting_interval": 1,
     "residual.continuity": 0.001,
     "residual.x-velocity": 0.001,
     "residual.y-velocity": 0.001,
@@ -35,7 +42,7 @@
     "reference.velocity": 1,
     "reference.viscosity": 1.7894e-05
   },
-  "read_count": 20,
+  "read_count": 27,
   "apply_report": {
     "operation": "apply",
     "status": "success",
@@ -60,6 +67,55 @@
         "actual": 1.2862500000000001,
         "success": true,
         "message": ""
+      },
+      {
+        "setting_id": "methods.flow_scheme",
+        "expected": "SIMPLE",
+        "actual": "SIMPLE",
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "methods.gradient_scheme",
+        "expected": "green-gauss-cell-based",
+        "actual": "green-gauss-cell-based",
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "controls.flow_equations",
+        "expected": true,
+        "actual": true,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "initialization.type",
+        "expected": "standard",
+        "actual": "standard",
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "initialization.reference_frame",
+        "expected": "absolute",
+        "actual": "absolute",
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "run_calculation.iterations",
+        "expected": 1,
+        "actual": 1,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "run_calculation.reporting_interval",
+        "expected": 2,
+        "actual": 2,
+        "success": true,
+        "message": ""
       }
     ],
     "rollback_attempted": false,
@@ -69,7 +125,14 @@
   "after_apply": {
     "residual.continuity": 0.0011,
     "reference.area": 1.05,
-    "reference.density": 1.2862500000000001
+    "reference.density": 1.28625,
+    "methods.flow_scheme": "SIMPLE",
+    "methods.gradient_scheme": "green-gauss-cell-based",
+    "controls.flow_equations": true,
+    "initialization.type": "standard",
+    "initialization.reference_frame": "absolute",
+    "run_calculation.iterations": 1,
+    "run_calculation.reporting_interval": 2
   },
   "restore_report": {
     "operation": "write",
@@ -95,6 +158,55 @@
         "actual": 1.225,
         "success": true,
         "message": ""
+      },
+      {
+        "setting_id": "methods.flow_scheme",
+        "expected": "Coupled",
+        "actual": "Coupled",
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "methods.gradient_scheme",
+        "expected": "least-square-cell-based",
+        "actual": "least-square-cell-based",
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "controls.flow_equations",
+        "expected": true,
+        "actual": true,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "initialization.type",
+        "expected": "hybrid",
+        "actual": "hybrid",
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "initialization.reference_frame",
+        "expected": "relative",
+        "actual": "relative",
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "run_calculation.iterations",
+        "expected": 0,
+        "actual": 0,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "run_calculation.reporting_interval",
+        "expected": 1,
+        "actual": 1,
+        "success": true,
+        "message": ""
       }
     ],
     "rollback_attempted": false,
@@ -111,6 +223,13 @@
     "viscous.low_re_correction": false,
     "viscous.curvature_correction": false,
     "viscous.corner_flow_correction": false,
+    "methods.flow_scheme": "Coupled",
+    "methods.gradient_scheme": "least-square-cell-based",
+    "controls.flow_equations": true,
+    "initialization.type": "hybrid",
+    "initialization.reference_frame": "relative",
+    "run_calculation.iterations": 0,
+    "run_calculation.reporting_interval": 1,
     "residual.continuity": 0.001,
     "residual.x-velocity": 0.001,
     "residual.y-velocity": 0.001,
@@ -126,5 +245,5 @@
   "apply_verified": true,
   "restored": true,
   "disconnect": "success",
-  "finished_at_utc": "2026-10-22T08:40:23.036274+00:00"
+  "finished_at_utc": "2026-10-23T01:22:54.969951+00:00"
 }

@@ -125,6 +125,35 @@ def _residual(setting_id: str, equation: str) -> SettingDefinition:
     )
 
 
+def _node(session: Any, path: tuple[str, ...]) -> Any:
+    node = session.settings
+    for part in path:
+        node = getattr(node, part)
+    return node
+
+
+def _scalar_getter(path: tuple[str, ...]) -> SettingGetter:
+    def getter(session: Any) -> PresetValue:
+        parent = _node(session, path[:-1])
+        try:
+            return cast(PresetValue, getattr(parent, path[-1]).get_state())
+        except AttributeError:
+            return cast(PresetValue, parent.get_state()[path[-1]])
+
+    return getter
+
+
+def _scalar_setter(path: tuple[str, ...]) -> SettingSetter:
+    def setter(session: Any, value: PresetValue) -> None:
+        parent = _node(session, path[:-1])
+        try:
+            getattr(parent, path[-1]).set_state(value)
+        except AttributeError:
+            parent.set_state({path[-1]: value})
+
+    return setter
+
+
 def create_fluent_252_catalog() -> FluentSettingCatalog:
     """Return the validated Fluent 2025 R2 setting catalog."""
 
@@ -302,6 +331,85 @@ def create_fluent_252_catalog() -> FluentSettingCatalog:
             value_type="bool",
             getter=corner_getter,
             setter=corner_setter,
+        ),
+        SettingDefinition(
+            setting_id="methods.flow_scheme",
+            group="solution",
+            display_name="Pressure-velocity coupling",
+            value_type="enum",
+            getter=_scalar_getter(("solution", "methods", "p_v_coupling", "flow_scheme")),
+            setter=_scalar_setter(("solution", "methods", "p_v_coupling", "flow_scheme")),
+            allowed_values=("SIMPLE", "SIMPLEC", "PISO", "Coupled"),
+            description="Pressure-velocity coupling scheme exposed by Fluent Methods.",
+        ),
+        SettingDefinition(
+            setting_id="methods.gradient_scheme",
+            group="solution",
+            display_name="Gradient method",
+            value_type="enum",
+            getter=_scalar_getter(
+                ("solution", "methods", "spatial_discretization", "gradient_scheme")
+            ),
+            setter=_scalar_setter(
+                ("solution", "methods", "spatial_discretization", "gradient_scheme")
+            ),
+            allowed_values=(
+                "green-gauss-node-based",
+                "green-gauss-cell-based",
+                "least-square-cell-based",
+            ),
+            description="Gradient reconstruction method used by the solver.",
+        ),
+        SettingDefinition(
+            setting_id="controls.flow_equations",
+            group="solution",
+            display_name="Flow equations",
+            value_type="bool",
+            getter=_scalar_getter(("solution", "controls", "equations", "flow")),
+            setter=_scalar_setter(("solution", "controls", "equations", "flow")),
+            description="Enable or disable flow equation solution.",
+        ),
+        SettingDefinition(
+            setting_id="initialization.type",
+            group="solution",
+            display_name="Initialization method",
+            value_type="enum",
+            getter=_scalar_getter(("solution", "initialization", "initialization_type")),
+            setter=_scalar_setter(("solution", "initialization", "initialization_type")),
+            allowed_values=("standard", "hybrid"),
+            description="Standard or hybrid initialization method.",
+        ),
+        SettingDefinition(
+            setting_id="initialization.reference_frame",
+            group="solution",
+            display_name="Initialization reference frame",
+            value_type="enum",
+            getter=_scalar_getter(("solution", "initialization", "reference_frame")),
+            setter=_scalar_setter(("solution", "initialization", "reference_frame")),
+            allowed_values=("relative", "absolute"),
+            description="Reference frame used while initializing the solution.",
+        ),
+        SettingDefinition(
+            setting_id="run_calculation.iterations",
+            group="solution",
+            display_name="Run calculation iterations",
+            value_type="int",
+            getter=_scalar_getter(("solution", "run_calculation", "iter_count")),
+            setter=_scalar_setter(("solution", "run_calculation", "iter_count")),
+            minimum=0,
+            maximum=1_000_000,
+            description="Number of iterations configured for the next calculation run.",
+        ),
+        SettingDefinition(
+            setting_id="run_calculation.reporting_interval",
+            group="solution",
+            display_name="Reporting interval",
+            value_type="int",
+            getter=_scalar_getter(("solution", "run_calculation", "reporting_interval")),
+            setter=_scalar_setter(("solution", "run_calculation", "reporting_interval")),
+            minimum=1,
+            maximum=100_000,
+            description="Iteration interval for reports and monitor updates.",
         ),
         _residual("residual.continuity", "continuity"),
         _residual("residual.x-velocity", "x-velocity"),

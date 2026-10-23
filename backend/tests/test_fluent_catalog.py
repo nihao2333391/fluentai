@@ -1,12 +1,12 @@
 from app.fluent.catalog import FLUENT_252_CATALOG, SettingDefinition
 
 
-def test_catalog_contains_twenty_unique_validated_settings() -> None:
+def test_catalog_contains_twenty_seven_unique_validated_settings() -> None:
     definitions = FLUENT_252_CATALOG.list()
     setting_ids = [definition.setting_id for definition in definitions]
 
-    assert len(definitions) == 20
-    assert len(setting_ids) == 20
+    assert len(definitions) == 27
+    assert len(setting_ids) == 27
     assert FLUENT_252_CATALOG.version == "25.2.0"
     assert FLUENT_252_CATALOG.get("residual.continuity").value_type == "float"
     assert {definition.group for definition in definitions} == {
@@ -17,6 +17,9 @@ def test_catalog_contains_twenty_unique_validated_settings() -> None:
     }
     assert "density-based-implicit" in (FLUENT_252_CATALOG.get("solver.type").allowed_values or ())
     assert "unsteady-2nd-order" in (FLUENT_252_CATALOG.get("solver.time").allowed_values or ())
+    assert "Coupled" in (FLUENT_252_CATALOG.get("methods.flow_scheme").allowed_values or ())
+    assert FLUENT_252_CATALOG.get("initialization.type").value_type == "enum"
+    assert FLUENT_252_CATALOG.get("run_calculation.iterations").value_type == "int"
 
 
 def test_catalog_rejects_invalid_values() -> None:
