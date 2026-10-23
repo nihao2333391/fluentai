@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom'
 
 import type { MeshingAutomation, MeshingWorkflowReport, Model } from '../../../shared/contracts'
 import { EmptyState, ErrorState, LoadingState, PageContent } from '../components/PageState'
+import { localizedRuntimeMessage } from '../i18n/runtimeMessages'
 import { fluentAiService } from '../services/fluentAi'
 import { useSidecarStore } from '../store/sidecarStore'
 
@@ -123,7 +124,7 @@ export function MeshingAutomationsPage() {
       if (report.status === 'success') {
         message.success(t('meshing.applySuccess'))
       } else {
-        message.error(report.message)
+        message.error(localizedRuntimeMessage(t, report.message))
       }
     } catch (applyError) {
       message.error(applyError instanceof Error ? applyError.message : String(applyError))
@@ -152,7 +153,9 @@ export function MeshingAutomationsPage() {
       key: 'workflow',
       render: (preset: MeshingAutomation['preset']) => (
         <Tag color={preset.workflow_type === 'watertight' ? 'blue' : 'purple'}>
-          {preset.workflow_type}
+          {preset.workflow_type === 'watertight'
+            ? t('meshing.watertight')
+            : t('meshing.faultTolerant')}
         </Tag>
       ),
     },
@@ -169,7 +172,7 @@ export function MeshingAutomationsPage() {
       render: (preset: MeshingAutomation['preset']) => preset.items.length,
     },
     {
-      title: 'Updated',
+      title: t('common.updated'),
       dataIndex: 'updated_at',
       key: 'updated_at',
       width: 200,
@@ -277,7 +280,7 @@ export function MeshingAutomationsPage() {
                   ? t('meshing.applyVerified', {
                       count: applyReport.apply_report?.results.length ?? 0,
                     })
-                  : applyReport.message
+                  : localizedRuntimeMessage(t, applyReport.message)
               }
               description={
                 <Space direction="vertical" size={6}>

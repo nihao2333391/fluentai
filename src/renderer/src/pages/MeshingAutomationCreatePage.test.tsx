@@ -145,12 +145,12 @@ describe('MeshingAutomationCreatePage', () => {
       </AppProviders>,
     )
 
-    expect(await screen.findByText('Import Geometry')).toBeInTheDocument()
+    expect(await screen.findByText('导入几何')).toBeInTheDocument()
     expect(screen.getByText('length_unit')).toBeInTheDocument()
     expect(screen.getByText('高级与状态选项 (1)')).toBeInTheDocument()
     expect(screen.getByText('Watertight Geometry')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByText('Add Local Sizing'))
+    fireEvent.click(screen.getByText('添加局部尺寸'))
     fireEvent.click(await screen.findByText('添加复合子任务预设'))
     expect(await screen.findByText('子任务/控制名称')).toBeInTheDocument()
     expect(screen.getByText('控制名称将自动写入 boi_control_name。')).toBeInTheDocument()

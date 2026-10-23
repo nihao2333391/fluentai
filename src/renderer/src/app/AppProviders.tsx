@@ -3,7 +3,7 @@ import enUS from 'antd/locale/en_US'
 import zhCN from 'antd/locale/zh_CN'
 import { useEffect, type ReactNode } from 'react'
 
-import i18n from '../i18n'
+import { systemLanguage } from '../i18n'
 import { useAppStore } from '../store/appStore'
 import { useSidecarStore } from '../store/sidecarStore'
 import { getThemeConfig } from '../theme/theme'
@@ -11,15 +11,13 @@ import { useSystemDark } from '../theme/useSystemDark'
 
 export function AppProviders({ children }: { children: ReactNode }) {
   const themeMode = useAppStore((state) => state.themeMode)
-  const language = useAppStore((state) => state.language)
   const setSidecarStatus = useSidecarStore((state) => state.setStatus)
   const systemDark = useSystemDark()
   const isDark = themeMode === 'dark' || (themeMode === 'system' && systemDark)
 
   useEffect(() => {
-    void i18n.changeLanguage(language)
-    document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en'
-  }, [language])
+    document.documentElement.lang = systemLanguage === 'zh' ? 'zh-CN' : 'en'
+  }, [])
 
   useEffect(() => {
     document.documentElement.dataset.theme = isDark ? 'dark' : 'light'
@@ -54,7 +52,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   return (
     <ConfigProvider
-      locale={language === 'zh' ? zhCN : enUS}
+      locale={systemLanguage === 'zh' ? zhCN : enUS}
       theme={getThemeConfig(isDark)}
       componentSize="middle"
     >

@@ -3,7 +3,6 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SettingOutlined,
-  ThunderboltOutlined,
   DatabaseOutlined,
   PartitionOutlined,
 } from '@ant-design/icons'
@@ -34,9 +33,9 @@ export function AppLayout() {
         label: t('nav.workspace'),
         children: [
           {
-            key: '/automations/create',
-            icon: <ThunderboltOutlined />,
-            label: t('nav.automationCreate'),
+            key: '/meshing',
+            icon: <PartitionOutlined />,
+            label: t('nav.meshingAutomations'),
           },
           {
             key: '/automations',
@@ -47,11 +46,6 @@ export function AppLayout() {
             key: '/models',
             icon: <DatabaseOutlined />,
             label: t('nav.myModels'),
-          },
-          {
-            key: '/meshing',
-            icon: <PartitionOutlined />,
-            label: t('nav.meshingAutomations'),
           },
         ],
       },
@@ -71,15 +65,13 @@ export function AppLayout() {
     [t],
   )
 
-  const selectedKey = location.pathname.startsWith('/automations/create')
-    ? '/automations/create'
-    : location.pathname.startsWith('/automations')
-      ? '/automations'
-      : location.pathname.startsWith('/models')
-        ? '/models'
-        : location.pathname.startsWith('/meshing')
-          ? '/meshing'
-          : '/settings'
+  const selectedKey = location.pathname.startsWith('/automations')
+    ? '/automations'
+    : location.pathname.startsWith('/models')
+      ? '/models'
+      : location.pathname.startsWith('/meshing')
+        ? '/meshing'
+        : '/settings'
 
   return (
     <Layout className="app-layout">
@@ -101,7 +93,7 @@ export function AppLayout() {
                 Fluent AI
               </Typography.Text>
               <Typography.Text type="secondary" className="brand-subtitle">
-                Fluent automation
+                {t('nav.brandSubtitle')}
               </Typography.Text>
             </div>
           ) : null}
@@ -122,7 +114,7 @@ export function AppLayout() {
               type="text"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed((value) => !value)}
-              aria-label="Toggle navigation"
+              aria-label={t('nav.toggleNavigation')}
             />
             <div>
               <Typography.Text strong className="header-title">

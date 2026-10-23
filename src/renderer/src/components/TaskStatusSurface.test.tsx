@@ -55,7 +55,8 @@ describe('TaskStatusSurface', () => {
 
     expect(await screen.findByText('1 个活动任务')).toBeInTheDocument()
     fireEvent.click(screen.getByText('1 个活动任务'))
-    expect(await screen.findByText('apply-automation')).toBeInTheDocument()
+    expect(await screen.findByText('应用 Solver 自动化')).toBeInTheDocument()
+    expect(screen.getByText('模型已载入。')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '取消任务' }))
 
     await waitFor(() => {

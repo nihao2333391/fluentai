@@ -51,6 +51,7 @@ import {
   type MeshingIncludedMap,
   type MeshingValueMap,
 } from './meshingPreset'
+import { localizedMeshingTaskName, localizedMeshingTaskType } from './meshingLabels'
 
 interface MeshingFormValues {
   name: string
@@ -356,6 +357,7 @@ function TaskPanel({
   onRemoveChild: (taskPath: string[], instanceId: string) => void
   onRenameChild: (taskPath: string[], instanceId: string, name: string) => void
 }) {
+  const { t } = useTranslation()
   const instancesKey = taskPathKey(taskPath)
   const hasChildTemplate = Boolean(task.supports_child_template && task.child_template)
 
@@ -390,7 +392,7 @@ function TaskPanel({
             <Card
               key={taskPathKey([...taskPath, child.python_name])}
               size="small"
-              title={child.display_name}
+              title={localizedMeshingTaskName(t, child)}
             >
               <TaskPanel
                 task={child}
@@ -591,9 +593,9 @@ export function MeshingAutomationCreatePage() {
     key: task.python_name,
     label: (
       <Space direction="vertical" size={0}>
-        <span>{task.display_name}</span>
+        <span>{localizedMeshingTaskName(t, task)}</span>
         <Typography.Text type="secondary" className="task-type-label">
-          {task.task_type}
+          {localizedMeshingTaskType(t, task.task_type)}
         </Typography.Text>
       </Space>
     ),

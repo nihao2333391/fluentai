@@ -35,6 +35,7 @@ import type {
 import { ErrorState, LoadingState, PageContent } from '../components/PageState'
 import { fluentAiService } from '../services/fluentAi'
 import { useSidecarStore } from '../store/sidecarStore'
+import { localizedSettingLabel, localizedSettingOption } from './settingLabels'
 
 interface AutomationFormValues {
   name: string
@@ -87,14 +88,6 @@ const defaultSettingValue = (entry: SettingCatalogEntry): PresetValue => {
   if (entry.value_type === 'float') return entry.minimum ?? 0
   if (entry.allowed_values?.length) return entry.allowed_values[0]
   return ''
-}
-
-const formatOption = (value: PresetValue): string => {
-  if (typeof value !== 'string') return String(value)
-  return value
-    .split('-')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
 }
 
 export function AutomationCreatePage() {
@@ -303,7 +296,10 @@ export function AutomationCreatePage() {
           className="fluent-setting-control"
           options={(entry.allowed_values ?? []).map((option) => ({
             value: option,
-            label: formatOption(option),
+            label:
+              typeof option === 'string'
+                ? localizedSettingOption(t, entry.setting_id, option)
+                : String(option),
           }))}
           onChange={(next) => setValues((current) => ({ ...current, [entry.setting_id]: next }))}
         />
@@ -404,9 +400,11 @@ export function AutomationCreatePage() {
                 }
               >
                 <Space direction="vertical" size={2}>
-                  <Typography.Text strong>{entry.display_name}</Typography.Text>
+                  <Typography.Text strong>
+                    {localizedSettingLabel(t, entry.setting_id, entry.display_name)}
+                  </Typography.Text>
                   <Typography.Text type="secondary" className="fluent-setting-description">
-                    {entry.description || entry.setting_id}
+                    {entry.setting_id}
                   </Typography.Text>
                 </Space>
               </Checkbox>

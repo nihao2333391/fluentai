@@ -190,7 +190,7 @@ export function MyModelsPage() {
       width: 170,
       render: (automationId: number | null) => {
         const name = automationName(automationId)
-        return name ? <Tag color="blue">{name}</Tag> : <Tag>None</Tag>
+        return name ? <Tag color="blue">{name}</Tag> : <Tag>{t('common.none')}</Tag>
       },
     },
     {

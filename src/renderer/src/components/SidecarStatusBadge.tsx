@@ -3,6 +3,7 @@ import { Badge, Button, Descriptions, Popover, Space, Tag, Typography } from 'an
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { localizedRuntimeMessage } from '../i18n/runtimeMessages'
 import { useSidecarStore } from '../store/sidecarStore'
 
 const statusColor = {
@@ -38,22 +39,20 @@ export function SidecarStatusBadge() {
       <Descriptions column={1} size="small">
         <Descriptions.Item label={t('sidecar.title')}>{label}</Descriptions.Item>
         {status.version ? (
-          <Descriptions.Item label="Version">
-            {t('sidecar.version', { version: status.version })}
-          </Descriptions.Item>
+          <Descriptions.Item label={t('sidecar.versionLabel')}>{status.version}</Descriptions.Item>
         ) : null}
         {status.pid ? (
-          <Descriptions.Item label="PID">{t('sidecar.pid', { pid: status.pid })}</Descriptions.Item>
+          <Descriptions.Item label={t('sidecar.pidLabel')}>{status.pid}</Descriptions.Item>
         ) : null}
         {status.port ? (
-          <Descriptions.Item label="Port">
+          <Descriptions.Item label={t('sidecar.portLabel')}>
             {t('sidecar.port', { port: status.port })}
           </Descriptions.Item>
         ) : null}
       </Descriptions>
       {status.message ? (
         <Typography.Paragraph type="secondary" className="popover-message">
-          {status.message}
+          {localizedRuntimeMessage(t, status.message)}
         </Typography.Paragraph>
       ) : null}
       <Button

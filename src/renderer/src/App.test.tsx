@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { FluentAIApi } from '../../shared/contracts'
@@ -127,24 +127,24 @@ const createMockApi = (): FluentAIApi => ({
 describe('App', () => {
   beforeEach(() => {
     localStorage.clear()
-    useAppStore.setState({ themeMode: 'system', language: 'zh' })
-    window.location.hash = '#/automations/create'
+    useAppStore.setState({ themeMode: 'system' })
+    window.location.hash = '#/'
     Object.defineProperty(window, 'fluentAI', {
       configurable: true,
       value: createMockApi(),
     })
   })
 
-  it('renders the four-module shell and navigates between routes', async () => {
+  it('opens Meshing automations first and navigates between routes', async () => {
     render(<App />)
 
-    expect(await screen.findByRole('heading', { name: '自动化创建' })).toBeInTheDocument()
-    expect(await screen.findByText('Fluent 工作流预设')).toBeInTheDocument()
-    expect(screen.getByText('常规')).toBeInTheDocument()
-    expect(screen.getByText('模型')).toBeInTheDocument()
-    expect(screen.getByText('求解')).toBeInTheDocument()
-    expect(screen.getByText('参考值')).toBeInTheDocument()
-    expect(screen.getByText('我的自动化')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Meshing 自动化' })).toBeInTheDocument()
+    expect(screen.queryByText('自动化创建')).not.toBeInTheDocument()
+    const meshingMenu = screen.getByRole('menuitem', { name: /Meshing 自动化/ })
+    const automationsMenu = screen.getByRole('menuitem', { name: /我的自动化/ })
+    expect(
+      meshingMenu.compareDocumentPosition(automationsMenu) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
     expect(screen.getByText('我的模型')).toBeInTheDocument()
     expect(screen.getByText('设置')).toBeInTheDocument()
 
@@ -155,18 +155,13 @@ describe('App', () => {
     expect(await screen.findByText('界面外观')).toBeInTheDocument()
   })
 
-  it('switches theme and language immediately', async () => {
+  it('switches theme without exposing a manual language switch', async () => {
     render(<App />)
 
     fireEvent.click(await screen.findByText('设置'))
     fireEvent.click(await screen.findByText('深色'))
     expect(document.documentElement.dataset.theme).toBe('dark')
-
-    act(() => {
-      useAppStore.getState().setLanguage('en')
-    })
-
-    expect(await screen.findByText('Appearance')).toBeInTheDocument()
-    expect(screen.getByText('Create Automation')).toBeInTheDocument()
+    expect(await screen.findByText('界面外观')).toBeInTheDocument()
+    expect(screen.queryByText('界面语言')).not.toBeInTheDocument()
   })
 })

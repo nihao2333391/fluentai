@@ -33,6 +33,7 @@ import type {
   SyncLogStatus,
 } from '../../../shared/contracts'
 import { EmptyState, ErrorState, LoadingState, PageContent } from '../components/PageState'
+import { localizedRuntimeMessage } from '../i18n/runtimeMessages'
 import { fluentAiService } from '../services/fluentAi'
 import { useSidecarStore } from '../store/sidecarStore'
 
@@ -148,7 +149,7 @@ export function MyAutomationsPage() {
       } else {
         modal.error({
           title: t('pages.myAutomations.failed'),
-          content: report.message,
+          content: localizedRuntimeMessage(t, report.message),
         })
       }
     } catch (applyError) {
@@ -188,20 +189,22 @@ export function MyAutomationsPage() {
       dataIndex: 'preset',
       key: 'preset',
       render: (preset: Automation['preset']) => (
-        <Tag color="blue">{preset.items.length} settings</Tag>
+        <Tag color="blue">
+          {t('pages.myAutomations.settingsCount', { count: preset.items.length })}
+        </Tag>
       ),
     },
     {
-      title: 'Status',
+      title: t('common.status'),
       dataIndex: 'status',
       key: 'status',
       width: 110,
       render: (status: Automation['status']) => (
-        <Tag color={status === 'active' ? 'green' : 'default'}>{status}</Tag>
+        <Tag color={status === 'active' ? 'green' : 'default'}>{t(`common.${status}`)}</Tag>
       ),
     },
     {
-      title: 'Updated',
+      title: t('common.updated'),
       dataIndex: 'updated_at',
       key: 'updated_at',
       width: 200,
@@ -319,11 +322,11 @@ export function MyAutomationsPage() {
                 onChange={setLogDirection}
                 placeholder={t('pages.myAutomations.filterDirection')}
                 options={[
-                  { value: 'apply', label: 'apply' },
-                  { value: 'write', label: 'write' },
-                  { value: 'read', label: 'read' },
-                  { value: 'sync', label: 'sync' },
-                  { value: 'pull', label: 'pull' },
+                  { value: 'apply', label: t('common.logDirections.apply') },
+                  { value: 'write', label: t('common.logDirections.write') },
+                  { value: 'read', label: t('common.logDirections.read') },
+                  { value: 'sync', label: t('common.logDirections.sync') },
+                  { value: 'pull', label: t('common.logDirections.pull') },
                 ]}
                 className="log-filter-select"
               />
@@ -333,8 +336,8 @@ export function MyAutomationsPage() {
                 onChange={setLogStatus}
                 placeholder={t('pages.myAutomations.filterStatus')}
                 options={[
-                  { value: 'success', label: 'success' },
-                  { value: 'failed', label: 'failed' },
+                  { value: 'success', label: t('common.success') },
+                  { value: 'failed', label: t('common.failed') },
                 ]}
                 className="log-filter-select"
               />
@@ -355,9 +358,11 @@ export function MyAutomationsPage() {
                 renderItem={(log) => (
                   <List.Item>
                     <Space wrap>
-                      <Tag color={log.status === 'success' ? 'green' : 'red'}>{log.status}</Tag>
-                      <Tag>{log.direction}</Tag>
-                      <Typography.Text>{log.message}</Typography.Text>
+                      <Tag color={log.status === 'success' ? 'green' : 'red'}>
+                        {t(`common.${log.status}`)}
+                      </Tag>
+                      <Tag>{t(`common.logDirections.${log.direction}`)}</Tag>
+                      <Typography.Text>{localizedRuntimeMessage(t, log.message)}</Typography.Text>
                       <Typography.Text type="secondary">
                         {new Date(log.created_at).toLocaleString()}
                       </Typography.Text>

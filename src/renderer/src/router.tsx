@@ -13,8 +13,7 @@ export const appRoutes = [
     path: '/',
     element: <AppLayout />,
     children: [
-      { index: true, element: <Navigate to="/automations/create" replace /> },
-      { path: 'automations/create', element: <AutomationCreatePage /> },
+      { index: true, element: <Navigate to="/meshing" replace /> },
       { path: 'automations/:id/edit', element: <AutomationCreatePage /> },
       { path: 'automations/:id/duplicate', element: <AutomationCreatePage /> },
       { path: 'automations', element: <MyAutomationsPage /> },
@@ -22,7 +21,7 @@ export const appRoutes = [
       { path: 'meshing', element: <MeshingAutomationsPage /> },
       { path: 'meshing/create', element: <MeshingAutomationCreatePage /> },
       { path: 'settings', element: <SettingsPage /> },
-      { path: '*', element: <Navigate to="/automations/create" replace /> },
+      { path: '*', element: <Navigate to="/meshing" replace /> },
     ],
   },
 ]

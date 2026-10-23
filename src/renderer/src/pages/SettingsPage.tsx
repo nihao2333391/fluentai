@@ -6,23 +6,22 @@ import {
   ReloadOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import { App, Button, Card, Flex, List, Radio, Select, Space, Tag, Typography } from 'antd'
+import { App, Button, Card, Flex, List, Radio, Space, Tag, Typography } from 'antd'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { CredentialStatus, DatabaseBackupInfo } from '../../../shared/contracts'
 import { FluentConnectionCard } from '../components/FluentConnectionCard'
 import { PageContent } from '../components/PageState'
+import { localizedRuntimeMessage } from '../i18n/runtimeMessages'
 import { fluentAiService } from '../services/fluentAi'
-import { useAppStore, type Language, type ThemeMode } from '../store/appStore'
+import { useAppStore, type ThemeMode } from '../store/appStore'
 
 export function SettingsPage() {
   const { t } = useTranslation()
   const { message, modal } = App.useApp()
   const themeMode = useAppStore((state) => state.themeMode)
-  const language = useAppStore((state) => state.language)
   const setThemeMode = useAppStore((state) => state.setThemeMode)
-  const setLanguage = useAppStore((state) => state.setLanguage)
   const [credentialStatus, setCredentialStatus] = useState<CredentialStatus | null>(null)
   const [backups, setBackups] = useState<DatabaseBackupInfo[]>([])
   const [backupBusy, setBackupBusy] = useState(false)
@@ -86,7 +85,7 @@ export function SettingsPage() {
         setBackupBusy(true)
         try {
           const report = await fluentAiService.system.restoreBackup(backup.name)
-          message.success(report.message)
+          message.success(localizedRuntimeMessage(t, report.message))
           await loadBackups()
         } finally {
           setBackupBusy(false)
@@ -116,23 +115,6 @@ export function SettingsPage() {
                   { value: 'light', label: t('settings.light') },
                   { value: 'dark', label: t('settings.dark') },
                   { value: 'system', label: t('settings.system') },
-                ]}
-              />
-            </div>
-            <div className="setting-row">
-              <div>
-                <Typography.Text strong>{t('settings.language')}</Typography.Text>
-                <Typography.Paragraph type="secondary" className="setting-description">
-                  {t('settings.languageDescription')}
-                </Typography.Paragraph>
-              </div>
-              <Select<Language>
-                value={language}
-                onChange={setLanguage}
-                className="language-select"
-                options={[
-                  { value: 'zh', label: '简体中文' },
-                  { value: 'en', label: 'English' },
                 ]}
               />
             </div>

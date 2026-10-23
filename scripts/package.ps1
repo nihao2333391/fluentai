@@ -5,6 +5,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
+$windowsPowerShell = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+if (-not (Test-Path -LiteralPath $windowsPowerShell -PathType Leaf)) {
+  throw "Windows PowerShell was not found: $windowsPowerShell"
+}
 Push-Location $root
 try {
   if (-not $env:ELECTRON_BUILDER_BINARIES_MIRROR) {
@@ -36,7 +40,7 @@ try {
   & pnpm package:check-installed
   if ($LASTEXITCODE -ne 0) { throw "Installed application verification failed." }
 
-  & powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/finalize-release.ps1
+  & $windowsPowerShell -NoProfile -ExecutionPolicy Bypass -File ./scripts/finalize-release.ps1
   if ($LASTEXITCODE -ne 0) { throw "Release manifest generation failed." }
 
   Write-Host "PACKAGE_WIN_PASSED"

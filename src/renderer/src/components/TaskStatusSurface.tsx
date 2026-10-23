@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { Job } from '../../../shared/contracts'
+import { localizedRuntimeMessage } from '../i18n/runtimeMessages'
 import { useSidecarStore } from '../store/sidecarStore'
 
 const statusColor = (status: Job['status']): string => {
@@ -59,6 +60,12 @@ export function TaskStatusSurface() {
     }
   }
 
+  const jobTypeLabel = (jobType: string): string => {
+    if (jobType === 'apply-automation') return t('tasks.jobTypes.applyAutomation')
+    if (jobType === 'apply-meshing-automation') return t('tasks.jobTypes.applyMeshingAutomation')
+    return t('tasks.jobTypes.other')
+  }
+
   const content = (
     <div className="task-popover">
       <Typography.Text strong>{t('tasks.title')}</Typography.Text>
@@ -90,14 +97,14 @@ export function TaskStatusSurface() {
             >
               <Space direction="vertical" size={4} className="full-width">
                 <Space wrap>
-                  <Tag color={statusColor(job.status)}>{job.status}</Tag>
-                  <Typography.Text>{job.job_type}</Typography.Text>
+                  <Tag color={statusColor(job.status)}>{t(`tasks.statuses.${job.status}`)}</Tag>
+                  <Typography.Text>{jobTypeLabel(job.job_type)}</Typography.Text>
                   <Typography.Text type="secondary">
                     {new Date(job.updated_at).toLocaleTimeString()}
                   </Typography.Text>
                 </Space>
                 <Typography.Text type="secondary" ellipsis>
-                  {job.message || job.error || job.id}
+                  {localizedRuntimeMessage(t, job.message || job.error || job.id)}
                 </Typography.Text>
                 <Progress
                   percent={job.progress}

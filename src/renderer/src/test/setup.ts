@@ -3,6 +3,14 @@ import { cleanup } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
 
 if (typeof window !== 'undefined') {
+  Object.defineProperty(window.navigator, 'language', {
+    configurable: true,
+    value: 'zh-CN',
+  })
+  Object.defineProperty(window.navigator, 'languages', {
+    configurable: true,
+    value: ['zh-CN'],
+  })
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
     value: vi.fn().mockImplementation((query: string) => ({
