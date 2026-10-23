@@ -217,6 +217,7 @@ Completed:
 - sidecar development-dependency pruning.
 - Solver Methods, Initialization and Run Calculation branches with real read/write/restore verification.
 - Model-specific fluid material density and viscosity presets discovered after case load.
+- Named velocity-inlet, pressure-outlet and wall boundary-condition presets discovered from the active case.
 
 M9 completion includes:
 

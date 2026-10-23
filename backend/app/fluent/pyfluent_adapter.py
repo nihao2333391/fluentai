@@ -19,10 +19,55 @@ from app.domain import (
 from app.fluent.catalog import FLUENT_252_CATALOG, FluentSettingCatalog, SettingDefinition
 from app.fluent.comparison import preset_values_equal
 
+BOUNDARY_FIELD_SPECS = {
+    "velocity_inlet": (
+        ("velocity_magnitude", ("momentum", "velocity_magnitude", "value"), "Velocity magnitude"),
+        (
+            "gauge_pressure",
+            ("momentum", "initial_gauge_pressure", "value"),
+            "Initial gauge pressure",
+        ),
+        ("turbulent_intensity", ("turbulence", "turbulent_intensity"), "Turbulent intensity"),
+        (
+            "turbulent_viscosity_ratio",
+            ("turbulence", "turbulent_viscosity_ratio"),
+            "Turbulent viscosity ratio",
+        ),
+    ),
+    "pressure_outlet": (
+        ("gauge_pressure", ("momentum", "gauge_pressure", "value"), "Gauge pressure"),
+        (
+            "backflow_turbulent_intensity",
+            ("turbulence", "backflow_turbulent_intensity"),
+            "Backflow turbulent intensity",
+        ),
+        (
+            "backflow_turbulent_viscosity_ratio",
+            ("turbulence", "backflow_turbulent_viscosity_ratio"),
+            "Backflow turbulent viscosity ratio",
+        ),
+    ),
+    "wall": (
+        ("roughness_height", ("turbulence", "roughness_height", "value"), "Roughness height"),
+        ("roughness_constant", ("turbulence", "roughness_const", "value"), "Roughness constant"),
+    ),
+}
+
+_MISSING = object()
+
 
 def _debug(message: str) -> None:
     if os.environ.get("FLUENT_AI_DEBUG") == "1":
         print(f"[fluent-debug] {message}", file=sys.stderr, flush=True)
+
+
+def _state_path_value(state: Any, path: tuple[str, ...]) -> Any:
+    current = state
+    for part in path:
+        if not isinstance(current, dict) or part not in current:
+            return _MISSING
+        current = current[part]
+    return current
 
 
 class PyFluentAdapter:
@@ -186,6 +231,65 @@ class PyFluentAdapter:
                         description=f"{display_name} of fluid material {material_name}.",
                     )
                 )
+
+        boundaries = session.settings.setup.boundary_conditions
+        boundary_state = boundaries.get_state()
+        for boundary_type, field_specs in BOUNDARY_FIELD_SPECS.items():
+            zones = boundary_state.get(boundary_type, {})
+            if not isinstance(zones, dict):
+                continue
+            for zone_name, zone_state in zones.items():
+                for field_name, state_path, display_name in field_specs:
+                    if _state_path_value(zone_state, state_path) is _MISSING:
+                        continue
+                    setting_id = f"boundary.{boundary_type}.{zone_name}.{field_name}"
+
+                    def boundary_getter(
+                        active_session: Any,
+                        zone_type_label: str = boundary_type,
+                        zone_label: str = zone_name,
+                        path: tuple[str, ...] = state_path,
+                    ) -> PresetValue:
+                        node = getattr(
+                            active_session.settings.setup.boundary_conditions,
+                            zone_type_label,
+                        )[zone_label]
+                        value = _state_path_value(node.get_state(), path)
+                        if value is _MISSING:
+                            raise KeyError(f"Boundary setting path is unavailable: {path}")
+                        return cast(PresetValue, value)
+
+                    def boundary_setter(
+                        active_session: Any,
+                        value: PresetValue,
+                        zone_type_label: str = boundary_type,
+                        zone_label: str = zone_name,
+                        path: tuple[str, ...] = state_path,
+                    ) -> None:
+                        node = getattr(
+                            active_session.settings.setup.boundary_conditions,
+                            zone_type_label,
+                        )[zone_label]
+                        state = node.get_state()
+                        current = state
+                        for part in path[:-1]:
+                            current = current[part]
+                        current[path[-1]] = value
+                        node.set_state({path[0]: state[path[0]]})
+
+                    definitions.append(
+                        SettingDefinition(
+                            setting_id=setting_id,
+                            display_name=f"{zone_name} {display_name}",
+                            group="models",
+                            value_type="float",
+                            getter=boundary_getter,
+                            setter=boundary_setter,
+                            description=(
+                                f"{display_name} for {boundary_type} boundary {zone_name}."
+                            ),
+                        )
+                    )
         self.catalog = FluentSettingCatalog(definitions, version=self._base_catalog.version)
 
     def save_case(self, file_path: str) -> None:

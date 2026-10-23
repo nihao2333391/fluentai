@@ -150,6 +150,68 @@ def main() -> int:
             "verified": dynamic_verified,
             "restored": dynamic_restored,
         }
+        boundary_catalog_ids = [
+            definition.setting_id
+            for definition in adapter.catalog.list()
+            if definition.setting_id.startswith("boundary.")
+        ]
+        velocity_ids = [
+            item
+            for item in boundary_catalog_ids
+            if item.endswith(".velocity_magnitude")
+        ]
+        wall_ids = [
+            item for item in boundary_catalog_ids if item.endswith(".roughness_height")
+        ]
+        if not velocity_ids or not wall_ids:
+            raise RuntimeError(
+                "Dynamic boundary-condition properties were not discovered."
+            )
+        boundary_ids = [velocity_ids[0], wall_ids[0]]
+        boundary_initial = adapter.read_settings(boundary_ids)
+        boundary_desired = {
+            boundary_ids[0]: float(boundary_initial[boundary_ids[0]]) + 0.01,
+            boundary_ids[1]: float(boundary_initial[boundary_ids[1]]) + 0.001,
+        }
+        boundary_apply = adapter.apply_preset(
+            PresetDocument(
+                fluent_version="25.2.0",
+                items=[
+                    PresetItem(setting_id=setting_id, type="float", value=value)
+                    for setting_id, value in boundary_desired.items()
+                ],
+            )
+        )
+        boundary_after = adapter.read_settings(boundary_ids)
+        boundary_verified = boundary_apply.status == "success" and all(
+            preset_values_equal(
+                boundary_desired[setting_id], boundary_after[setting_id]
+            )
+            for setting_id in boundary_ids
+        )
+        boundary_restore = adapter.write_settings(
+            [
+                PresetItem(
+                    setting_id=setting_id,
+                    type="float",
+                    value=boundary_initial[setting_id],
+                )
+                for setting_id in boundary_ids
+            ]
+        )
+        boundary_restored_values = adapter.read_settings(boundary_ids)
+        boundary_restored = boundary_restore.status == "success" and all(
+            preset_values_equal(
+                boundary_initial[setting_id], boundary_restored_values[setting_id]
+            )
+            for setting_id in boundary_ids
+        )
+        report["dynamic_boundary"] = {
+            "setting_ids": boundary_ids,
+            "apply_report": boundary_apply.model_dump(mode="json"),
+            "verified": boundary_verified,
+            "restored": boundary_restored,
+        }
 
         continuity = float(initial["residual.continuity"])
         area = float(initial["reference.area"])
@@ -228,6 +290,8 @@ def main() -> int:
             and restored
             and dynamic_verified
             and dynamic_restored
+            and boundary_verified
+            and boundary_restored
         )
         report.update(
             {

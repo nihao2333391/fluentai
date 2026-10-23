@@ -1,6 +1,6 @@
 {
   "status": "passed",
-  "started_at_utc": "2026-10-23T01:42:10.287466+00:00",
+  "started_at_utc": "2026-10-23T04:13:49.606902+00:00",
   "case": "D:\\Fluent AI\\ansys-runs\\compat-smoke-20261021-170520\\01_mesh.cas.h5",
   "fluent_executable": "D:\\Ansys2025R2\\ANSYS Inc\\v252\\fluent\\ntbin\\win64\\fluent.exe",
   "catalog_version": "25.2.0",
@@ -9,9 +9,9 @@
     "connected": true,
     "mode": "launch",
     "version": "Ansys Fluent 2025 R2",
-    "pid": 18384,
+    "pid": 12652,
     "host": "localhost",
-    "port": 61945
+    "port": 59928
   },
   "initial_values": {
     "solver.time": "steady",
@@ -63,6 +63,37 @@
           "setting_id": "material.fluid.air.viscosity",
           "expected": 1.8072939999999997e-05,
           "actual": 1.8072939999999997e-05,
+          "success": true,
+          "message": ""
+        }
+      ],
+      "rollback_attempted": false,
+      "rollback_succeeded": null,
+      "rollback_results": []
+    },
+    "verified": true,
+    "restored": true
+  },
+  "dynamic_boundary": {
+    "setting_ids": [
+      "boundary.velocity_inlet.inlet.velocity_magnitude",
+      "boundary.wall.aircraft_wall.roughness_height"
+    ],
+    "apply_report": {
+      "operation": "apply",
+      "status": "success",
+      "results": [
+        {
+          "setting_id": "boundary.velocity_inlet.inlet.velocity_magnitude",
+          "expected": 0.01,
+          "actual": 0.01,
+          "success": true,
+          "message": ""
+        },
+        {
+          "setting_id": "boundary.wall.aircraft_wall.roughness_height",
+          "expected": 0.001,
+          "actual": 0.001,
           "success": true,
           "message": ""
         }
@@ -276,5 +307,5 @@
   "apply_verified": true,
   "restored": true,
   "disconnect": "success",
-  "finished_at_utc": "2026-10-23T01:42:33.780110+00:00"
+  "finished_at_utc": "2026-10-23T04:14:12.549446+00:00"
 }
