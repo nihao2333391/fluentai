@@ -12,7 +12,7 @@
 | M7 - First end-to-end vertical slice    | PASSED      | real model import/load, automation creation/apply, readback, jobs, sync logs and desktop smoke                                                                                                   |
 | M8 - Fluent Meshing workflow automation | PASSED      | Watertight/Fault-tolerant schemas, independent DB/API, full preset editor, exact name validation, compound-child creation, real Fluent apply/readback and stop-before-mesh behavior verified     |
 | M9 - Delivery lifecycle and packaging   | PASSED      | Automation lifecycle, model association, recent-session restore, detailed jobs/cancellation, filtered logs, bundled Python sidecar, NSIS installer and installed-app smoke verification complete |
-| M10 - Product hardening                 | IN PROGRESS | Branding, database recovery, sidecar pruning and expanded 27-setting Solver catalog with real read/write/restore verification complete; code signing remains pending                             |
+| M10 - Product hardening                 | IN PROGRESS | Branding, database recovery, sidecar pruning, 27 static Solver settings and dynamic material density/viscosity presets complete; code signing and named boundary presets remain                  |
 
 ## Evidence
 
@@ -32,4 +32,5 @@
 - M9.3: `docs/m9.3-verification.md`
 - M10.1: `docs/m10.1-verification.md`
 - M10.2: `docs/m10.2-verification.md`
+- M10.3: `docs/m10.3-verification.md`
 - Decisions: `docs/adr/`

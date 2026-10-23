@@ -95,6 +95,62 @@ def main() -> int:
         report["initial_values"] = initial
         report["read_count"] = len(initial)
 
+        dynamic_ids = [
+            definition.setting_id
+            for definition in adapter.catalog.list()
+            if definition.setting_id.startswith("material.fluid.")
+        ]
+        dynamic_initial = adapter.read_settings(dynamic_ids)
+        density_ids = [item for item in dynamic_ids if item.endswith(".density")]
+        viscosity_ids = [item for item in dynamic_ids if item.endswith(".viscosity")]
+        if not density_ids or not viscosity_ids:
+            raise RuntimeError("Dynamic fluid material properties were not discovered.")
+        dynamic_desired = {
+            density_ids[0]: float(dynamic_initial[density_ids[0]]) * 1.01,
+            viscosity_ids[0]: float(dynamic_initial[viscosity_ids[0]]) * 1.01,
+        }
+        dynamic_apply = adapter.apply_preset(
+            PresetDocument(
+                fluent_version="25.2.0",
+                items=[
+                    PresetItem(
+                        setting_id=setting_id,
+                        type="float",
+                        value=value,
+                    )
+                    for setting_id, value in dynamic_desired.items()
+                ],
+            )
+        )
+        dynamic_after = adapter.read_settings(list(dynamic_desired))
+        dynamic_verified = dynamic_apply.status == "success" and all(
+            preset_values_equal(dynamic_desired[setting_id], dynamic_after[setting_id])
+            for setting_id in dynamic_desired
+        )
+        dynamic_restore = adapter.write_settings(
+            [
+                PresetItem(
+                    setting_id=setting_id,
+                    type="float",
+                    value=dynamic_initial[setting_id],
+                )
+                for setting_id in dynamic_desired
+            ]
+        )
+        dynamic_restored_values = adapter.read_settings(list(dynamic_desired))
+        dynamic_restored = dynamic_restore.status == "success" and all(
+            preset_values_equal(
+                dynamic_initial[setting_id], dynamic_restored_values[setting_id]
+            )
+            for setting_id in dynamic_desired
+        )
+        report["dynamic_material"] = {
+            "setting_ids": dynamic_ids,
+            "apply_report": dynamic_apply.model_dump(mode="json"),
+            "verified": dynamic_verified,
+            "restored": dynamic_restored,
+        }
+
         continuity = float(initial["residual.continuity"])
         area = float(initial["reference.area"])
         density = float(initial["reference.density"])
@@ -166,7 +222,13 @@ def main() -> int:
             preset_values_equal(initial[setting_id], final[setting_id])
             for setting_id in setting_ids
         )
-        passed = len(initial) == 27 and apply_verified and restored
+        passed = (
+            len(initial) == 27
+            and apply_verified
+            and restored
+            and dynamic_verified
+            and dynamic_restored
+        )
         report.update(
             {
                 "status": "passed" if passed else "failed",

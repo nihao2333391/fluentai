@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 from app.database import Database
 from app.domain import (
@@ -63,23 +63,31 @@ class FluentService:
         return self.adapter.status()
 
     def catalog(self) -> list[SettingCatalogEntry]:
-        return [
-            SettingCatalogEntry(
-                setting_id=definition.setting_id,
-                display_name=definition.display_name,
-                group=definition.group,
-                value_type=definition.value_type,
-                allowed_values=(
-                    list(definition.allowed_values)
-                    if definition.allowed_values is not None
-                    else None
-                ),
-                minimum=definition.minimum,
-                maximum=definition.maximum,
-                description=definition.description,
+        def operation() -> list[SettingCatalogEntry]:
+            catalog = (
+                getattr(self.adapter, "catalog", FLUENT_252_CATALOG)
+                if self.adapter.status().connected
+                else FLUENT_252_CATALOG
             )
-            for definition in FLUENT_252_CATALOG.list()
-        ]
+            return [
+                SettingCatalogEntry(
+                    setting_id=definition.setting_id,
+                    display_name=definition.display_name,
+                    group=definition.group,
+                    value_type=definition.value_type,
+                    allowed_values=(
+                        list(definition.allowed_values)
+                        if definition.allowed_values is not None
+                        else None
+                    ),
+                    minimum=definition.minimum,
+                    maximum=definition.maximum,
+                    description=definition.description,
+                )
+                for definition in catalog.list()
+            ]
+
+        return self._run(operation)
 
     def read_settings(self, setting_ids: list[str]) -> dict[str, PresetValue]:
         return self._run(lambda: self.adapter.read_settings(setting_ids))
@@ -99,6 +107,20 @@ class FluentService:
         return report
 
     def validate_preset(self, preset: PresetDocument) -> PresetValidationReport:
+        def operation() -> PresetValidationReport:
+            catalog = (
+                getattr(self.adapter, "catalog", FLUENT_252_CATALOG)
+                if self.adapter.status().connected
+                else FLUENT_252_CATALOG
+            )
+            return self._validate_preset_with_catalog(preset, catalog)
+
+        return self._run(operation)
+
+    @staticmethod
+    def _validate_preset_with_catalog(
+        preset: PresetDocument, catalog: Any
+    ) -> PresetValidationReport:
         errors: list[str] = []
         normalized: list[PresetItem] = []
         seen: set[str] = set()
@@ -108,7 +130,7 @@ class FluentService:
                 continue
             seen.add(item.setting_id)
             try:
-                definition = FLUENT_252_CATALOG.get(item.setting_id)
+                definition = catalog.get(item.setting_id)
                 value = definition.validate(item.value)
             except Exception as exc:
                 errors.append(f"{item.setting_id}: {type(exc).__name__}: {exc}")
@@ -131,7 +153,9 @@ class FluentService:
         return self._run(lambda: self._apply_preset_impl(preset))
 
     def _apply_preset_impl(self, preset: PresetDocument) -> FluentOperationReport:
-        validation = self.validate_preset(preset)
+        validation = self._validate_preset_with_catalog(
+            preset, getattr(self.adapter, "catalog", FLUENT_252_CATALOG)
+        )
         if not validation.valid:
             report = FluentOperationReport(
                 operation="apply",
@@ -241,10 +265,6 @@ class FluentService:
             model = models.get(payload.model_id)
             current_model_id = model.id
 
-            validation = self.validate_preset(automation.preset)
-            if not validation.valid:
-                raise ValueError("Automation preset is invalid: " + "; ".join(validation.errors))
-
             connection_status = self.adapter.status()
             if not connection_status.connected:
                 config = payload.connection or self.default_connection_config()
@@ -254,6 +274,12 @@ class FluentService:
 
             if payload.load_case:
                 self.adapter.load_case(model.file_path)
+            validation = self._validate_preset_with_catalog(
+                automation.preset,
+                getattr(self.adapter, "catalog", FLUENT_252_CATALOG),
+            )
+            if not validation.valid:
+                raise ValueError("Automation preset is invalid: " + "; ".join(validation.errors))
             ensure_job_active(jobs, job.id)
             jobs.update(job.id, status="running", progress=55, message="Model loaded.")
 

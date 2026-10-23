@@ -1,6 +1,6 @@
 {
   "status": "passed",
-  "started_at_utc": "2026-10-23T01:22:33.291543+00:00",
+  "started_at_utc": "2026-10-23T01:42:10.287466+00:00",
   "case": "D:\\Fluent AI\\ansys-runs\\compat-smoke-20261021-170520\\01_mesh.cas.h5",
   "fluent_executable": "D:\\Ansys2025R2\\ANSYS Inc\\v252\\fluent\\ntbin\\win64\\fluent.exe",
   "catalog_version": "25.2.0",
@@ -9,9 +9,9 @@
     "connected": true,
     "mode": "launch",
     "version": "Ansys Fluent 2025 R2",
-    "pid": 32668,
+    "pid": 18384,
     "host": "localhost",
-    "port": 49699
+    "port": 61945
   },
   "initial_values": {
     "solver.time": "steady",
@@ -43,6 +43,37 @@
     "reference.viscosity": 1.7894e-05
   },
   "read_count": 27,
+  "dynamic_material": {
+    "setting_ids": [
+      "material.fluid.air.density",
+      "material.fluid.air.viscosity"
+    ],
+    "apply_report": {
+      "operation": "apply",
+      "status": "success",
+      "results": [
+        {
+          "setting_id": "material.fluid.air.density",
+          "expected": 1.2372500000000002,
+          "actual": 1.2372500000000002,
+          "success": true,
+          "message": ""
+        },
+        {
+          "setting_id": "material.fluid.air.viscosity",
+          "expected": 1.8072939999999997e-05,
+          "actual": 1.8072939999999997e-05,
+          "success": true,
+          "message": ""
+        }
+      ],
+      "rollback_attempted": false,
+      "rollback_succeeded": null,
+      "rollback_results": []
+    },
+    "verified": true,
+    "restored": true
+  },
   "apply_report": {
     "operation": "apply",
     "status": "success",
@@ -245,5 +276,5 @@
   "apply_verified": true,
   "restored": true,
   "disconnect": "success",
-  "finished_at_utc": "2026-10-23T01:22:54.969951+00:00"
+  "finished_at_utc": "2026-10-23T01:42:33.780110+00:00"
 }

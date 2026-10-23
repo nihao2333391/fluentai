@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -21,6 +20,9 @@ def main() -> int:
         "read_count": report.get("read_count") == 27,
         "apply_verified": report.get("apply_verified") is True,
         "restored": report.get("restored") is True,
+        "dynamic_material": report.get("dynamic_material", {}).get("verified") is True,
+        "dynamic_material_restored": report.get("dynamic_material", {}).get("restored")
+        is True,
         "disconnect": report.get("disconnect") == "success",
         "no_password": "password" not in json.dumps(report).lower(),
     }
@@ -33,6 +35,7 @@ def main() -> int:
     print(" - real Fluent read: 27 settings")
     print(" - apply readback: verified")
     print(" - original values: restored")
+    print(" - dynamic material density/viscosity: verified and restored")
     print(" - disconnect: clean")
     return 0
 

@@ -16,7 +16,7 @@ from app.domain import (
     PresetValue,
     SettingWriteResult,
 )
-from app.fluent.catalog import FLUENT_252_CATALOG, FluentSettingCatalog
+from app.fluent.catalog import FLUENT_252_CATALOG, FluentSettingCatalog, SettingDefinition
 from app.fluent.comparison import preset_values_equal
 
 
@@ -36,6 +36,7 @@ class PyFluentAdapter:
         session: Any | None = None,
         connection_mode: Literal["launch", "attach"] | None = None,
     ) -> None:
+        self._base_catalog = catalog
         self.catalog = catalog
         self._pyfluent_module = pyfluent_module
         self._session = session
@@ -96,6 +97,7 @@ class PyFluentAdapter:
         mode = self._connection_mode
         self._session = None
         self._connection_mode = None
+        self.catalog = self._base_catalog
         if session is None:
             return
         if mode == "launch":
@@ -140,6 +142,51 @@ class PyFluentAdapter:
         if not path.is_file():
             raise FileNotFoundError(f"Fluent case file does not exist: {path}")
         session.settings.file.read_case(file_name=str(path))
+        self._refresh_dynamic_catalog(session)
+
+    def _refresh_dynamic_catalog(self, session: Any) -> None:
+        definitions = list(self._base_catalog.list())
+        fluid_materials = session.settings.setup.materials.fluid
+        for material_name in fluid_materials.get_state():
+            for property_name, display_name, minimum in (
+                ("density", "Density", 1e-15),
+                ("viscosity", "Viscosity", 1e-15),
+            ):
+                setting_id = f"material.fluid.{material_name}.{property_name}"
+
+                def getter(
+                    active_session: Any,
+                    material: str = material_name,
+                    prop: str = property_name,
+                ) -> PresetValue:
+                    state = active_session.settings.setup.materials.fluid[material].get_state()
+                    return cast(PresetValue, state[prop]["value"])
+
+                def setter(
+                    active_session: Any,
+                    value: PresetValue,
+                    material: str = material_name,
+                    prop: str = property_name,
+                ) -> None:
+                    node = active_session.settings.setup.materials.fluid[material]
+                    state = node.get_state()
+                    property_state = state[prop]
+                    property_state["value"] = value
+                    node.set_state({prop: property_state})
+
+                definitions.append(
+                    SettingDefinition(
+                        setting_id=setting_id,
+                        display_name=f"{material_name} {display_name}",
+                        group="models",
+                        value_type="float",
+                        getter=getter,
+                        setter=setter,
+                        minimum=minimum,
+                        description=f"{display_name} of fluid material {material_name}.",
+                    )
+                )
+        self.catalog = FluentSettingCatalog(definitions, version=self._base_catalog.version)
 
     def save_case(self, file_path: str) -> None:
         session = self._ensure_session()

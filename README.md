@@ -216,6 +216,7 @@ Completed:
 - daily and manual SQLite backups with integrity checks and safety restore;
 - sidecar development-dependency pruning.
 - Solver Methods, Initialization and Run Calculation branches with real read/write/restore verification.
+- Model-specific fluid material density and viscosity presets discovered after case load.
 
 M9 completion includes:
 

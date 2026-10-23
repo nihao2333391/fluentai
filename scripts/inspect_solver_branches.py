@@ -52,12 +52,17 @@ def main() -> int:
             output["boundary_first"] = compact(
                 boundaries[boundary_names[0]].get_state()
             )
+        output["boundary_state"] = compact(boundaries.get_state())
         materials = session.settings.setup.materials
         output["material_attributes"] = [
             item for item in dir(materials) if not item.startswith("_")
         ]
         if hasattr(materials, "fluid"):
             output["fluid_materials"] = list(materials.fluid.get_state().keys())
+            output["fluid_states"] = {
+                name: compact(materials.fluid[name].get_state())
+                for name in materials.fluid.get_state().keys()
+            }
         candidates = {
             "flow_scheme": session.settings.solution.methods.p_v_coupling.flow_scheme,
             "gradient_scheme": session.settings.solution.methods.spatial_discretization.gradient_scheme,
