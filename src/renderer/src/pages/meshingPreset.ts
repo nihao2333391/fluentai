@@ -17,6 +17,7 @@ export type MeshingChildInstanceMap = Record<string, MeshingChildInstance[]>
 export interface MeshingArgumentLeaf {
   argument: MeshingSchemaArgument
   argumentPath: string[]
+  displayPath: string[]
 }
 
 export interface MeshingTaskLeaf extends MeshingArgumentLeaf {
@@ -54,6 +55,8 @@ export const selectionKey = (
 ): string => JSON.stringify([taskPath, childInstanceId, argumentPath])
 
 export const isAdvancedArgument = (argument: MeshingSchemaArgument): boolean => {
+  if (argument.ui_section === '高级选项') return true
+  if (argument.ui_section === '开发者/内部' || argument.ui_section === '常规') return false
   const exposure = String(argument.exposure_level ?? '').toLowerCase()
   if (exposure === 'advanced' || exposure === 'expert' || exposure === '2') {
     return true
@@ -64,6 +67,11 @@ export const isAdvancedArgument = (argument: MeshingSchemaArgument): boolean => 
   return /^(old_|current_|allowed_|complete_|mesh_object|topology|zone_location|list_all_|draw_|preview_|show_|save_|write_)/.test(
     argument.name,
   )
+}
+
+export const isDeveloperArgument = (argument: MeshingSchemaArgument): boolean => {
+  if (argument.ui_section === '开发者/内部') return true
+  return String(argument.exposure_level ?? '').toLowerCase() === 'developer'
 }
 
 export const defaultArgumentValue = (argument: MeshingSchemaArgument): MeshingPresetValue => {
@@ -85,15 +93,17 @@ export const defaultArgumentValue = (argument: MeshingSchemaArgument): MeshingPr
 export const flattenArgumentLeaves = (
   argumentsToFlatten: MeshingSchemaArgument[],
   parentPath: string[] = [],
+  parentDisplayPath: string[] = [],
 ): MeshingArgumentLeaf[] => {
   const leaves: MeshingArgumentLeaf[] = []
   for (const argument of argumentsToFlatten) {
     if (argument.name === '<arguments>') continue
     const argumentPath = [...parentPath, argument.name]
+    const displayPath = [...parentDisplayPath, argument.display_name?.trim() || argument.name]
     if (argument.children.length > 0) {
-      leaves.push(...flattenArgumentLeaves(argument.children, argumentPath))
+      leaves.push(...flattenArgumentLeaves(argument.children, argumentPath, displayPath))
     } else {
-      leaves.push({ argument, argumentPath })
+      leaves.push({ argument, argumentPath, displayPath })
     }
   }
   return leaves

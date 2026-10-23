@@ -35,7 +35,20 @@ catch {
     $signatureStatus = "NotSigned"
   }
 }
-$hash = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+$stream = [System.IO.File]::OpenRead($installer)
+try {
+  $sha256 = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $hashBytes = $sha256.ComputeHash($stream)
+  }
+  finally {
+    $sha256.Dispose()
+  }
+}
+finally {
+  $stream.Dispose()
+}
+$hash = ([System.BitConverter]::ToString($hashBytes) -replace '-', '').ToLowerInvariant()
 $size = (Get-Item -LiteralPath $installer).Length
 $shaPath = [System.IO.Path]::ChangeExtension($installer, ".sha256")
 $manifestPath = Join-Path (Split-Path -Parent $installer) "release-manifest.json"

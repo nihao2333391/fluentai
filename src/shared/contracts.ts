@@ -358,6 +358,12 @@ export interface MeshingWriteReport {
 export interface MeshingSchemaArgument {
   name: string
   source_name?: string
+  display_name?: string
+  display_condition?: string | null
+  display_text_expression?: string | null
+  display_unit?: string | null
+  ui_section?: '常规' | '高级选项' | '开发者/内部' | string
+  ui_kind?: string
   edit_path: string
   value_type: string
   current_value: unknown
@@ -392,6 +398,10 @@ export interface MeshingSchemaTask {
   template?: boolean
   template_task_path?: string[]
   template_source?: 'fluent_add_child_and_update' | 'parent_command_arguments' | string
+  ui_sequence?: number
+  ui_display_condition?: string | null
+  ui_help_string?: string | null
+  ui_source_line?: number | null
 }
 
 export interface MeshingWorkflowSchema {
@@ -401,6 +411,12 @@ export interface MeshingWorkflowSchema {
   display_name?: string
   generated_at_utc: string
   tasks: MeshingSchemaTask[]
+  ui_metadata?: {
+    schema_version: number
+    source: string
+    task_order: string[]
+    task_audit: Array<Record<string, unknown>>
+  }
 }
 
 export interface MeshingSchemaSummary {

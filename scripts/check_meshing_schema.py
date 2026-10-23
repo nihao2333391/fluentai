@@ -131,6 +131,30 @@ def main() -> int:
 
     try:
         watertight = _load("fluent-meshing-25.2-watertight.schema.json")
+        expected_order = [
+            "Import Geometry",
+            "Add Local Sizing",
+            "Generate the Surface Mesh",
+            "Describe Geometry",
+            "Apply Share Topology",
+            "Enclose Fluid Regions (Capping)",
+            "Update Boundaries",
+            "Create Regions",
+            "Update Regions",
+            "Add Boundary Layers",
+            "Generate the Volume Mesh",
+        ]
+        actual_order = [
+            task.get("display_name") for task in watertight.get("tasks") or []
+        ]
+        if actual_order != expected_order:
+            failures.append(f"watertight UI task order changed: {actual_order!r}")
+        first_task = (watertight.get("tasks") or [{}])[0]
+        first_argument = (first_task.get("arguments") or [{}])[0]
+        if first_argument.get("display_name") != "File Format":
+            failures.append(
+                "watertight UI display metadata is missing from the first argument"
+            )
         task_names = {
             task.get("display_name") for task in watertight.get("tasks") or []
         }

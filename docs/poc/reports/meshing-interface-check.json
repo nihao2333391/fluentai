@@ -1,13 +1,13 @@
 {
   "status": "passed",
-  "started_at_utc": "2026-10-23T11:18:13.365483+00:00",
+  "started_at_utc": "2026-10-23T11:55:47.070537+00:00",
   "connection": {
     "connected": true,
     "mode": "launch",
     "version": "Ansys Fluent 2025 R2",
-    "pid": 34836,
+    "pid": 13896,
     "host": "localhost",
-    "port": 61974
+    "port": 56091
   },
   "all_read": {
     "status": "success",
@@ -20,8 +20,8 @@
     "workflow_type": "watertight",
     "status": "success",
     "task_names": [
-      "create_regions",
       "update_regions",
+      "create_regions",
       "describe_geometry",
       "enclose_fluid_regions",
       "update_boundaries",
@@ -188,5 +188,5 @@
     "error": null
   },
   "marker": "MESHING_INTERFACE_CHECK_PASSED",
-  "finished_at_utc": "2026-10-23T11:19:49.802871+00:00"
+  "finished_at_utc": "2026-10-23T11:58:14.372706+00:00"
 }

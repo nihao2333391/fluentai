@@ -197,11 +197,19 @@ create_surface_mesh.cfd_surface_mesh_controls.max_size = 0.002
 
 ## 7. 剩余工作
 
-1. 将 FDL UI 元数据接入 Meshing Schema，使任务顺序、显示名称、`isActive`、`members` 顺序和高级分组与原版完全一致。
-2. 将 427 项读取结果映射到新的数据驱动表单，而不是当前递归展平表单。
-3. 为 Fault-tolerant 的两个 PyFluent 复合子任务限制增加明确的 UI 禁用状态。
-4. 为 attach 模式增加 PyFluent 版本探测；不支持时只允许连接和状态查看，禁止读写。
-5. 将“写入前快照”和“失败回滚”扩展到直接 Meshing 写入接口。
+已完成：
+
+1. 将 FDL 任务顺序、`displayText`、`members`/`arguments` 顺序和高级/开发者分组写入 Meshing Schema。
+2. Meshing 表单已按增强后的 Schema 渲染原版显示名和技术参数路径。
+3. 开发者字段默认隐藏，并提供显式开关。
+4. 每个条件字段显示原始 `isActive` 条件，便于预设审核。
+
+剩余工作：
+
+1. 将 FDL `isActive` 表达式实现为完整的运行时条件求值器，做到字段随上游值实时显示/隐藏。
+2. 为 Fault-tolerant 的两个 PyFluent 复合子任务限制增加明确的 UI 禁用状态。
+3. 为 attach 模式增加 PyFluent 版本探测；不支持时只允许连接和状态查看，禁止读写。
+4. 将“写入前快照”和“失败回滚”扩展到直接 Meshing 写入接口。
 
 ## 8. 验收标准
 

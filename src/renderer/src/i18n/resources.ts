@@ -143,6 +143,9 @@ export const resources = {
         referenceModelPlaceholder: '可选：选择一个参考模型',
         workflowOptions: 'Fluent Meshing 工作流选项',
         advancedOptions: '高级与状态选项',
+        developerOptions: '开发者/内部参数 ({{count}})',
+        showDeveloperOptions: '显示开发者/内部参数',
+        conditionLabel: '条件',
         taskTypes: {
           simple: '简单',
           compound: '复合',
@@ -573,6 +576,9 @@ export const resources = {
         referenceModelPlaceholder: 'Optional reference model',
         workflowOptions: 'Fluent Meshing workflow options',
         advancedOptions: 'Advanced and state options',
+        developerOptions: 'Developer/internal options ({{count}})',
+        showDeveloperOptions: 'Show developer/internal options',
+        conditionLabel: 'Condition',
         taskTypes: {
           simple: 'Simple',
           compound: 'Compound',

@@ -28,6 +28,8 @@ const schema = {
       arguments: [
         {
           name: 'length_unit',
+          display_name: 'Units',
+          ui_section: '常规',
           edit_path: "workflow.task('import_geometry').command_arguments.length_unit",
           value_type: 'string',
           current_value: 'mm',
@@ -41,6 +43,8 @@ const schema = {
         },
         {
           name: 'old_zone_list',
+          display_name: 'Old Zones',
+          ui_section: '高级选项',
           edit_path: "workflow.task('import_geometry').command_arguments.old_zone_list",
           value_type: 'list',
           current_value: [],
@@ -50,6 +54,21 @@ const schema = {
           editable: false,
           active: true,
           exposure_level: null,
+          children: [],
+        },
+        {
+          name: 'directory',
+          display_name: 'Directory',
+          ui_section: '开发者/内部',
+          exposure_level: 'Developer',
+          edit_path: "workflow.task('import_geometry').command_arguments.directory",
+          value_type: 'string',
+          current_value: '',
+          allowed_values: null,
+          default_value: '',
+          read_only: false,
+          editable: true,
+          active: true,
           children: [],
         },
       ],
@@ -146,9 +165,14 @@ describe('MeshingAutomationCreatePage', () => {
     )
 
     expect(await screen.findByText('导入几何')).toBeInTheDocument()
+    expect(screen.getByText('Units')).toBeInTheDocument()
     expect(screen.getByText('length_unit')).toBeInTheDocument()
     expect(screen.getByText('高级与状态选项 (1)')).toBeInTheDocument()
     expect(screen.getByText('Watertight Geometry')).toBeInTheDocument()
+    expect(screen.queryByText('Directory')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('switch'))
+    fireEvent.click(await screen.findByText('开发者/内部参数 (1)'))
+    expect(await screen.findByText('Directory')).toBeInTheDocument()
 
     fireEvent.click(screen.getByText('添加局部尺寸'))
     fireEvent.click(await screen.findByText('添加复合子任务预设'))

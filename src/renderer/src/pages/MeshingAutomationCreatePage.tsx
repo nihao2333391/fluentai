@@ -42,6 +42,7 @@ import {
   defaultChildName,
   flattenArgumentLeaves,
   isAdvancedArgument,
+  isDeveloperArgument,
   isManagedChildArgument,
   selectionKey,
   taskPathKey,
@@ -63,6 +64,7 @@ interface MeshingFormValues {
 interface EditorStateProps {
   included: MeshingIncludedMap
   values: MeshingValueMap
+  showDeveloper: boolean
   onToggle: (key: string, checked: boolean) => void
   onValueChange: (key: string, value: MeshingPresetValue) => void
 }
@@ -184,6 +186,7 @@ function ArgumentSections({
   childInstanceId,
   included,
   values,
+  showDeveloper,
   onToggle,
   onValueChange,
 }: EditorStateProps & {
@@ -197,13 +200,23 @@ function ArgumentSections({
   const leaves = flattenArgumentLeaves(sourceArguments).filter(
     (leaf) => childInstanceId === null || !isManagedChildArgument(task, leaf.argument),
   )
-  const primaryLeaves = leaves.filter((leaf) => !isAdvancedArgument(leaf.argument))
-  const advancedLeaves = leaves.filter((leaf) => isAdvancedArgument(leaf.argument))
+  const visibleLeaves = leaves.filter(
+    (leaf) => showDeveloper || !isDeveloperArgument(leaf.argument),
+  )
+  const primaryLeaves = visibleLeaves.filter(
+    (leaf) => !isAdvancedArgument(leaf.argument) && !isDeveloperArgument(leaf.argument),
+  )
+  const advancedLeaves = visibleLeaves.filter((leaf) => isAdvancedArgument(leaf.argument))
+  const developerLeaves = showDeveloper
+    ? leaves.filter((leaf) => isDeveloperArgument(leaf.argument))
+    : []
 
   const renderLeaf = (leaf: MeshingArgumentLeaf) => {
     const key = selectionKey(taskPath, childInstanceId, leaf.argumentPath)
     const editable = leaf.argument.editable !== false && leaf.argument.read_only !== true
     const current = values[key] ?? defaultArgumentValue(leaf.argument)
+    const technicalPath = leaf.argumentPath.join(' > ')
+    const displayPath = leaf.displayPath.join(' > ')
     return (
       <div key={key} className={`meshing-argument-row ${included[key] ? 'is-included' : ''}`}>
         <Checkbox
@@ -212,9 +225,12 @@ function ArgumentSections({
           onChange={(event) => onToggle(key, event.target.checked)}
         >
           <Space direction="vertical" size={2}>
-            <Typography.Text strong>{leaf.argumentPath.join(' > ')}</Typography.Text>
+            <Typography.Text strong>{displayPath}</Typography.Text>
             <Typography.Text type="secondary" className="meshing-argument-path">
-              {leaf.argument.edit_path}
+              {displayPath === technicalPath ? leaf.argument.edit_path : technicalPath}
+              {leaf.argument.display_condition
+                ? ` · ${t('meshing.conditionLabel')}：${leaf.argument.display_condition}`
+                : ''}
             </Typography.Text>
           </Space>
         </Checkbox>
@@ -252,6 +268,22 @@ function ArgumentSections({
               children: (
                 <Space direction="vertical" size={10} className="full-width">
                   {advancedLeaves.map(renderLeaf)}
+                </Space>
+              ),
+            },
+          ]}
+        />
+      ) : null}
+      {developerLeaves.length > 0 ? (
+        <Collapse
+          className="advanced-options-collapse"
+          items={[
+            {
+              key: 'developer',
+              label: t('meshing.developerOptions', { count: developerLeaves.length }),
+              children: (
+                <Space direction="vertical" size={10} className="full-width">
+                  {developerLeaves.map(renderLeaf)}
                 </Space>
               ),
             },
@@ -424,6 +456,7 @@ export function MeshingAutomationCreatePage() {
   const [included, setIncluded] = useState<MeshingIncludedMap>({})
   const [values, setValues] = useState<MeshingValueMap>({})
   const [childInstances, setChildInstances] = useState<MeshingChildInstanceMap>({})
+  const [showDeveloper, setShowDeveloper] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -606,6 +639,7 @@ export function MeshingAutomationCreatePage() {
         childInstances={childInstances}
         included={included}
         values={values}
+        showDeveloper={showDeveloper}
         onToggle={toggle}
         onValueChange={changeValue}
         onAddChild={addChild}
@@ -703,7 +737,17 @@ export function MeshingAutomationCreatePage() {
             <Form.Item name="description" label={t('pages.automationCreate.descriptionField')}>
               <Input.TextArea rows={2} maxLength={2_000} />
             </Form.Item>
-            <Typography.Title level={5}>{t('meshing.workflowOptions')}</Typography.Title>
+            <Space align="center" wrap>
+              <Typography.Title level={5} style={{ margin: 0 }}>
+                {t('meshing.workflowOptions')}
+              </Typography.Title>
+              <Space size={6}>
+                <Switch checked={showDeveloper} onChange={setShowDeveloper} />
+                <Typography.Text type="secondary">
+                  {t('meshing.showDeveloperOptions')}
+                </Typography.Text>
+              </Space>
+            </Space>
             <Tabs tabPosition="left" items={tabItems} className="meshing-workflow-tabs" />
             <Form.Item className="form-actions">
               <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving}>
