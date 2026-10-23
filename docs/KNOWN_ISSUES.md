@@ -22,4 +22,4 @@
 18. Arbitrary Python/TUI command execution remains out of scope.
 19. Meshing name validation can only use names exposed after geometry import; names that first appear after surface mesh generation are intentionally rejected under the no-mesh rule.
 20. Direct `.dsco` import can block in standalone Fluent Meshing. Use the generated `.pmdb` or another verified native geometry format for Meshing apply.
-21. The NSIS installer is not Authenticode-signed because no code-signing certificate is configured. Windows SmartScreen may show an unknown-publisher warning.
+21. The signing and checksum pipeline is ready, but no Authenticode certificate is configured in this environment. The current installer remains unsigned and Windows SmartScreen may warn.

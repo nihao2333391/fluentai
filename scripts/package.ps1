@@ -20,6 +20,9 @@ try {
   & pnpm package:check-sidecar
   if ($LASTEXITCODE -ne 0) { throw "Packaged sidecar verification failed." }
 
+  & powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/check-signing-config.ps1
+  if ($LASTEXITCODE -ne 0) { throw "Code-signing preflight failed." }
+
   if ($Target -eq "dir") {
     & pnpm exec electron-builder --win --dir --config electron-builder.yml
     if ($LASTEXITCODE -ne 0) { throw "Unpacked Windows package failed." }
@@ -32,6 +35,9 @@ try {
 
   & pnpm package:check-installed
   if ($LASTEXITCODE -ne 0) { throw "Installed application verification failed." }
+
+  & powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/finalize-release.ps1
+  if ($LASTEXITCODE -ne 0) { throw "Release manifest generation failed." }
 
   Write-Host "PACKAGE_WIN_PASSED"
 } finally {

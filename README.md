@@ -177,6 +177,17 @@ release\FluentAI-0.1.0-x64-Setup.exe
 
 Current installer boundary: it is not Authenticode-signed. The Fluent AI application icon is included.
 
+For signed releases, configure:
+
+```powershell
+$env:CSC_LINK = "D:\certificates\fluent-ai.pfx"
+$env:CSC_KEY_PASSWORD = "<password>"
+$env:FLUENT_AI_REQUIRE_SIGNING = "1"
+pnpm package:win
+```
+
+The release pipeline writes `release-manifest.json` and a SHA-256 checksum, and refuses an unsigned artifact when required signing is enabled.
+
 ## Evidence
 
 - M7 verification: `docs/m7-verification.md`
