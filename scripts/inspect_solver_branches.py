@@ -48,6 +48,36 @@ def main() -> int:
                 "state": compact(node.get_state()),
                 "attributes": [item for item in dir(node) if not item.startswith("_")],
             }
+        monitor = session.settings.solution.monitor
+        output["monitor"] = {
+            "state": compact(monitor.get_state()),
+            "attributes": [item for item in dir(monitor) if not item.startswith("_")],
+        }
+        monitor_options = monitor.residual.options
+        output["monitor_options"] = {
+            name: {
+                "state": getattr(monitor_options, name).get_state(),
+                "allowed": getattr(monitor_options, name).allowed_values()
+                if hasattr(getattr(monitor_options, name), "allowed_values")
+                else None,
+            }
+            for name in (
+                "criterion_type",
+                "n_save",
+                "n_display",
+                "normalize",
+                "print",
+                "plot",
+            )
+        }
+        if hasattr(session.settings.solution, "calculation_activities"):
+            activities = session.settings.solution.calculation_activities
+            output["calculation_activities"] = {
+                "state": compact(activities.get_state()),
+                "attributes": [
+                    item for item in dir(activities) if not item.startswith("_")
+                ],
+            }
         boundaries = session.settings.setup.boundary_conditions
         boundary_names = list(boundaries.get_state().keys())
         output["boundary_names"] = boundary_names

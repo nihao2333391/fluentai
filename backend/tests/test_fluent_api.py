@@ -28,7 +28,7 @@ def test_fluent_connection_catalog_and_settings_api(
 
     catalog = app_client.get("/api/fluent/catalog", headers=auth_headers)
     assert catalog.status_code == 200
-    assert len(catalog.json()) == 27
+    assert len(catalog.json()) == 39
 
     connected = app_client.post(
         "/api/fluent/connect",

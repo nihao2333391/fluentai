@@ -35,7 +35,7 @@ launch or attach Fluent
 
 The M7 validation ran through the real sidecar HTTP API and Fluent 2025 R2:
 
-- Catalog exposed 27 settings;
+- Catalog exposed 39 settings;
 - Fluent launched and reported a real PID and port;
 - model file imported into SQLite;
 - model loaded into Fluent;
@@ -229,6 +229,7 @@ Completed:
 - Solver Methods, Initialization and Run Calculation branches with real read/write/restore verification.
 - Model-specific fluid material density and viscosity presets discovered after case load.
 - Named velocity-inlet, pressure-outlet and wall boundary-condition presets discovered from the active case.
+- Residual monitor options and per-equation residual monitor toggles.
 
 M9 completion includes:
 

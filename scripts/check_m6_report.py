@@ -16,8 +16,8 @@ def main() -> int:
     report = json.loads(REPORT.read_text(encoding="utf-8"))
     checks = {
         "status": report.get("status") == "passed",
-        "catalog_size": report.get("catalog_size") == 27,
-        "read_count": report.get("read_count") == 27,
+        "catalog_size": report.get("catalog_size") == 39,
+        "read_count": report.get("read_count") == 39,
         "apply_verified": report.get("apply_verified") is True,
         "restored": report.get("restored") is True,
         "dynamic_material": report.get("dynamic_material", {}).get("verified") is True,
@@ -34,8 +34,8 @@ def main() -> int:
         print("M6_GATE_FAILED: " + ", ".join(failed))
         return 1
     print("M6_GATE_PASSED")
-    print(" - catalog: 27 settings")
-    print(" - real Fluent read: 27 settings")
+    print(" - catalog: 39 settings")
+    print(" - real Fluent read: 39 settings")
     print(" - apply readback: verified")
     print(" - original values: restored")
     print(" - dynamic material density/viscosity: verified and restored")

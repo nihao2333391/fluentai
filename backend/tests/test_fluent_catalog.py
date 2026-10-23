@@ -1,12 +1,12 @@
 from app.fluent.catalog import FLUENT_252_CATALOG, SettingDefinition
 
 
-def test_catalog_contains_twenty_seven_unique_validated_settings() -> None:
+def test_catalog_contains_thirty_nine_unique_validated_settings() -> None:
     definitions = FLUENT_252_CATALOG.list()
     setting_ids = [definition.setting_id for definition in definitions]
 
-    assert len(definitions) == 27
-    assert len(setting_ids) == 27
+    assert len(definitions) == 39
+    assert len(setting_ids) == 39
     assert FLUENT_252_CATALOG.version == "25.2.0"
     assert FLUENT_252_CATALOG.get("residual.continuity").value_type == "float"
     assert {definition.group for definition in definitions} == {

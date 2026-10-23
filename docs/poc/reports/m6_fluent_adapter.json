@@ -1,17 +1,17 @@
 {
   "status": "passed",
-  "started_at_utc": "2026-10-23T04:13:49.606902+00:00",
+  "started_at_utc": "2026-10-23T05:02:14.806696+00:00",
   "case": "D:\\Fluent AI\\ansys-runs\\compat-smoke-20261021-170520\\01_mesh.cas.h5",
   "fluent_executable": "D:\\Ansys2025R2\\ANSYS Inc\\v252\\fluent\\ntbin\\win64\\fluent.exe",
   "catalog_version": "25.2.0",
-  "catalog_size": 27,
+  "catalog_size": 39,
   "connection_status": {
     "connected": true,
     "mode": "launch",
     "version": "Ansys Fluent 2025 R2",
-    "pid": 12652,
+    "pid": 18380,
     "host": "localhost",
-    "port": 59928
+    "port": 59430
   },
   "initial_values": {
     "solver.time": "steady",
@@ -30,6 +30,18 @@
     "initialization.reference_frame": "relative",
     "run_calculation.iterations": 0,
     "run_calculation.reporting_interval": 1,
+    "monitor.residual.criterion_type": "absolute",
+    "monitor.residual.save_count": 1000,
+    "monitor.residual.display_count": 1000,
+    "monitor.residual.normalize": false,
+    "monitor.residual.print": true,
+    "monitor.residual.plot": true,
+    "monitor.residual.monitor.continuity": true,
+    "monitor.residual.monitor.x-velocity": true,
+    "monitor.residual.monitor.y-velocity": true,
+    "monitor.residual.monitor.z-velocity": true,
+    "monitor.residual.monitor.k": true,
+    "monitor.residual.monitor.omega": true,
     "residual.continuity": 0.001,
     "residual.x-velocity": 0.001,
     "residual.y-velocity": 0.001,
@@ -42,7 +54,7 @@
     "reference.velocity": 1,
     "reference.viscosity": 1.7894e-05
   },
-  "read_count": 27,
+  "read_count": 39,
   "dynamic_material": {
     "setting_ids": [
       "material.fluid.air.density",
@@ -178,6 +190,55 @@
         "actual": 2,
         "success": true,
         "message": ""
+      },
+      {
+        "setting_id": "monitor.residual.criterion_type",
+        "expected": "absolute",
+        "actual": "absolute",
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "monitor.residual.save_count",
+        "expected": 1010,
+        "actual": 1010,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "monitor.residual.display_count",
+        "expected": 1010,
+        "actual": 1010,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "monitor.residual.normalize",
+        "expected": true,
+        "actual": true,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "monitor.residual.print",
+        "expected": true,
+        "actual": true,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "monitor.residual.plot",
+        "expected": true,
+        "actual": true,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "monitor.residual.monitor.continuity",
+        "expected": true,
+        "actual": true,
+        "success": true,
+        "message": ""
       }
     ],
     "rollback_attempted": false,
@@ -194,7 +255,14 @@
     "initialization.type": "standard",
     "initialization.reference_frame": "absolute",
     "run_calculation.iterations": 1,
-    "run_calculation.reporting_interval": 2
+    "run_calculation.reporting_interval": 2,
+    "monitor.residual.criterion_type": "absolute",
+    "monitor.residual.save_count": 1010,
+    "monitor.residual.display_count": 1010,
+    "monitor.residual.normalize": true,
+    "monitor.residual.print": true,
+    "monitor.residual.plot": true,
+    "monitor.residual.monitor.continuity": true
   },
   "restore_report": {
     "operation": "write",
@@ -269,6 +337,55 @@
         "actual": 1,
         "success": true,
         "message": ""
+      },
+      {
+        "setting_id": "monitor.residual.criterion_type",
+        "expected": "absolute",
+        "actual": "absolute",
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "monitor.residual.save_count",
+        "expected": 1000,
+        "actual": 1000,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "monitor.residual.display_count",
+        "expected": 1000,
+        "actual": 1000,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "monitor.residual.normalize",
+        "expected": false,
+        "actual": false,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "monitor.residual.print",
+        "expected": true,
+        "actual": true,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "monitor.residual.plot",
+        "expected": true,
+        "actual": true,
+        "success": true,
+        "message": ""
+      },
+      {
+        "setting_id": "monitor.residual.monitor.continuity",
+        "expected": true,
+        "actual": true,
+        "success": true,
+        "message": ""
       }
     ],
     "rollback_attempted": false,
@@ -292,6 +409,18 @@
     "initialization.reference_frame": "relative",
     "run_calculation.iterations": 0,
     "run_calculation.reporting_interval": 1,
+    "monitor.residual.criterion_type": "absolute",
+    "monitor.residual.save_count": 1000,
+    "monitor.residual.display_count": 1000,
+    "monitor.residual.normalize": false,
+    "monitor.residual.print": true,
+    "monitor.residual.plot": true,
+    "monitor.residual.monitor.continuity": true,
+    "monitor.residual.monitor.x-velocity": true,
+    "monitor.residual.monitor.y-velocity": true,
+    "monitor.residual.monitor.z-velocity": true,
+    "monitor.residual.monitor.k": true,
+    "monitor.residual.monitor.omega": true,
     "residual.continuity": 0.001,
     "residual.x-velocity": 0.001,
     "residual.y-velocity": 0.001,
@@ -307,5 +436,5 @@
   "apply_verified": true,
   "restored": true,
   "disconnect": "success",
-  "finished_at_utc": "2026-10-23T04:14:12.549446+00:00"
+  "finished_at_utc": "2026-10-23T05:02:37.624973+00:00"
 }

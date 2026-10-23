@@ -239,6 +239,23 @@ def main() -> int:
                 initial["run_calculation.reporting_interval"]
             )
             + 1,
+            "monitor.residual.criterion_type": initial[
+                "monitor.residual.criterion_type"
+            ],
+            "monitor.residual.save_count": int(initial["monitor.residual.save_count"])
+            + 10,
+            "monitor.residual.display_count": int(
+                initial["monitor.residual.display_count"]
+            )
+            + 10,
+            "monitor.residual.normalize": not bool(
+                initial["monitor.residual.normalize"]
+            ),
+            "monitor.residual.print": bool(initial["monitor.residual.print"]),
+            "monitor.residual.plot": bool(initial["monitor.residual.plot"]),
+            "monitor.residual.monitor.continuity": bool(
+                initial["monitor.residual.monitor.continuity"]
+            ),
         }
         apply_report = adapter.apply_preset(
             PresetDocument(
@@ -285,7 +302,7 @@ def main() -> int:
             for setting_id in setting_ids
         )
         passed = (
-            len(initial) == 27
+            len(initial) == 39
             and apply_verified
             and restored
             and dynamic_verified

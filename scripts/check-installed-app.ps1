@@ -34,8 +34,15 @@ $summary = [ordered]@{
   started_at_utc = [DateTime]::UtcNow.ToString("o")
 }
 $appProcess = $null
+function Stop-InstalledProcesses {
+  Get-CimInstance Win32_Process |
+    Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith($installDir, [StringComparison]::OrdinalIgnoreCase) } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+}
 try {
   if (Test-Path -LiteralPath $installDir) {
+    Stop-InstalledProcesses
+    Start-Sleep -Milliseconds 500
     Remove-Item -LiteralPath $installDir -Recurse -Force
   }
 
@@ -93,7 +100,9 @@ try {
   if ($appProcess -and -not $appProcess.HasExited) {
     Stop-Process -Id $appProcess.Id -Force
   }
+  Stop-InstalledProcesses
   if (-not $KeepInstalled) {
+    Start-Sleep -Seconds 2
     $uninstaller = Join-Path $installDir "Uninstall Fluent AI.exe"
     if (Test-Path -LiteralPath $uninstaller) {
       try {
@@ -102,8 +111,16 @@ try {
         $summary["uninstall_error"] = $_.Exception.Message
       }
     }
+    for ($attempt = 1; $attempt -le 20 -and (Test-Path -LiteralPath $installDir); $attempt++) {
+      try {
+        Remove-Item -LiteralPath $installDir -Recurse -Force -ErrorAction Stop
+      } catch {
+        $summary["cleanup_warning"] = $_.Exception.Message
+        Start-Sleep -Milliseconds 500
+      }
+    }
     if (Test-Path -LiteralPath $installDir) {
-      Remove-Item -LiteralPath $installDir -Recurse -Force
+      $summary["cleanup_warning"] = "Install directory still exists after retries: $installDir"
     }
   }
   $summary["finished_at_utc"] = [DateTime]::UtcNow.ToString("o")

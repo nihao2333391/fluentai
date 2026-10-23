@@ -12,6 +12,7 @@ SettingValueType = Literal["int", "float", "bool", "string", "enum"]
 SettingGroup = Literal["general", "models", "solution", "reference"]
 SettingGetter = Callable[[Any], PresetValue]
 SettingSetter = Callable[[Any, PresetValue], None]
+RESIDUAL_EQUATIONS = ("continuity", "x-velocity", "y-velocity", "z-velocity", "k", "omega")
 
 
 @dataclass(frozen=True)
@@ -122,6 +123,29 @@ def _residual(setting_id: str, equation: str) -> SettingDefinition:
         minimum=1e-12,
         maximum=1.0,
         description=f"Absolute convergence criterion for the {equation} equation.",
+    )
+
+
+def _residual_monitor_flag(
+    setting_id: str, equation: str, field: str, display_name: str
+) -> SettingDefinition:
+    def getter(session: Any) -> PresetValue:
+        equation_node = session.settings.solution.monitor.residual.equations[equation]
+        return bool(getattr(equation_node, field).get_state())
+
+    def setter(session: Any, value: PresetValue) -> None:
+        getattr(session.settings.solution.monitor.residual.equations[equation], field).set_state(
+            value
+        )
+
+    return SettingDefinition(
+        setting_id=setting_id,
+        display_name=f"{display_name}: {equation}",
+        group="solution",
+        value_type="bool",
+        getter=getter,
+        setter=setter,
+        description=f"{display_name} for the {equation} residual.",
     )
 
 
@@ -411,6 +435,74 @@ def create_fluent_252_catalog() -> FluentSettingCatalog:
             maximum=100_000,
             description="Iteration interval for reports and monitor updates.",
         ),
+        SettingDefinition(
+            setting_id="monitor.residual.criterion_type",
+            group="solution",
+            display_name="Residual criterion type",
+            value_type="enum",
+            getter=_scalar_getter(("solution", "monitor", "residual", "options", "criterion_type")),
+            setter=_scalar_setter(("solution", "monitor", "residual", "options", "criterion_type")),
+            allowed_values=("absolute", "none"),
+            description="Global residual convergence criterion type.",
+        ),
+        SettingDefinition(
+            setting_id="monitor.residual.save_count",
+            group="solution",
+            display_name="Residual history points to save",
+            value_type="int",
+            getter=_scalar_getter(("solution", "monitor", "residual", "options", "n_save")),
+            setter=_scalar_setter(("solution", "monitor", "residual", "options", "n_save")),
+            minimum=1,
+            maximum=1_000_000,
+            description="Number of residual history points retained in the solution.",
+        ),
+        SettingDefinition(
+            setting_id="monitor.residual.display_count",
+            group="solution",
+            display_name="Residual points to display",
+            value_type="int",
+            getter=_scalar_getter(("solution", "monitor", "residual", "options", "n_display")),
+            setter=_scalar_setter(("solution", "monitor", "residual", "options", "n_display")),
+            minimum=1,
+            maximum=1_000_000,
+            description="Number of residual points displayed in the monitor.",
+        ),
+        SettingDefinition(
+            setting_id="monitor.residual.normalize",
+            group="solution",
+            display_name="Normalize residuals",
+            value_type="bool",
+            getter=_scalar_getter(("solution", "monitor", "residual", "options", "normalize")),
+            setter=_scalar_setter(("solution", "monitor", "residual", "options", "normalize")),
+            description="Normalize residuals in the monitor.",
+        ),
+        SettingDefinition(
+            setting_id="monitor.residual.print",
+            group="solution",
+            display_name="Print residuals",
+            value_type="bool",
+            getter=_scalar_getter(("solution", "monitor", "residual", "options", "print")),
+            setter=_scalar_setter(("solution", "monitor", "residual", "options", "print")),
+            description="Print residuals to the transcript.",
+        ),
+        SettingDefinition(
+            setting_id="monitor.residual.plot",
+            group="solution",
+            display_name="Plot residuals",
+            value_type="bool",
+            getter=_scalar_getter(("solution", "monitor", "residual", "options", "plot")),
+            setter=_scalar_setter(("solution", "monitor", "residual", "options", "plot")),
+            description="Plot residuals in the Fluent GUI.",
+        ),
+        *[
+            _residual_monitor_flag(
+                f"monitor.residual.monitor.{equation}",
+                equation,
+                "monitor",
+                "Monitor residual",
+            )
+            for equation in RESIDUAL_EQUATIONS
+        ],
         _residual("residual.continuity", "continuity"),
         _residual("residual.x-velocity", "x-velocity"),
         _residual("residual.y-velocity", "y-velocity"),
