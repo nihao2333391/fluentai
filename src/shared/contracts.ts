@@ -316,6 +316,45 @@ export type MeshingWorkflowType = 'watertight' | 'fault-tolerant'
 export type MeshingPresetValue =
   PresetValue | MeshingPresetValue[] | { [key: string]: MeshingPresetValue }
 
+export interface MeshingArgumentReference {
+  task_path: string[]
+  argument_path: string[]
+  compound_child_name?: string | null
+}
+
+export interface MeshingReadRequest {
+  workflow_type: MeshingWorkflowType
+  items?: MeshingArgumentReference[]
+}
+
+export interface MeshingReadItemResult extends MeshingArgumentReference {
+  found: boolean
+  value: MeshingPresetValue | null
+  error: string | null
+}
+
+export interface MeshingReadReport {
+  workflow_type: MeshingWorkflowType
+  status: 'success' | 'failed'
+  task_names: string[]
+  items: MeshingReadItemResult[]
+  error: string | null
+}
+
+export interface MeshingWriteRequest {
+  workflow_type: MeshingWorkflowType
+  items: MeshingPresetItem[]
+  verify: boolean
+}
+
+export interface MeshingWriteReport {
+  workflow_type: MeshingWorkflowType
+  status: 'success' | 'failed'
+  results: MeshingArgumentWriteResult[]
+  verified: boolean
+  error: string | null
+}
+
 export interface MeshingSchemaArgument {
   name: string
   source_name?: string
@@ -490,6 +529,11 @@ export interface SystemApi {
 }
 
 export interface MeshingApi {
+  status: () => Promise<FluentStatus>
+  connect: (config: FluentConnectionConfig) => Promise<FluentStatus>
+  disconnect: () => Promise<FluentStatus>
+  read: (request: MeshingReadRequest) => Promise<MeshingReadReport>
+  write: (request: MeshingWriteRequest) => Promise<MeshingWriteReport>
   schemas: () => Promise<MeshingSchemaSummary[]>
   schema: (workflowType: MeshingWorkflowType) => Promise<MeshingWorkflowSchema>
   validatePreset: (preset: MeshingPresetDocument) => Promise<MeshingPresetValidationReport>

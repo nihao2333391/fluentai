@@ -58,6 +58,60 @@ def test_meshing_schema_and_automation_api(
     assert rejected.status_code == 422
 
 
+def test_meshing_connection_and_direct_read_write_api(
+    app_client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    status = app_client.get("/api/meshing/status", headers=auth_headers)
+    assert status.status_code == 200
+    assert status.json()["connected"] is False
+
+    connected = app_client.post(
+        "/api/meshing/connect",
+        headers=auth_headers,
+        json={"mode": "launch", "ui_mode": "no_gui"},
+    )
+    assert connected.status_code == 200
+    assert connected.json()["connected"] is True
+
+    reference = {
+        "task_path": ["import_geometry"],
+        "argument_path": ["length_unit"],
+    }
+    read = app_client.post(
+        "/api/meshing/read",
+        headers=auth_headers,
+        json={"workflow_type": "watertight", "items": [reference]},
+    )
+    assert read.status_code == 200
+    assert read.json()["status"] == "success"
+    assert read.json()["items"][0]["value"] == "mm"
+
+    written = app_client.post(
+        "/api/meshing/write",
+        headers=auth_headers,
+        json={
+            "workflow_type": "watertight",
+            "verify": True,
+            "items": [{**reference, "value": "m", "required": True}],
+        },
+    )
+    assert written.status_code == 200
+    assert written.json()["status"] == "success"
+    assert written.json()["results"][0]["actual"] == "m"
+
+    read_back = app_client.post(
+        "/api/meshing/read",
+        headers=auth_headers,
+        json={"workflow_type": "watertight", "items": [reference]},
+    )
+    assert read_back.json()["items"][0]["value"] == "m"
+
+    disconnected = app_client.post("/api/meshing/disconnect", headers=auth_headers)
+    assert disconnected.status_code == 200
+    assert disconnected.json()["connected"] is False
+
+
 def test_apply_meshing_automation(
     app_client: TestClient,
     auth_headers: dict[str, str],

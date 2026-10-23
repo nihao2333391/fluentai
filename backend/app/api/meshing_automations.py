@@ -7,18 +7,58 @@ from fastapi import APIRouter, HTTPException, Response, status
 from app.api.deps import DatabaseDependency, MeshingServiceDependency
 from app.domain import (
     ApplyMeshingAutomationRequest,
+    FluentConnectionConfig,
+    FluentStatus,
     MeshingAutomationCreate,
     MeshingAutomationRead,
     MeshingAutomationUpdate,
     MeshingPresetDocument,
     MeshingPresetValidationReport,
+    MeshingReadReport,
+    MeshingReadRequest,
     MeshingSchemaSummary,
     MeshingWorkflowReport,
+    MeshingWriteReport,
+    MeshingWriteRequest,
 )
 from app.meshing.schema_index import MESHING_SCHEMA_INDEX
 from app.repositories.meshing_automations import MeshingAutomationRepository
 
 router = APIRouter(tags=["meshing"])
+
+
+@router.get("/meshing/status", response_model=FluentStatus)
+def get_meshing_status(meshing: MeshingServiceDependency) -> FluentStatus:
+    return meshing.status()
+
+
+@router.post("/meshing/connect", response_model=FluentStatus)
+def connect_meshing(
+    payload: FluentConnectionConfig,
+    meshing: MeshingServiceDependency,
+) -> FluentStatus:
+    return meshing.connect(payload)
+
+
+@router.post("/meshing/disconnect", response_model=FluentStatus)
+def disconnect_meshing(meshing: MeshingServiceDependency) -> FluentStatus:
+    return meshing.disconnect()
+
+
+@router.post("/meshing/read", response_model=MeshingReadReport)
+def read_meshing_arguments(
+    payload: MeshingReadRequest,
+    meshing: MeshingServiceDependency,
+) -> MeshingReadReport:
+    return meshing.read_arguments(payload)
+
+
+@router.post("/meshing/write", response_model=MeshingWriteReport)
+def write_meshing_arguments(
+    payload: MeshingWriteRequest,
+    meshing: MeshingServiceDependency,
+) -> MeshingWriteReport:
+    return meshing.write_arguments(payload)
 
 
 def _validate_preset(preset: MeshingPresetDocument) -> MeshingPresetValidationReport:

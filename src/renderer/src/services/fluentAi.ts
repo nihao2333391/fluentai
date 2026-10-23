@@ -6,6 +6,8 @@ import type {
   FluentConnectionConfig,
   MeshingAutomationInput,
   MeshingPresetDocument,
+  MeshingReadRequest,
+  MeshingWriteRequest,
   MeshingWorkflowType,
   ModelAssociationRequest,
   ModelCreateRequest,
@@ -74,6 +76,11 @@ export const fluentAiService = {
     clearFluentPassword: () => getFluentAIApi().credentials.clearFluentPassword(),
   },
   meshing: {
+    status: () => getFluentAIApi().meshing.status(),
+    connect: (config: FluentConnectionConfig) => getFluentAIApi().meshing.connect(config),
+    disconnect: () => getFluentAIApi().meshing.disconnect(),
+    read: (request: MeshingReadRequest) => getFluentAIApi().meshing.read(request),
+    write: (request: MeshingWriteRequest) => getFluentAIApi().meshing.write(request),
     schemas: () => getFluentAIApi().meshing.schemas(),
     schema: (workflowType: MeshingWorkflowType) => getFluentAIApi().meshing.schema(workflowType),
     validatePreset: (preset: MeshingPresetDocument) =>

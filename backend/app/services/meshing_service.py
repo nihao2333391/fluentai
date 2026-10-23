@@ -16,7 +16,11 @@ from app.domain import (
     FluentUiMode,
     JobCreate,
     MeshingApplyReport,
+    MeshingReadReport,
+    MeshingReadRequest,
     MeshingWorkflowReport,
+    MeshingWriteReport,
+    MeshingWriteRequest,
     SyncLogCreate,
 )
 from app.meshing.base import MeshingWorkflowAdapter
@@ -57,6 +61,46 @@ class MeshingService:
     def _run[T](self, operation: Callable[[], T]) -> T:
         return self._executor.submit(operation).result()
 
+    def status(self) -> FluentStatus:
+        return self._run(self.adapter.status)
+
+    def connect(self, config: FluentConnectionConfig) -> FluentStatus:
+        return self._run(lambda: self.adapter.connect(config))
+
+    def disconnect(self) -> FluentStatus:
+        return self._run(self._disconnect_impl)
+
+    def _disconnect_impl(self) -> FluentStatus:
+        self.adapter.disconnect()
+        return self.adapter.status()
+
+    def read_arguments(self, request: MeshingReadRequest) -> MeshingReadReport:
+        return self._run(lambda: self.adapter.read_arguments(request))
+
+    def write_arguments(self, request: MeshingWriteRequest) -> MeshingWriteReport:
+        return self._run(lambda: self._write_arguments_impl(request))
+
+    def _write_arguments_impl(self, request: MeshingWriteRequest) -> MeshingWriteReport:
+        report = self.adapter.write_arguments(request)
+        SyncLogRepository(self.database).create(
+            SyncLogCreate(
+                direction="write",
+                target="Fluent Meshing",
+                payload={
+                    "workflow_type": request.workflow_type,
+                    "items": [item.model_dump(mode="json") for item in request.items],
+                    "report": report.model_dump(mode="json"),
+                },
+                status=report.status,
+                message=(
+                    f"{len(report.results)} Meshing argument write(s)."
+                    if report.status == "success"
+                    else (report.error or "Meshing argument write failed.")
+                ),
+            )
+        )
+        return report
+
     def apply_automation(
         self,
         automation_id: int,
@@ -66,13 +110,19 @@ class MeshingService:
 
     def default_connection_config(self) -> FluentConnectionConfig:
         values = SettingsRepository(self.database).get_all()
-        port_text = values.get("fluent_port", "").strip()
+        port_text = values.get("meshing_port", values.get("fluent_port", "")).strip()
         return FluentConnectionConfig(
-            mode=cast(FluentLaunchMode, values.get("fluent_connect_mode", "launch")),
-            fluent_path=values.get("fluent_path") or None,
+            mode=cast(
+                FluentLaunchMode,
+                values.get("meshing_connect_mode", values.get("fluent_connect_mode", "launch")),
+            ),
+            fluent_path=values.get("meshing_fluent_path") or values.get("fluent_path") or None,
             product_version=values.get("fluent_version", "25.2.0"),
-            ui_mode=cast(FluentUiMode, values.get("fluent_ui_mode", "gui")),
-            host=values.get("fluent_host", "127.0.0.1"),
+            ui_mode=cast(
+                FluentUiMode,
+                values.get("meshing_ui_mode", values.get("fluent_ui_mode", "no_gui")),
+            ),
+            host=values.get("meshing_host", values.get("fluent_host", "127.0.0.1")),
             port=int(port_text) if port_text else None,
         )
 

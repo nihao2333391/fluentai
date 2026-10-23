@@ -16,10 +16,14 @@ import type {
   MeshingAutomationInput,
   MeshingPresetDocument,
   MeshingPresetValidationReport,
+  MeshingReadReport,
+  MeshingReadRequest,
   MeshingSchemaSummary,
   MeshingWorkflowSchema,
   MeshingWorkflowType,
   MeshingWorkflowReport,
+  MeshingWriteReport,
+  MeshingWriteRequest,
   Model,
   ModelAssociationRequest,
   ModelCreateRequest,
@@ -175,6 +179,28 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
     }),
   )
 
+  ipcMain.handle('meshing:status', () => sidecar.request<FluentStatus>('/api/meshing/status'))
+  ipcMain.handle('meshing:connect', (_event, payload: FluentConnectionConfig) =>
+    sidecar.request<FluentStatus>('/api/meshing/connect', {
+      method: 'POST',
+      body: jsonBody(payload),
+    }),
+  )
+  ipcMain.handle('meshing:disconnect', () =>
+    sidecar.request<FluentStatus>('/api/meshing/disconnect', { method: 'POST' }),
+  )
+  ipcMain.handle('meshing:read', (_event, payload: MeshingReadRequest) =>
+    sidecar.request<MeshingReadReport>('/api/meshing/read', {
+      method: 'POST',
+      body: jsonBody(payload),
+    }),
+  )
+  ipcMain.handle('meshing:write', (_event, payload: MeshingWriteRequest) =>
+    sidecar.request<MeshingWriteReport>('/api/meshing/write', {
+      method: 'POST',
+      body: jsonBody(payload),
+    }),
+  )
   ipcMain.handle('meshing:schemas', () =>
     sidecar.request<MeshingSchemaSummary[]>('/api/meshing/schemas'),
   )

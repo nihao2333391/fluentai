@@ -17,11 +17,18 @@ from app.domain import (
     FluentConnectionConfig,
     FluentStatus,
     MeshingApplyReport,
+    MeshingArgumentReference,
     MeshingArgumentWriteResult,
     MeshingNameCheck,
     MeshingPresetDocument,
     MeshingPresetItem,
     MeshingPresetValue,
+    MeshingReadItemResult,
+    MeshingReadReport,
+    MeshingReadRequest,
+    MeshingWorkflowType,
+    MeshingWriteReport,
+    MeshingWriteRequest,
 )
 from app.meshing.schema_index import MESHING_SCHEMA_INDEX
 from app.meshing.workflow_inventory import describe_task_arguments
@@ -96,6 +103,61 @@ def _read_state_path(state: Any, path: list[str]) -> Any:
             return None
         current = current[part]
     return current
+
+
+def _state_path_exists(state: Any, path: list[str]) -> bool:
+    current = state
+    for part in path:
+        if not isinstance(current, dict) or part not in current:
+            return False
+        current = current[part]
+    return True
+
+
+def _find_compound_child(task: Any, child_name: str) -> Any | None:
+    try:
+        children = list(task.tasks())
+    except Exception:
+        return None
+    for child in children:
+        try:
+            if str(child.python_name()) == child_name:
+                return child
+        except Exception:
+            continue
+        state = _safe_call(getattr(child, "get_state", None), {}) or {}
+        if str(state.get("_name_", "")) == child_name:
+            return child
+    return None
+
+
+def _schema_argument_references(
+    workflow_type: MeshingWorkflowType,
+) -> list[tuple[list[str], list[str]]]:
+    schema = MESHING_SCHEMA_INDEX.schemas.get(workflow_type) or {}
+    references: list[tuple[list[str], list[str]]] = []
+
+    def visit_arguments(
+        arguments: list[dict[str, Any]],
+        task_path: list[str],
+        prefix: list[str],
+    ) -> None:
+        for argument in arguments:
+            path = [*prefix, str(argument.get("name"))]
+            children = argument.get("children") or []
+            if children:
+                visit_arguments(children, task_path, path)
+            else:
+                references.append((list(task_path), path))
+
+    def visit_tasks(tasks: list[dict[str, Any]], parent_path: list[str]) -> None:
+        for task in tasks:
+            task_path = [*parent_path, str(task.get("python_name"))]
+            visit_arguments(task.get("arguments") or [], task_path, [])
+            visit_tasks(task.get("children") or [], task_path)
+
+    visit_tasks(schema.get("tasks") or [], [])
+    return references
 
 
 def _numeric(value: Any) -> float | None:
@@ -271,6 +333,8 @@ class PyFluentMeshingAdapter:
         self._pyfluent_module = pyfluent_module
         self._session = session
         self._connection_mode = connection_mode
+        self._workflow: Any | None = None
+        self._workflow_type: str | None = None
 
     def connect(self, config: FluentConnectionConfig) -> FluentStatus:
         if self._session is not None and self._is_active():
@@ -320,6 +384,8 @@ class PyFluentMeshingAdapter:
         mode = self._connection_mode
         self._session = None
         self._connection_mode = None
+        self._workflow = None
+        self._workflow_type = None
         if session is not None and mode == "launch":
             session.exit()
 
@@ -353,6 +419,143 @@ class PyFluentMeshingAdapter:
             port=port,
         )
 
+    def read_arguments(self, request: MeshingReadRequest) -> MeshingReadReport:
+        report = MeshingReadReport(
+            workflow_type=request.workflow_type,
+            status="failed",
+        )
+        try:
+            workflow = self._get_workflow(request.workflow_type)
+            report.task_names = [str(task.python_name()) for task in workflow.tasks()]
+            references = request.items or [
+                MeshingArgumentReference(task_path=task_path, argument_path=argument_path)
+                for task_path, argument_path in _schema_argument_references(request.workflow_type)
+            ]
+            for reference in references:
+                try:
+                    task = _find_task(workflow, reference.task_path)
+                    target = task
+                    if reference.compound_child_name:
+                        child = _find_compound_child(task, reference.compound_child_name)
+                        if child is None:
+                            raise LookupError(
+                                f"Compound child was not found: {reference.compound_child_name}"
+                            )
+                        target = child
+                    state = _normalize_state(target.arguments.get_state())
+                    found = _state_path_exists(state, reference.argument_path)
+                    report.items.append(
+                        MeshingReadItemResult(
+                            task_path=reference.task_path,
+                            argument_path=reference.argument_path,
+                            compound_child_name=reference.compound_child_name,
+                            found=found,
+                            value=cast(
+                                MeshingPresetValue | None,
+                                _read_state_path(state, reference.argument_path),
+                            ),
+                            error=None if found else "Argument path was not found.",
+                        )
+                    )
+                except Exception as exc:
+                    report.items.append(
+                        MeshingReadItemResult(
+                            task_path=reference.task_path,
+                            argument_path=reference.argument_path,
+                            compound_child_name=reference.compound_child_name,
+                            found=False,
+                            error=f"{type(exc).__name__}: {exc}",
+                        )
+                    )
+            report.status = (
+                "success"
+                if report.items and all(item.found and item.error is None for item in report.items)
+                else "failed"
+            )
+            if report.status == "failed":
+                report.error = "One or more Meshing arguments could not be read."
+            return report
+        except Exception as exc:
+            report.error = f"{type(exc).__name__}: {exc}"
+            return report
+
+    def write_arguments(self, request: MeshingWriteRequest) -> MeshingWriteReport:
+        report = MeshingWriteReport(
+            workflow_type=request.workflow_type,
+            status="failed",
+            verified=request.verify,
+        )
+        try:
+            workflow = self._get_workflow(request.workflow_type)
+            grouped: dict[tuple[tuple[str, ...], str | None], list[MeshingPresetItem]] = {}
+            for item in request.items:
+                key = (tuple(item.task_path), item.compound_child_name)
+                grouped.setdefault(key, []).append(item)
+
+            for (task_path_tuple, child_name), items in grouped.items():
+                try:
+                    task = _find_task(workflow, list(task_path_tuple))
+                    target = task
+                    if child_name:
+                        child = _find_compound_child(task, child_name)
+                        if child is None:
+                            raise LookupError(f"Compound child was not found: {child_name}")
+                        target = child
+                    state: dict[str, Any] = {}
+                    for item in items:
+                        _merge_state(state, item.argument_path, item.value)
+                    _write_argument_state(target, state)
+                    actual_state = _normalize_state(target.arguments.get_state())
+                    for item in items:
+                        actual = _read_state_path(actual_state, item.argument_path)
+                        schema_argument = MESHING_SCHEMA_INDEX.get_argument(
+                            request.workflow_type,
+                            item.task_path,
+                            item.argument_path,
+                            item.compound_child_name,
+                        )
+                        value_type = (
+                            str(schema_argument.get("value_type")) if schema_argument else None
+                        )
+                        success = not request.verify or _values_equal(
+                            item.value, actual, value_type
+                        )
+                        report.results.append(
+                            MeshingArgumentWriteResult(
+                                task_path=item.task_path,
+                                argument_path=item.argument_path,
+                                compound_child_name=item.compound_child_name,
+                                expected=item.value,
+                                actual=cast(MeshingPresetValue | None, actual),
+                                success=success,
+                                message="" if success else "Meshing readback did not match.",
+                            )
+                        )
+                except Exception as exc:
+                    for item in items:
+                        report.results.append(
+                            MeshingArgumentWriteResult(
+                                task_path=item.task_path,
+                                argument_path=item.argument_path,
+                                compound_child_name=item.compound_child_name,
+                                expected=item.value,
+                                actual=None,
+                                success=False,
+                                message=f"{type(exc).__name__}: {exc}",
+                            )
+                        )
+            report.status = (
+                "success"
+                if report.results and all(result.success for result in report.results)
+                else "failed"
+            )
+            if report.status == "failed":
+                report.error = "One or more Meshing arguments failed to write or verify."
+            return report
+        except Exception as exc:
+            report.error = f"{type(exc).__name__}: {exc}"
+            return report
+
     def apply_preset(
         self,
         preset: MeshingPresetDocument,
@@ -360,12 +563,7 @@ class PyFluentMeshingAdapter:
         *,
         import_geometry: bool = True,
     ) -> MeshingApplyReport:
-        session = self._ensure_session()
-        workflow = (
-            session.watertight()
-            if preset.workflow_type == "watertight"
-            else session.fault_tolerant()
-        )
+        workflow = self._get_workflow(preset.workflow_type)
         _debug(f"workflow ready type={preset.workflow_type}")
         report = MeshingApplyReport(
             workflow_type=preset.workflow_type,
@@ -465,6 +663,25 @@ class PyFluentMeshingAdapter:
         if self._session is None or not self._is_active():
             raise RuntimeError("Fluent Meshing is not connected.")
         return self._session
+
+    def _get_workflow(self, workflow_type: str) -> Any:
+        session = self._ensure_session()
+        if self._workflow is not None and self._workflow_type == workflow_type:
+            return self._workflow
+        try:
+            workflow = (
+                session.watertight() if workflow_type == "watertight" else session.fault_tolerant()
+            )
+        except TypeError as exc:
+            if self._connection_mode == "attach" and "StringVector" in str(exc):
+                raise RuntimeError(
+                    "Fluent Meshing attach mode is connected, but PyFluent cannot read the "
+                    "Fluent 2025 R2 legacy workflow arguments. Use launch mode for read/write."
+                ) from exc
+            raise
+        self._workflow = workflow
+        self._workflow_type = workflow_type
+        return workflow
 
     def _is_active(self) -> bool:
         if self._session is None:

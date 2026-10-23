@@ -67,6 +67,11 @@ describe('fluentAiService', () => {
         applyAutomation: vi.fn(),
       },
       meshing: {
+        status: vi.fn(),
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        read: vi.fn(),
+        write: vi.fn(),
         schemas: vi.fn().mockResolvedValue([]),
         schema: vi.fn().mockResolvedValue({ tasks: [] }),
         validatePreset: vi.fn().mockResolvedValue({

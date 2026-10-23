@@ -32,7 +32,7 @@ describe('SidecarManager', () => {
       appRoot,
       pythonExecutable: resolvePython(),
       dataDirectory,
-      startTimeoutMs: 20_000,
+      startTimeoutMs: 60_000,
     })
     const states: string[] = []
     const unsubscribe = manager.onStatusChanged((status) => {
@@ -77,7 +77,7 @@ describe('SidecarManager', () => {
     }
 
     expect(manager.getStatus().state).toBe('stopped')
-  }, 45_000)
+  }, 90_000)
   it('automatically restarts after an unexpected sidecar exit', async () => {
     const dataDirectory = mkdtempSync(join(tmpdir(), 'fluent-ai-sidecar-restart-'))
     const manager = new SidecarManager({

@@ -55,8 +55,12 @@ try {
   & $python scripts\check_meshing_apply.py
   if ($LASTEXITCODE -ne 0) { throw 'M8 Meshing apply check failed.' }
 
+  & $python scripts\check_meshing_interface.py
+  if ($LASTEXITCODE -ne 0) { throw 'Meshing connection/read/write interface check failed.' }
+
   Write-Host 'M8_SCHEMA_CHECK_PASSED'
   Write-Host 'M8_APPLY_CHECK_PASSED'
+  Write-Host 'MESHING_INTERFACE_CHECK_PASSED'
 }
 finally {
   Pop-Location

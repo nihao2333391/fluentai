@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next'
 
 import type { CredentialStatus, DatabaseBackupInfo } from '../../../shared/contracts'
 import { FluentConnectionCard } from '../components/FluentConnectionCard'
+import { MeshingConnectionCard } from '../components/MeshingConnectionCard'
 import { PageContent } from '../components/PageState'
 import { localizedRuntimeMessage } from '../i18n/runtimeMessages'
 import { fluentAiService } from '../services/fluentAi'
@@ -122,6 +123,7 @@ export function SettingsPage() {
         </Card>
 
         <FluentConnectionCard />
+        <MeshingConnectionCard />
 
         <Card
           title={t('settings.dataSafety')}

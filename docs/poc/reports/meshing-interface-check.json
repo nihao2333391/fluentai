@@ -1,0 +1,192 @@
+{
+  "status": "passed",
+  "started_at_utc": "2026-10-23T11:18:13.365483+00:00",
+  "connection": {
+    "connected": true,
+    "mode": "launch",
+    "version": "Ansys Fluent 2025 R2",
+    "pid": 34836,
+    "host": "localhost",
+    "port": 61974
+  },
+  "all_read": {
+    "status": "success",
+    "task_count": 11,
+    "item_count": 427,
+    "found_count": 427,
+    "errors": []
+  },
+  "direct_read": {
+    "workflow_type": "watertight",
+    "status": "success",
+    "task_names": [
+      "create_regions",
+      "update_regions",
+      "describe_geometry",
+      "enclose_fluid_regions",
+      "update_boundaries",
+      "import_geometry",
+      "create_surface_mesh",
+      "create_volume_mesh",
+      "apply_share_topology",
+      "add_boundary_layer",
+      "add_local_sizing"
+    ],
+    "items": [
+      {
+        "task_path": [
+          "import_geometry"
+        ],
+        "argument_path": [
+          "file_format"
+        ],
+        "compound_child_name": null,
+        "found": true,
+        "value": "CAD",
+        "error": null
+      },
+      {
+        "task_path": [
+          "import_geometry"
+        ],
+        "argument_path": [
+          "length_unit"
+        ],
+        "compound_child_name": null,
+        "found": true,
+        "value": "mm",
+        "error": null
+      },
+      {
+        "task_path": [
+          "add_local_sizing"
+        ],
+        "argument_path": [
+          "add_child"
+        ],
+        "compound_child_name": null,
+        "found": true,
+        "value": "no",
+        "error": null
+      },
+      {
+        "task_path": [
+          "create_surface_mesh"
+        ],
+        "argument_path": [
+          "cfd_surface_mesh_controls",
+          "min_size"
+        ],
+        "compound_child_name": null,
+        "found": true,
+        "value": 0.1,
+        "error": null
+      },
+      {
+        "task_path": [
+          "create_surface_mesh"
+        ],
+        "argument_path": [
+          "cfd_surface_mesh_controls",
+          "max_size"
+        ],
+        "compound_child_name": null,
+        "found": true,
+        "value": 1.0,
+        "error": null
+      },
+      {
+        "task_path": [
+          "create_volume_mesh"
+        ],
+        "argument_path": [
+          "volume_fill"
+        ],
+        "compound_child_name": null,
+        "found": true,
+        "value": "polyhedra",
+        "error": null
+      }
+    ],
+    "error": null
+  },
+  "direct_write": {
+    "workflow_type": "watertight",
+    "status": "success",
+    "results": [
+      {
+        "task_path": [
+          "import_geometry"
+        ],
+        "argument_path": [
+          "length_unit"
+        ],
+        "compound_child_name": null,
+        "expected": "mm",
+        "actual": "mm",
+        "success": true,
+        "message": ""
+      }
+    ],
+    "verified": true,
+    "error": null
+  },
+  "apply_after_import": {
+    "workflow_type": "watertight",
+    "status": "success",
+    "results": [
+      {
+        "task_path": [
+          "import_geometry"
+        ],
+        "argument_path": [
+          "length_unit"
+        ],
+        "compound_child_name": null,
+        "expected": "m",
+        "actual": "m",
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "create_surface_mesh"
+        ],
+        "argument_path": [
+          "cfd_surface_mesh_controls",
+          "min_size"
+        ],
+        "compound_child_name": null,
+        "expected": 0.0005,
+        "actual": 0.0005,
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "create_surface_mesh"
+        ],
+        "argument_path": [
+          "cfd_surface_mesh_controls",
+          "max_size"
+        ],
+        "compound_child_name": null,
+        "expected": 0.002,
+        "actual": 0.002,
+        "success": true,
+        "message": ""
+      }
+    ],
+    "name_checks": [],
+    "created_children": [],
+    "stopped_before": [
+      "Generate the Surface Mesh",
+      "Generate the Volume Mesh"
+    ],
+    "imported_model": "D:\\Fluent AI\\wql.meshed_files\\dp0\\FFF\\Fluent\\FM_ComputerOfWeiJiabao_9648\\wenqiuli.dsco.pmdb",
+    "missing_names": [],
+    "error": null
+  },
+  "marker": "MESHING_INTERFACE_CHECK_PASSED",
+  "finished_at_utc": "2026-10-23T11:19:49.802871+00:00"
+}

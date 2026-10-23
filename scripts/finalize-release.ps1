@@ -14,7 +14,27 @@ if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
   throw "Installer was not found: $installer"
 }
 
-$signature = Get-AuthenticodeSignature -LiteralPath $installer
+$signatureStatus = "Unknown"
+$signerSubject = $null
+try {
+  $signature = Get-AuthenticodeSignature -LiteralPath $installer
+  $signatureStatus = [string]$signature.Status
+  if ($signature.SignerCertificate) {
+    $signerSubject = $signature.SignerCertificate.Subject
+  }
+}
+catch {
+  try {
+    $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate]::CreateFromSignedFile(
+      $installer
+    )
+    $signatureStatus = "Signed"
+    $signerSubject = $certificate.Subject
+  }
+  catch {
+    $signatureStatus = "NotSigned"
+  }
+}
 $hash = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
 $size = (Get-Item -LiteralPath $installer).Length
 $shaPath = [System.IO.Path]::ChangeExtension($installer, ".sha256")
@@ -32,18 +52,18 @@ $manifest = [ordered]@{
   installer = $relativeName
   installer_bytes = $size
   sha256 = $hash
-  authenticode_status = [string]$signature.Status
-  signer_subject = if ($signature.SignerCertificate) { $signature.SignerCertificate.Subject } else { $null }
+  authenticode_status = $signatureStatus
+  signer_subject = $signerSubject
   blockmap = if (Test-Path -LiteralPath "$installer.blockmap") { (Split-Path -Leaf "$installer.blockmap") } else { $null }
 }
 $manifestJson = $manifest | ConvertTo-Json -Depth 5
 [System.IO.File]::WriteAllText($manifestPath, $manifestJson, $utf8NoBom)
 
-if ($env:FLUENT_AI_REQUIRE_SIGNING -eq "1" -and $signature.Status -ne "Valid") {
-  throw "Signing was required, but the installer signature status is $($signature.Status)."
+if ($env:FLUENT_AI_REQUIRE_SIGNING -eq "1" -and $signatureStatus -ne "Valid") {
+  throw "Signing was required, but the installer signature status is $signatureStatus."
 }
 
 Write-Host "RELEASE_MANIFEST_PASSED"
 Write-Host " - installer: $relativeName"
 Write-Host " - sha256: $hash"
-Write-Host " - signature: $($signature.Status)"
+Write-Host " - signature: $signatureStatus"

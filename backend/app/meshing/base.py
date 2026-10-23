@@ -7,6 +7,10 @@ from app.domain import (
     FluentStatus,
     MeshingApplyReport,
     MeshingPresetDocument,
+    MeshingReadReport,
+    MeshingReadRequest,
+    MeshingWriteReport,
+    MeshingWriteRequest,
 )
 
 
@@ -16,6 +20,10 @@ class MeshingWorkflowAdapter(Protocol):
     def disconnect(self) -> None: ...
 
     def status(self) -> FluentStatus: ...
+
+    def read_arguments(self, request: MeshingReadRequest) -> MeshingReadReport: ...
+
+    def write_arguments(self, request: MeshingWriteRequest) -> MeshingWriteReport: ...
 
     def apply_preset(
         self,

@@ -6,9 +6,16 @@ from app.domain import (
     FluentConnectionConfig,
     FluentStatus,
     MeshingApplyReport,
+    MeshingArgumentReference,
     MeshingArgumentWriteResult,
     MeshingNameCheck,
     MeshingPresetDocument,
+    MeshingPresetValue,
+    MeshingReadItemResult,
+    MeshingReadReport,
+    MeshingReadRequest,
+    MeshingWriteReport,
+    MeshingWriteRequest,
 )
 
 
@@ -18,6 +25,14 @@ class FakeMeshingAdapter:
         self.mode: Literal["launch", "attach"] | None = None
         self.known_names = set(known_names or {"wall-big", "wall-small", "inlet", "outlet"})
         self.applied_presets: list[tuple[MeshingPresetDocument, str, bool]] = []
+        self.values: dict[
+            tuple[tuple[str, ...], tuple[str, ...], str | None], MeshingPresetValue
+        ] = {
+            (("import_geometry",), ("file_format",), None): "CAD",
+            (("import_geometry",), ("length_unit",), None): "mm",
+            (("create_surface_mesh",), ("cfd_surface_mesh_controls", "min_size"), None): 0.001,
+            (("create_surface_mesh",), ("cfd_surface_mesh_controls", "max_size"), None): 0.01,
+        }
 
     def connect(self, config: FluentConnectionConfig) -> FluentStatus:
         self.connected = True
@@ -30,6 +45,77 @@ class FakeMeshingAdapter:
 
     def status(self) -> FluentStatus:
         return FluentStatus(connected=self.connected, mode=self.mode, version="25.2.0-fake")
+
+    def read_arguments(self, request: MeshingReadRequest) -> MeshingReadReport:
+        if not self.connected:
+            return MeshingReadReport(
+                workflow_type=request.workflow_type,
+                status="failed",
+                error="Fake Fluent Meshing is not connected.",
+            )
+        references = request.items or [
+            MeshingArgumentReference(
+                task_path=list(task_path),
+                argument_path=list(argument_path),
+            )
+            for task_path, argument_path, child in self.values
+            if child is None
+        ]
+        items = []
+        for reference in references:
+            key = (
+                tuple(reference.task_path),
+                tuple(reference.argument_path),
+                reference.compound_child_name,
+            )
+            found = key in self.values
+            items.append(
+                MeshingReadItemResult(
+                    task_path=reference.task_path,
+                    argument_path=reference.argument_path,
+                    compound_child_name=reference.compound_child_name,
+                    found=found,
+                    value=self.values[key] if found else None,
+                    error=None if found else "Argument path was not found.",
+                )
+            )
+        return MeshingReadReport(
+            workflow_type=request.workflow_type,
+            status="success" if all(item.found for item in items) else "failed",
+            task_names=["import_geometry", "add_local_sizing", "create_surface_mesh"],
+            items=items,
+            error=None if all(item.found for item in items) else "Read failed.",
+        )
+
+    def write_arguments(self, request: MeshingWriteRequest) -> MeshingWriteReport:
+        if not self.connected:
+            return MeshingWriteReport(
+                workflow_type=request.workflow_type,
+                status="failed",
+                verified=request.verify,
+                error="Fake Fluent Meshing is not connected.",
+            )
+        results = []
+        for item in request.items:
+            key = (tuple(item.task_path), tuple(item.argument_path), item.compound_child_name)
+            self.values[key] = item.value
+            actual = self.values.get(key)
+            results.append(
+                MeshingArgumentWriteResult(
+                    task_path=item.task_path,
+                    argument_path=item.argument_path,
+                    compound_child_name=item.compound_child_name,
+                    expected=item.value,
+                    actual=actual,
+                    success=actual == item.value,
+                )
+            )
+        return MeshingWriteReport(
+            workflow_type=request.workflow_type,
+            status="success" if all(result.success for result in results) else "failed",
+            results=results,
+            verified=request.verify,
+        )
 
     def apply_preset(
         self,
@@ -45,6 +131,9 @@ class FakeMeshingAdapter:
         missing: list[str] = []
         results: list[MeshingArgumentWriteResult] = []
         for item in preset.items:
+            self.values[
+                (tuple(item.task_path), tuple(item.argument_path), item.compound_child_name)
+            ] = item.value
             if isinstance(item.value, list):
                 for value in item.value:
                     if not isinstance(value, str) or value in self.known_names:

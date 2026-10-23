@@ -348,6 +348,57 @@ class MeshingApplyReport(BaseModel):
     error: str | None = None
 
 
+class MeshingArgumentReference(BaseModel):
+    """Reference one Meshing task argument without a value."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    task_path: list[str] = Field(min_length=1, max_length=8)
+    argument_path: list[str] = Field(min_length=1, max_length=16)
+    compound_child_name: str | None = Field(default=None, max_length=120)
+
+
+class MeshingReadRequest(BaseModel):
+    """Read selected Meshing arguments; an empty list reads all schema leaves."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    workflow_type: MeshingWorkflowType
+    items: list[MeshingArgumentReference] = Field(default_factory=list)
+
+
+class MeshingReadItemResult(MeshingArgumentReference):
+    found: bool
+    value: MeshingPresetValue | None = None
+    error: str | None = None
+
+
+class MeshingReadReport(BaseModel):
+    workflow_type: MeshingWorkflowType
+    status: Literal["success", "failed"]
+    task_names: list[str] = Field(default_factory=list)
+    items: list[MeshingReadItemResult] = Field(default_factory=list)
+    error: str | None = None
+
+
+class MeshingWriteRequest(BaseModel):
+    """Write selected Meshing arguments and optionally verify readback."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    workflow_type: MeshingWorkflowType
+    items: list[MeshingPresetItem] = Field(min_length=1)
+    verify: bool = True
+
+
+class MeshingWriteReport(BaseModel):
+    workflow_type: MeshingWorkflowType
+    status: Literal["success", "failed"]
+    results: list[MeshingArgumentWriteResult] = Field(default_factory=list)
+    verified: bool = True
+    error: str | None = None
+
+
 class MeshingWorkflowReport(BaseModel):
     status: Literal["success", "failed"]
     automation_id: int
