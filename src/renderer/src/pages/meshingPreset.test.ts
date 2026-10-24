@@ -124,4 +124,17 @@ describe('meshingPreset', () => {
       'duplicateChildName',
     ])
   })
+
+  it('skips fixed optional children when the user leaves them empty', () => {
+    const childInstances: MeshingChildInstanceMap = {
+      [taskPathKey(['add_local_sizing'])]: [
+        { id: 'size-big', name: 'size-big', optional: true },
+        { id: 'size-small', name: 'size-small', optional: true },
+      ],
+    }
+    const result = buildMeshingPresetItems([task], {}, {}, childInstances)
+
+    expect(result.issues).toEqual([])
+    expect(result.items).toEqual([])
+  })
 })

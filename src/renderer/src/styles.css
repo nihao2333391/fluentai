@@ -3,6 +3,7 @@
   --app-bg: #f4f7fb;
   --app-panel: rgba(255, 255, 255, 0.88);
   --app-panel-strong: #ffffff;
+  --app-panel-hover: rgba(15, 23, 42, 0.045);
   --app-border: rgba(15, 23, 42, 0.1);
   --app-text: #0f172a;
   --app-muted: #64748b;
@@ -14,6 +15,7 @@
   --app-bg: #07101d;
   --app-panel: rgba(13, 25, 43, 0.9);
   --app-panel-strong: #0d192b;
+  --app-panel-hover: rgba(255, 255, 255, 0.045);
   --app-border: rgba(148, 163, 184, 0.16);
   --app-text: #e8eefc;
   --app-muted: #91a3bc;
@@ -429,6 +431,130 @@ select {
 
 .meshing-workflow-tabs .ant-tabs-nav {
   min-width: 220px;
+}
+
+.meshing-stepper-scroll {
+  width: 100%;
+  margin-top: 12px;
+  padding: 2px 2px 10px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.meshing-stepper {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  min-width: max-content;
+}
+
+.meshing-step {
+  width: 190px;
+  min-height: 82px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-panel-strong) 76%, transparent);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.meshing-step.is-complete {
+  border-color: rgba(22, 163, 74, 0.35);
+}
+
+.meshing-step.is-active {
+  border-color: rgba(22, 119, 255, 0.7);
+  background: color-mix(in srgb, var(--app-panel-strong) 68%, rgba(22, 119, 255, 0.16));
+  box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.18);
+}
+
+.meshing-step-main {
+  width: 100%;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 12px 12px 0 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.meshing-step-main:hover {
+  background: var(--app-panel-hover, rgba(255, 255, 255, 0.04));
+}
+
+.meshing-step-icon {
+  color: var(--app-muted);
+}
+
+.meshing-step.is-active .meshing-step-icon,
+.meshing-step-check {
+  color: #1677ff;
+}
+
+.meshing-step.is-complete .meshing-step-icon,
+.meshing-step.is-complete .meshing-step-check {
+  color: #16a34a;
+}
+
+.meshing-step-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.meshing-step-copy strong,
+.meshing-step-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meshing-substeps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 10px 10px;
+}
+
+.meshing-substep {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--app-muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.meshing-substep:hover,
+.meshing-substep.is-active {
+  background: rgba(22, 119, 255, 0.14);
+  color: var(--app-text);
+}
+
+.meshing-substep-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.65;
+}
+
+.meshing-step-panel {
+  margin-top: 12px;
 }
 
 .task-type-label {

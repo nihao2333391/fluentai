@@ -8,6 +8,7 @@ import type {
 export interface MeshingChildInstance {
   id: string
   name: string
+  optional?: boolean
 }
 
 export type MeshingIncludedMap = Record<string, boolean>
@@ -195,7 +196,9 @@ export const buildMeshingPresetItems = (
           Boolean(included[selectionKey(taskPath, instance.id, leaf.argumentPath)]),
         )
         if (selectedLeaves.length === 0) {
-          issues.push({ code: 'childHasNoSelection', taskName: task.display_name, childName })
+          if (!instance.optional) {
+            issues.push({ code: 'childHasNoSelection', taskName: task.display_name, childName })
+          }
           continue
         }
         const nameArgument = childNameArgument(task)

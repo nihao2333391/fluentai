@@ -1,4 +1,11 @@
-import { DeleteOutlined, PlusOutlined, ReloadOutlined, SaveOutlined } from '@ant-design/icons'
+import {
+  CheckOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SaveOutlined,
+  ThunderboltOutlined,
+} from '@ant-design/icons'
 import {
   Alert,
   App,
@@ -14,7 +21,6 @@ import {
   Select,
   Space,
   Switch,
-  Tabs,
   Tag,
   Typography,
 } from 'antd'
@@ -61,10 +67,63 @@ interface MeshingFormValues {
   reference_model_id: number | null
 }
 
+const WATERTIGHT_STEP_TASKS = [
+  'import_geometry',
+  'add_local_sizing',
+  'create_surface_mesh',
+  'describe_geometry',
+  'update_regions',
+  'add_boundary_layer',
+  'create_volume_mesh',
+] as const
+
+const WATERTIGHT_FIXED_CHILDREN: Record<string, string[]> = {
+  add_local_sizing: ['size-big', 'size-small'],
+  add_boundary_layer: ['smooth-transition_1', 'smooth-transition_2'],
+}
+
+const buildFixedChildInstances = (tasks: MeshingSchemaTask[]): MeshingChildInstanceMap => {
+  const result: MeshingChildInstanceMap = {}
+  for (const [taskName, childNames] of Object.entries(WATERTIGHT_FIXED_CHILDREN)) {
+    if (!tasks.some((task) => task.python_name === taskName && task.child_template)) continue
+    result[taskPathKey([taskName])] = childNames.map((name) => ({
+      id: name,
+      name,
+      optional: true,
+    }))
+  }
+  return result
+}
+
+const buildInitialValues = (
+  tasks: MeshingSchemaTask[],
+  childInstances: MeshingChildInstanceMap,
+): MeshingValueMap => {
+  const result: MeshingValueMap = {}
+  for (const entry of collectTaskLeaves(tasks)) {
+    result[selectionKey(entry.taskPath, null, entry.argumentPath)] = defaultArgumentValue(
+      entry.argument,
+    )
+  }
+  for (const task of tasks) {
+    if (!task.child_template) continue
+    const instances = childInstances[taskPathKey([task.python_name])] ?? []
+    for (const instance of instances) {
+      for (const leaf of flattenArgumentLeaves(task.child_template.arguments)) {
+        if (isManagedChildArgument(task, leaf.argument)) continue
+        result[selectionKey([task.python_name], instance.id, leaf.argumentPath)] =
+          defaultArgumentValue(leaf.argument)
+      }
+    }
+  }
+  return result
+}
+
 interface EditorStateProps {
   included: MeshingIncludedMap
   values: MeshingValueMap
   showDeveloper: boolean
+  lengthUnit: string
   onToggle: (key: string, checked: boolean) => void
   onValueChange: (key: string, value: MeshingPresetValue) => void
 }
@@ -187,6 +246,7 @@ function ArgumentSections({
   included,
   values,
   showDeveloper,
+  lengthUnit,
   onToggle,
   onValueChange,
 }: EditorStateProps & {
@@ -217,6 +277,7 @@ function ArgumentSections({
     const current = values[key] ?? defaultArgumentValue(leaf.argument)
     const technicalPath = leaf.argumentPath.join(' > ')
     const displayPath = leaf.displayPath.join(' > ')
+    const unitSuffix = leaf.argument.display_unit?.includes('LengthUnit') ? ` [${lengthUnit}]` : ''
     return (
       <div key={key} className={`meshing-argument-row ${included[key] ? 'is-included' : ''}`}>
         <Checkbox
@@ -225,7 +286,10 @@ function ArgumentSections({
           onChange={(event) => onToggle(key, event.target.checked)}
         >
           <Space direction="vertical" size={2}>
-            <Typography.Text strong>{displayPath}</Typography.Text>
+            <Typography.Text strong>
+              {displayPath}
+              {unitSuffix}
+            </Typography.Text>
             <Typography.Text type="secondary" className="meshing-argument-path">
               {displayPath === technicalPath ? leaf.argument.edit_path : technicalPath}
               {leaf.argument.display_condition
@@ -294,151 +358,174 @@ function ArgumentSections({
   )
 }
 
-function CompoundChildEditor({
-  task,
-  taskPath,
-  instances,
-  onAdd,
-  onRemove,
-  onRename,
-  ...editorProps
-}: EditorStateProps & {
-  task: MeshingSchemaTask
-  taskPath: string[]
-  instances: MeshingChildInstance[]
-  onAdd: () => void
-  onRemove: (instanceId: string) => void
-  onRename: (instanceId: string, name: string) => void
+function WorkflowStepper({
+  steps,
+  activeStepKey,
+  activeChildId,
+  childInstances,
+  onSelectStep,
+  onSelectChild,
+}: {
+  steps: MeshingSchemaTask[]
+  activeStepKey: string
+  activeChildId: string | null
+  childInstances: MeshingChildInstanceMap
+  onSelectStep: (task: MeshingSchemaTask) => void
+  onSelectChild: (task: MeshingSchemaTask, child: MeshingChildInstance) => void
 }) {
   const { t } = useTranslation()
-  const managedNameArgument = childNameArgument(task)
+  const activeIndex = Math.max(
+    steps.findIndex((task) => task.python_name === activeStepKey),
+    0,
+  )
 
   return (
-    <Space direction="vertical" size={14} className="full-width">
-      {task.child_template_warning ? (
-        <Alert type="warning" showIcon message={t('meshing.childTemplateFallback')} />
-      ) : null}
-      <Space wrap>
-        <Button type="dashed" icon={<PlusOutlined />} onClick={onAdd}>
-          {t('meshing.addChildInstance')}
-        </Button>
-        <Typography.Text type="secondary">{t('meshing.childInstanceHint')}</Typography.Text>
-      </Space>
-      {instances.length === 0 ? (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('meshing.noChildInstances')} />
-      ) : (
-        instances.map((instance, index) => (
-          <Card
-            key={instance.id}
-            size="small"
-            title={`${t('meshing.compoundChild')} ${index + 1}`}
-            extra={
-              <Button
-                danger
-                type="text"
-                icon={<DeleteOutlined />}
-                aria-label={t('meshing.removeChildInstance')}
-                onClick={() => onRemove(instance.id)}
-              />
-            }
-          >
-            <Space direction="vertical" size={14} className="full-width">
-              <Form.Item
-                label={t('meshing.childInstanceName')}
-                required
-                className="meshing-child-name-field"
+    <div className="meshing-stepper-scroll" role="navigation" aria-label="Meshing workflow steps">
+      <div className="meshing-stepper">
+        {steps.map((task, index) => {
+          const children = childInstances[taskPathKey([task.python_name])] ?? []
+          const isActive = task.python_name === activeStepKey
+          const isComplete = index < activeIndex
+          return (
+            <div
+              key={task.python_name}
+              className={`meshing-step ${isActive ? 'is-active' : ''} ${isComplete ? 'is-complete' : ''}`}
+            >
+              <button
+                type="button"
+                className="meshing-step-main"
+                onClick={() => onSelectStep(task)}
+                aria-current={isActive ? 'step' : undefined}
               >
-                <Input
-                  value={instance.name}
-                  placeholder={t('meshing.childInstanceNamePlaceholder')}
-                  onChange={(event) => onRename(instance.id, event.target.value)}
-                />
-              </Form.Item>
-              {managedNameArgument ? (
-                <Typography.Text type="secondary">
-                  {t('meshing.managedChildName', { argument: managedNameArgument.name })}
-                </Typography.Text>
+                <span className="meshing-step-icon" aria-hidden="true">
+                  <ThunderboltOutlined />
+                </span>
+                <span className="meshing-step-copy">
+                  <strong>{localizedMeshingTaskName(t, task)}</strong>
+                  <span className="text-small text-muted">{task.display_name}</span>
+                </span>
+                {isComplete ? (
+                  <CheckOutlined className="meshing-step-check" aria-label="completed" />
+                ) : null}
+              </button>
+              {children.length > 0 ? (
+                <div className="meshing-substeps">
+                  {children.map((child) => (
+                    <button
+                      key={child.id}
+                      type="button"
+                      className={`meshing-substep ${isActive && activeChildId === child.id ? 'is-active' : ''}`}
+                      onClick={() => onSelectChild(task, child)}
+                    >
+                      <span className="meshing-substep-dot" aria-hidden="true" />
+                      {child.name}
+                    </button>
+                  ))}
+                </div>
               ) : null}
-              <ArgumentSections
-                task={task}
-                taskPath={taskPath}
-                childInstanceId={instance.id}
-                {...editorProps}
-              />
-            </Space>
-          </Card>
-        ))
-      )}
-    </Space>
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
-function TaskPanel({
+function WorkflowStepPanel({
   task,
-  taskPath,
   childInstances,
+  activeChildId,
+  fixedChildren,
   onAddChild,
   onRemoveChild,
   onRenameChild,
   ...editorProps
 }: EditorStateProps & {
   task: MeshingSchemaTask
-  taskPath: string[]
   childInstances: MeshingChildInstanceMap
+  activeChildId: string | null
+  fixedChildren: boolean
   onAddChild: (task: MeshingSchemaTask, taskPath: string[]) => void
   onRemoveChild: (taskPath: string[], instanceId: string) => void
   onRenameChild: (taskPath: string[], instanceId: string, name: string) => void
 }) {
   const { t } = useTranslation()
+  const taskPath = [task.python_name]
   const instancesKey = taskPathKey(taskPath)
   const hasChildTemplate = Boolean(task.supports_child_template && task.child_template)
+  const instances = childInstances[instancesKey] ?? []
+  const activeInstance = instances.find((instance) => instance.id === activeChildId) ?? null
+  const managedNameArgument = childNameArgument(task)
+
+  if (!hasChildTemplate) {
+    return (
+      <Space direction="vertical" size={14} className="full-width">
+        {task.task_type === 'Compound' && task.child_template_error ? (
+          <Alert type="warning" showIcon message={task.child_template_error} />
+        ) : null}
+        <ArgumentSections task={task} taskPath={taskPath} childInstanceId={null} {...editorProps} />
+      </Space>
+    )
+  }
 
   return (
-    <Space direction="vertical" size={16} className="full-width">
-      {hasChildTemplate ? (
-        <CompoundChildEditor
-          task={task}
-          taskPath={taskPath}
-          instances={childInstances[instancesKey] ?? []}
-          onAdd={() => onAddChild(task, taskPath)}
-          onRemove={(instanceId) => onRemoveChild(taskPath, instanceId)}
-          onRename={(instanceId, name) => onRenameChild(taskPath, instanceId, name)}
-          {...editorProps}
-        />
-      ) : (
-        <>
-          {task.task_type === 'Compound' && task.child_template_error ? (
-            <Alert type="warning" showIcon message={task.child_template_error} />
-          ) : null}
-          <ArgumentSections
-            task={task}
-            taskPath={taskPath}
-            childInstanceId={null}
-            {...editorProps}
-          />
-        </>
-      )}
-      {task.children.length > 0 ? (
-        <Space direction="vertical" size={12} className="full-width">
-          {task.children.map((child) => (
-            <Card
-              key={taskPathKey([...taskPath, child.python_name])}
-              size="small"
-              title={localizedMeshingTaskName(t, child)}
-            >
-              <TaskPanel
-                task={child}
-                taskPath={[...taskPath, child.python_name]}
-                childInstances={childInstances}
-                onAddChild={onAddChild}
-                onRemoveChild={onRemoveChild}
-                onRenameChild={onRenameChild}
-                {...editorProps}
-              />
-            </Card>
-          ))}
+    <Space direction="vertical" size={14} className="full-width">
+      {task.child_template_warning ? (
+        <Alert type="warning" showIcon message={t('meshing.childTemplateFallback')} />
+      ) : null}
+      {!fixedChildren ? (
+        <Space wrap>
+          <Button type="dashed" icon={<PlusOutlined />} onClick={() => onAddChild(task, taskPath)}>
+            {t('meshing.addChildInstance')}
+          </Button>
+          <Typography.Text type="secondary">{t('meshing.childInstanceHint')}</Typography.Text>
         </Space>
       ) : null}
+      {!activeInstance ? (
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('meshing.noChildInstances')} />
+      ) : (
+        <Card
+          size="small"
+          title={activeInstance.name}
+          extra={
+            fixedChildren ? null : (
+              <Button
+                danger
+                type="text"
+                icon={<DeleteOutlined />}
+                aria-label={t('meshing.removeChildInstance')}
+                onClick={() => onRemoveChild(taskPath, activeInstance.id)}
+              />
+            )
+          }
+        >
+          <Space direction="vertical" size={14} className="full-width">
+            <Form.Item
+              label={t('meshing.childInstanceName')}
+              required
+              className="meshing-child-name-field"
+            >
+              <Input
+                value={activeInstance.name}
+                disabled={fixedChildren}
+                placeholder={t('meshing.childInstanceNamePlaceholder')}
+                onChange={(event) => onRenameChild(taskPath, activeInstance.id, event.target.value)}
+              />
+            </Form.Item>
+            {managedNameArgument ? (
+              <Typography.Text type="secondary">
+                {t('meshing.managedChildName', { argument: managedNameArgument.name })}
+              </Typography.Text>
+            ) : null}
+            <ArgumentSections
+              task={task}
+              taskPath={taskPath}
+              childInstanceId={activeInstance.id}
+              {...editorProps}
+            />
+          </Space>
+        </Card>
+      )}
     </Space>
   )
 }
@@ -456,6 +543,8 @@ export function MeshingAutomationCreatePage() {
   const [included, setIncluded] = useState<MeshingIncludedMap>({})
   const [values, setValues] = useState<MeshingValueMap>({})
   const [childInstances, setChildInstances] = useState<MeshingChildInstanceMap>({})
+  const [activeStepKey, setActiveStepKey] = useState<string>('import_geometry')
+  const [activeChildId, setActiveChildId] = useState<string | null>(null)
   const [showDeveloper, setShowDeveloper] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -469,15 +558,17 @@ export function MeshingAutomationCreatePage() {
         if (!active) return
         setSchema(nextSchema)
         setModels(nextModels)
-        const nextValues: MeshingValueMap = {}
-        for (const entry of collectTaskLeaves(nextSchema.tasks)) {
-          nextValues[selectionKey(entry.taskPath, null, entry.argumentPath)] = defaultArgumentValue(
-            entry.argument,
-          )
-        }
-        setValues(nextValues)
+        const initialChildren =
+          workflowType === 'watertight' ? buildFixedChildInstances(nextSchema.tasks) : {}
+        setChildInstances(initialChildren)
+        setValues(buildInitialValues(nextSchema.tasks, initialChildren))
         setIncluded({})
-        setChildInstances({})
+        setActiveStepKey(
+          workflowType === 'watertight'
+            ? WATERTIGHT_STEP_TASKS[0]
+            : (nextSchema.tasks[0]?.python_name ?? ''),
+        )
+        setActiveChildId(null)
       })
       .catch((loadError: unknown) => {
         if (active) setError(loadError instanceof Error ? loadError.message : String(loadError))
@@ -491,6 +582,38 @@ export function MeshingAutomationCreatePage() {
   }, [sidecarState, workflowType, reloadVersion])
 
   const selectedCount = useMemo(() => Object.values(included).filter(Boolean).length, [included])
+  const lengthUnit = String(
+    values[selectionKey(['import_geometry'], null, ['length_unit'])] ?? 'mm',
+  )
+
+  const workflowSteps = useMemo(() => {
+    const tasks = schema?.tasks ?? []
+    if (workflowType !== 'watertight') return tasks
+    const byName = new Map(tasks.map((task) => [task.python_name, task]))
+    return WATERTIGHT_STEP_TASKS.map((name) => byName.get(name)).filter(
+      (task): task is MeshingSchemaTask => task !== undefined,
+    )
+  }, [schema, workflowType])
+
+  const activeTask =
+    workflowSteps.find((task) => task.python_name === activeStepKey) ?? workflowSteps[0] ?? null
+  const fixedChildren = workflowType === 'watertight'
+  const activeChild = activeTask
+    ? ((childInstances[taskPathKey([activeTask.python_name])] ?? []).find(
+        (child) => child.id === activeChildId,
+      ) ?? null)
+    : null
+
+  const selectStep = (task: MeshingSchemaTask): void => {
+    setActiveStepKey(task.python_name)
+    const children = childInstances[taskPathKey([task.python_name])] ?? []
+    setActiveChildId(task.supports_child_template ? (children[0]?.id ?? null) : null)
+  }
+
+  const selectChild = (task: MeshingSchemaTask, child: MeshingChildInstance): void => {
+    setActiveStepKey(task.python_name)
+    setActiveChildId(child.id)
+  }
 
   const toggle = (key: string, checked: boolean) =>
     setIncluded((current) => ({ ...current, [key]: checked }))
@@ -622,33 +745,6 @@ export function MeshingAutomationCreatePage() {
     }
   }
 
-  const tabItems = (schema?.tasks ?? []).map((task) => ({
-    key: task.python_name,
-    label: (
-      <Space direction="vertical" size={0}>
-        <span>{localizedMeshingTaskName(t, task)}</span>
-        <Typography.Text type="secondary" className="task-type-label">
-          {localizedMeshingTaskType(t, task.task_type)}
-        </Typography.Text>
-      </Space>
-    ),
-    children: (
-      <TaskPanel
-        task={task}
-        taskPath={[task.python_name]}
-        childInstances={childInstances}
-        included={included}
-        values={values}
-        showDeveloper={showDeveloper}
-        onToggle={toggle}
-        onValueChange={changeValue}
-        onAddChild={addChild}
-        onRemoveChild={removeChild}
-        onRenameChild={renameChild}
-      />
-    ),
-  }))
-
   if (sidecarState === 'error') {
     return (
       <PageContent title={t('meshing.createTitle')} description={t('meshing.createDescription')}>
@@ -748,7 +844,47 @@ export function MeshingAutomationCreatePage() {
                 </Typography.Text>
               </Space>
             </Space>
-            <Tabs tabPosition="left" items={tabItems} className="meshing-workflow-tabs" />
+            <WorkflowStepper
+              steps={workflowSteps}
+              activeStepKey={activeTask?.python_name ?? ''}
+              activeChildId={activeChildId}
+              childInstances={childInstances}
+              onSelectStep={selectStep}
+              onSelectChild={selectChild}
+            />
+            {activeTask ? (
+              <Card
+                className="meshing-step-panel"
+                title={
+                  <Space wrap>
+                    <span>{localizedMeshingTaskName(t, activeTask)}</span>
+                    {activeChild ? (
+                      <Tag color="blue">{activeChild.name}</Tag>
+                    ) : (
+                      <Typography.Text type="secondary" className="task-type-label">
+                        {localizedMeshingTaskType(t, activeTask.task_type)}
+                      </Typography.Text>
+                    )}
+                  </Space>
+                }
+              >
+                <WorkflowStepPanel
+                  task={activeTask}
+                  childInstances={childInstances}
+                  activeChildId={activeChildId}
+                  fixedChildren={fixedChildren}
+                  included={included}
+                  values={values}
+                  showDeveloper={showDeveloper}
+                  lengthUnit={lengthUnit}
+                  onToggle={toggle}
+                  onValueChange={changeValue}
+                  onAddChild={addChild}
+                  onRemoveChild={removeChild}
+                  onRenameChild={renameChild}
+                />
+              </Card>
+            ) : null}
             <Form.Item className="form-actions">
               <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving}>
                 {saving ? t('pages.automationCreate.saving') : t('meshing.save')}
