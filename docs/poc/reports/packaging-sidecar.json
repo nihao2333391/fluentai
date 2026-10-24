@@ -1,13 +1,13 @@
 {
     "status":  "passed",
-    "started_at_utc":  "2026-10-23T12:14:38.0772511Z",
+    "started_at_utc":  "2026-10-24T13:23:26.8734036Z",
     "python":  "D:\\Fluent AI\\fluent-ai-app\\build\\sidecar\\python\\python.exe",
     "sidecar_root":  "D:\\Fluent AI\\fluent-ai-app\\build\\sidecar",
-    "pid":  41296,
+    "pid":  2308,
     "handshake":  {
                       "event":  "sidecar_ready",
-                      "port":  63779,
-                      "pid":  41296,
+                      "port":  61425,
+                      "pid":  2308,
                       "version":  "0.1.0",
                       "host":  "127.0.0.1"
                   },
@@ -15,14 +15,14 @@
                   "status":  "ready",
                   "service":  "fluent-ai-sidecar",
                   "version":  "0.1.0",
-                  "pid":  41296,
+                  "pid":  2308,
                   "database":  "ready",
-                  "timestamp":  "2026-10-23T12:14:58.931488+00:00"
+                  "timestamp":  "2026-10-24T13:24:06.793099+00:00"
               },
     "shutdown":  {
                      "status":  "shutting-down"
                  },
     "exit_code":  null,
     "marker":  "PACKAGED_SIDECAR_CHECK_PASSED",
-    "finished_at_utc":  "2026-10-23T12:14:59.4132105Z"
+    "finished_at_utc":  "2026-10-24T13:24:07.1564820Z"
 }
