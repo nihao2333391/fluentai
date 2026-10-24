@@ -1,0 +1,8 @@
+git add .    //把修改的文件"放入暂存区"（准备提交）。执行后，Git 会记录这些文件的变更，但还没有真正保存
+git commit -am ""      //把暂存区的文件正式"保存快照"，并附上说明；代码的变更被记录在本地仓库历史中；“”里面是更新日志的说明
+git push //把本地保存的提交，上传到远程仓库（Gitee/GitHub）
+git checkout master // 切换到master分支
+git checkout -b xxx //创建名为xxx的分支
+git checkout master -> git pull origin master //获得master分支最新状态
+git checkout xxx -> git merge master //进入xxx分支并使用master分支进行测试（此时不影响master分支） 
+在gitbash当中，复制黏贴只能右键+paste，不能ctrl+v

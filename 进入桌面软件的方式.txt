@@ -1,0 +1,4 @@
+打开文件夹 C:\Users\lenovo\Desktop\fluent-ai-for-aic2026。
+点击资源管理器的地址栏，输入 powershell，按回车。
+在打开的窗口运行 pnpm dev。
+等待 Fluent AI 窗口出现。使用期间保留 PowerShell 窗口。
