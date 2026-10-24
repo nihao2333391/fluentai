@@ -116,6 +116,14 @@ const createMockApi = (): FluentAIApi => ({
     disconnect: vi.fn(),
     read: vi.fn(),
     write: vi.fn(),
+    workflowSchema: vi.fn().mockResolvedValue({
+      schema_version: 1,
+      fluent_version: '25.2.0',
+      workflow_type: 'watertight',
+      source_schema: '',
+      step_order: [],
+      steps: [],
+    }),
     schemas: vi.fn().mockResolvedValue([]),
     schema: vi.fn().mockResolvedValue({ tasks: [] }),
     validatePreset: vi.fn().mockResolvedValue({

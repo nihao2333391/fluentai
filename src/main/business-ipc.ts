@@ -20,6 +20,7 @@ import type {
   MeshingReadRequest,
   MeshingSchemaSummary,
   MeshingWorkflowSchema,
+  MeshingWorkflowContract,
   MeshingWorkflowType,
   MeshingWorkflowReport,
   MeshingWriteReport,
@@ -203,6 +204,9 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
   )
   ipcMain.handle('meshing:schemas', () =>
     sidecar.request<MeshingSchemaSummary[]>('/api/meshing/schemas'),
+  )
+  ipcMain.handle('meshing:workflow-schema', (_event, workflowType: MeshingWorkflowType) =>
+    sidecar.request<MeshingWorkflowContract>(`/api/meshing/workflows/${workflowType}/schema`),
   )
   ipcMain.handle('meshing:schema', (_event, workflowType: MeshingWorkflowType) =>
     sidecar.request<MeshingWorkflowSchema>(`/api/meshing/schemas/${workflowType}`),

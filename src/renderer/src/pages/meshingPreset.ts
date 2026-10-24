@@ -137,12 +137,13 @@ export const isManagedChildArgument = (
 
 export const defaultChildName = (task: MeshingSchemaTask, index: number): string => {
   const argumentName = childNameArgument(task)?.name
-  if (argumentName === 'bl_control_name') return `boundary-layer-${index}`
+  if (argumentName === 'bl_control_name' && argumentName) return `smooth-transition_${index}`
+  if (argumentName === 'boi_control_name') return `facesize_${index}`
   if (argumentName === 'material_points_name') return `region-${index}`
   if (argumentName === 'leakage_name') return `leakage-${index}`
   if (argumentName === 'extract_edges_name') return `edge-group-${index}`
   if (argumentName === 'zero_thickness_name') return `face-group-${index}`
-  return `local-sizing-${index}`
+  return `local-sizing_${index}`
 }
 
 export const buildMeshingPresetItems = (
@@ -174,6 +175,24 @@ export const buildMeshingPresetItems = (
   const visitTask = (task: MeshingSchemaTask, parentPath: string[]) => {
     const taskPath = [...parentPath, task.python_name]
     if (task.supports_child_template && task.child_template) {
+      const toggleArgument = task.arguments.find((argument) => argument.name === 'add_child')
+      const toggleKey = selectionKey(taskPath, null, ['add_child'])
+      const toggleValue = String(
+        values[toggleKey] ?? (toggleArgument ? defaultArgumentValue(toggleArgument) : 'no'),
+      )
+      if (toggleArgument) {
+        items.push({
+          task_path: taskPath,
+          argument_path: ['add_child'],
+          value: toggleValue,
+          required: true,
+          compound_child_name: null,
+        })
+      }
+      if (toggleArgument && !toggleValue.toLowerCase().startsWith('yes')) {
+        for (const child of task.children) visitTask(child, taskPath)
+        return
+      }
       const instances = childInstances[taskPathKey(taskPath)] ?? []
       const seenNames = new Set<string>()
       for (const instance of instances) {

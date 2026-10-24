@@ -345,6 +345,7 @@ export interface MeshingWriteRequest {
   workflow_type: MeshingWorkflowType
   items: MeshingPresetItem[]
   verify: boolean
+  create_compound_child?: boolean
 }
 
 export interface MeshingWriteReport {
@@ -353,6 +354,48 @@ export interface MeshingWriteReport {
   results: MeshingArgumentWriteResult[]
   verified: boolean
   error: string | null
+}
+
+export interface MeshingWorkflowFieldContract {
+  path: string[]
+  label: string
+  type: string
+  control: 'switch' | 'select' | 'multi_select' | 'tag_select' | 'number' | 'text' | string
+  enum: unknown[] | null
+  default: unknown
+  advanced: boolean
+  developer: boolean
+  display_condition?: string | null
+  ui_default_override?: unknown
+}
+
+export interface MeshingWorkflowStepContract {
+  sequence: number
+  task_path: string[]
+  english_name: string
+  label: string
+  task_type: string
+  mode?: 'collection' | 'region_table' | string
+  fields: MeshingWorkflowFieldContract[]
+  toggle_field?: MeshingWorkflowFieldContract | null
+  collection?: {
+    child_name_field: string | null
+    fields: MeshingWorkflowFieldContract[]
+  }
+  region_name_field?: string[]
+  region_type_field?: string[]
+  region_type_enum?: string[]
+  file_field?: string[]
+  primary_field?: string[]
+}
+
+export interface MeshingWorkflowContract {
+  schema_version: number
+  fluent_version: string
+  workflow_type: MeshingWorkflowType
+  source_schema: string
+  step_order: string[]
+  steps: MeshingWorkflowStepContract[]
 }
 
 export interface MeshingSchemaArgument {
@@ -550,6 +593,7 @@ export interface MeshingApi {
   disconnect: () => Promise<FluentStatus>
   read: (request: MeshingReadRequest) => Promise<MeshingReadReport>
   write: (request: MeshingWriteRequest) => Promise<MeshingWriteReport>
+  workflowSchema: (workflowType: MeshingWorkflowType) => Promise<MeshingWorkflowContract>
   schemas: () => Promise<MeshingSchemaSummary[]>
   schema: (workflowType: MeshingWorkflowType) => Promise<MeshingWorkflowSchema>
   validatePreset: (preset: MeshingPresetDocument) => Promise<MeshingPresetValidationReport>

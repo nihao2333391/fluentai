@@ -557,6 +557,12 @@ select {
   margin-top: 12px;
 }
 
+.meshing-step-actions {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--app-border);
+}
+
 .task-type-label {
   font-size: 10px;
 }
@@ -587,6 +593,10 @@ select {
   font-family: 'Cascadia Code', 'Consolas', monospace;
   font-size: 10px;
   overflow-wrap: anywhere;
+}
+
+.meshing-label-filter {
+  width: 180px;
 }
 
 .advanced-options-collapse {

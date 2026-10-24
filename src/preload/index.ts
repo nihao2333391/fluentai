@@ -20,6 +20,7 @@ import type {
   MeshingReadReport,
   MeshingReadRequest,
   MeshingSchemaSummary,
+  MeshingWorkflowContract,
   MeshingWorkflowSchema,
   MeshingWorkflowType,
   MeshingWorkflowReport,
@@ -119,6 +120,8 @@ const api: FluentAIApi = Object.freeze({
     disconnect: () => invoke<FluentStatus>('meshing:disconnect'),
     read: (request: MeshingReadRequest) => invoke<MeshingReadReport>('meshing:read', request),
     write: (request: MeshingWriteRequest) => invoke<MeshingWriteReport>('meshing:write', request),
+    workflowSchema: (workflowType: MeshingWorkflowType) =>
+      invoke<MeshingWorkflowContract>('meshing:workflow-schema', workflowType),
     schemas: () => invoke<MeshingSchemaSummary[]>('meshing:schemas'),
     schema: (workflowType: MeshingWorkflowType) =>
       invoke<MeshingWorkflowSchema>('meshing:schema', workflowType),

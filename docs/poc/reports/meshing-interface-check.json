@@ -1,13 +1,13 @@
 {
   "status": "passed",
-  "started_at_utc": "2026-10-23T11:55:47.070537+00:00",
+  "started_at_utc": "2026-10-24T14:10:37.089689+00:00",
   "connection": {
     "connected": true,
     "mode": "launch",
     "version": "Ansys Fluent 2025 R2",
-    "pid": 13896,
+    "pid": 21620,
     "host": "localhost",
-    "port": 56091
+    "port": 55103
   },
   "all_read": {
     "status": "success",
@@ -20,8 +20,8 @@
     "workflow_type": "watertight",
     "status": "success",
     "task_names": [
-      "update_regions",
       "create_regions",
+      "update_regions",
       "describe_geometry",
       "enclose_fluid_regions",
       "update_boundaries",
@@ -187,6 +187,70 @@
     "missing_names": [],
     "error": null
   },
+  "direct_child_write": {
+    "workflow_type": "watertight",
+    "status": "success",
+    "results": [
+      {
+        "task_path": [
+          "add_local_sizing"
+        ],
+        "argument_path": [
+          "boi_control_name"
+        ],
+        "compound_child_name": "ui-interface-check",
+        "expected": "ui-interface-check",
+        "actual": "ui-interface-check",
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_local_sizing"
+        ],
+        "argument_path": [
+          "boi_execution"
+        ],
+        "compound_child_name": "ui-interface-check",
+        "expected": "Face Size",
+        "actual": "Face Size",
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_local_sizing"
+        ],
+        "argument_path": [
+          "boi_face_label_list"
+        ],
+        "compound_child_name": "ui-interface-check",
+        "expected": [
+          "wall-big"
+        ],
+        "actual": [
+          "wall-big"
+        ],
+        "success": true,
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_local_sizing"
+        ],
+        "argument_path": [
+          "boi_size"
+        ],
+        "compound_child_name": "ui-interface-check",
+        "expected": 0.001,
+        "actual": 0.001,
+        "success": true,
+        "message": ""
+      }
+    ],
+    "verified": true,
+    "error": null
+  },
   "marker": "MESHING_INTERFACE_CHECK_PASSED",
-  "finished_at_utc": "2026-10-23T11:58:14.372706+00:00"
+  "finished_at_utc": "2026-10-24T14:11:37.754346+00:00"
 }

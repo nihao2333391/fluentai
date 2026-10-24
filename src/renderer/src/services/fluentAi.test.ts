@@ -72,6 +72,7 @@ describe('fluentAiService', () => {
         disconnect: vi.fn(),
         read: vi.fn(),
         write: vi.fn(),
+        workflowSchema: vi.fn(),
         schemas: vi.fn().mockResolvedValue([]),
         schema: vi.fn().mockResolvedValue({ tasks: [] }),
         validatePreset: vi.fn().mockResolvedValue({

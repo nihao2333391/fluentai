@@ -389,6 +389,7 @@ class MeshingWriteRequest(BaseModel):
     workflow_type: MeshingWorkflowType
     items: list[MeshingPresetItem] = Field(min_length=1)
     verify: bool = True
+    create_compound_child: bool = False
 
 
 class MeshingWriteReport(BaseModel):

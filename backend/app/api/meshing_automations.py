@@ -22,6 +22,7 @@ from app.domain import (
     MeshingWriteRequest,
 )
 from app.meshing.schema_index import MESHING_SCHEMA_INDEX
+from app.meshing.workflow_contract import get_watertight_workflow_contract
 from app.repositories.meshing_automations import MeshingAutomationRepository
 
 router = APIRouter(tags=["meshing"])
@@ -74,6 +75,11 @@ def _validate_preset(preset: MeshingPresetDocument) -> MeshingPresetValidationRe
 @router.get("/meshing/schemas", response_model=list[MeshingSchemaSummary])
 def list_meshing_schemas() -> list[MeshingSchemaSummary]:
     return MESHING_SCHEMA_INDEX.summaries()
+
+
+@router.get("/meshing/workflows/watertight/schema")
+def get_watertight_workflow_ui_schema() -> dict[str, Any]:
+    return get_watertight_workflow_contract()
 
 
 @router.get("/meshing/schemas/{workflow_type}")

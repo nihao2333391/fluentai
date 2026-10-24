@@ -81,6 +81,8 @@ export const fluentAiService = {
     disconnect: () => getFluentAIApi().meshing.disconnect(),
     read: (request: MeshingReadRequest) => getFluentAIApi().meshing.read(request),
     write: (request: MeshingWriteRequest) => getFluentAIApi().meshing.write(request),
+    workflowSchema: (workflowType: MeshingWorkflowType) =>
+      getFluentAIApi().meshing.workflowSchema(workflowType),
     schemas: () => getFluentAIApi().meshing.schemas(),
     schema: (workflowType: MeshingWorkflowType) => getFluentAIApi().meshing.schema(workflowType),
     validatePreset: (preset: MeshingPresetDocument) =>

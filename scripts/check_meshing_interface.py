@@ -172,6 +172,45 @@ def main() -> int:
         if not all(result.success for result in apply_report.results):
             raise AssertionError("Meshing apply readback verification failed.")
 
+        child_write = adapter.write_arguments(
+            MeshingWriteRequest(
+                workflow_type="watertight",
+                verify=True,
+                create_compound_child=True,
+                items=[
+                    MeshingPresetItem(
+                        task_path=["add_local_sizing"],
+                        argument_path=["boi_control_name"],
+                        value="ui-interface-check",
+                        compound_child_name="ui-interface-check",
+                    ),
+                    MeshingPresetItem(
+                        task_path=["add_local_sizing"],
+                        argument_path=["boi_execution"],
+                        value="Face Size",
+                        compound_child_name="ui-interface-check",
+                    ),
+                    MeshingPresetItem(
+                        task_path=["add_local_sizing"],
+                        argument_path=["boi_face_label_list"],
+                        value=["wall-big"],
+                        compound_child_name="ui-interface-check",
+                    ),
+                    MeshingPresetItem(
+                        task_path=["add_local_sizing"],
+                        argument_path=["boi_size"],
+                        value=0.001,
+                        compound_child_name="ui-interface-check",
+                    ),
+                ],
+            )
+        )
+        summary["direct_child_write"] = child_write.model_dump(mode="json")
+        if child_write.status != "success":
+            raise AssertionError(
+                child_write.error or "Direct compound-child write failed."
+            )
+
         if args.test_attach:
             properties = adapter._session.connection_properties  # type: ignore[attr-defined]
             host = str(getattr(properties, "ip", None) or "127.0.0.1")

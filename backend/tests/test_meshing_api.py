@@ -34,6 +34,20 @@ def test_meshing_schema_and_automation_api(
     assert schemas.status_code == 200
     assert {item["workflow_type"] for item in schemas.json()} == {"watertight", "fault-tolerant"}
 
+    workflow_schema = app_client.get(
+        "/api/meshing/workflows/watertight/schema", headers=auth_headers
+    )
+    assert workflow_schema.status_code == 200
+    assert workflow_schema.json()["step_order"] == [
+        "import_geometry",
+        "add_local_sizing",
+        "create_surface_mesh",
+        "describe_geometry",
+        "update_regions",
+        "add_boundary_layer",
+        "create_volume_mesh",
+    ]
+
     watertight = app_client.get("/api/meshing/schemas/watertight", headers=auth_headers)
     assert watertight.status_code == 200
     local_sizing = next(

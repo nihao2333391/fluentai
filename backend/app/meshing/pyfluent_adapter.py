@@ -495,15 +495,18 @@ class PyFluentMeshingAdapter:
             for (task_path_tuple, child_name), items in grouped.items():
                 try:
                     task = _find_task(workflow, list(task_path_tuple))
+                    state: dict[str, Any] = {}
+                    for item in items:
+                        _merge_state(state, item.argument_path, item.value)
                     target = task
                     if child_name:
                         child = _find_compound_child(task, child_name)
                         if child is None:
-                            raise LookupError(f"Compound child was not found: {child_name}")
+                            if request.create_compound_child:
+                                child = _create_child(task, state)
+                            else:
+                                raise LookupError(f"Compound child was not found: {child_name}")
                         target = child
-                    state: dict[str, Any] = {}
-                    for item in items:
-                        _merge_state(state, item.argument_path, item.value)
                     _write_argument_state(target, state)
                     actual_state = _normalize_state(target.arguments.get_state())
                     for item in items:
