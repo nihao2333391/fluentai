@@ -8,12 +8,12 @@
 4. Fluent credentials are encrypted and stored by Electron, but are not yet consumed by the sidecar attach flow.
 5. Model files are referenced in place and are not copied into an application-managed library directory.
 6. Selection tokens are memory-only and become invalid after an application restart.
-7. Recent-session restoration and richer sync-log filtering are not implemented.
+7. Recent-session restoration and richer sync-log filtering are implemented; cross-machine synchronization is still out of scope.
 8. Rollback is best-effort because Fluent does not provide a transaction across arbitrary setting nodes.
 9. Only the curated 20-setting Fluent 2025 R2 catalog is supported.
 10. Ant Design and icon modules produce an eager renderer bundle around 3.07 MB before gzip. Bundle optimization remains a hardening task.
 11. Theme and language preferences persist locally, but authoritative synchronization with backend app settings is not implemented.
-12. Database backup, restore, compaction, export, and corruption recovery are not implemented.
+12. Daily/manual database backup and safe restore are implemented. Portable export, scheduled external copies, and automated corruption repair are not implemented.
 13. The Windows installer bundles a standalone Python runtime and pruned site-packages. The sidecar is approximately 263 MB; PyInstaller can reduce it further.
 14. Sidecar logs are currently console-only and not persisted to rotating files.
 15. The per-launch bearer token is passed through the child process environment. It is not exposed to the renderer, but same-user process inspection remains part of the local threat model.
@@ -21,5 +21,5 @@
 17. FastAPI TestClient emits a Starlette deprecation warning about `httpx`; tests pass, but the HTTP test dependency should be revisited before upgrading Starlette.
 18. Arbitrary Python/TUI command execution remains out of scope.
 19. Meshing name validation can only use names exposed after geometry import; names that first appear after surface mesh generation are intentionally rejected under the no-mesh rule.
-20. Direct `.dsco` import can block in standalone Fluent Meshing. Use the generated `.pmdb` or another verified native geometry format for Meshing apply.
+20. Direct `.scdoc/.scdocx/.dsco` import can time out when the Windows computer name differs from the Python/DNS hostname used for the ANSYS `RunningCADs` handshake. Use the directory-junction repair in the user guide, or use a verified `.pmdb` for Meshing apply.
 21. The signing and checksum pipeline is ready, but no Authenticode certificate is configured in this environment. The current installer remains unsigned and Windows SmartScreen may warn.

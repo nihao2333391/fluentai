@@ -1,249 +1,213 @@
 # Fluent AI
 
-Fluent AI is a Windows desktop application for managing reusable ANSYS Fluent automation presets, model references, Fluent connections, and verified setting synchronization.
+> 面向 ANSYS Fluent Meshing 的 Windows 桌面自动化、七步工作流实时同步与同类模型批量处理工具。
 
-## Repository
+---
 
-Team development repository:
+## 📘 完整使用指南
 
-```text
-https://gitee.com/alcohol-free-beverage-station/fluent-ai-for-aic2026
-```
+> **第一次使用、部署、排障或团队交接，请先阅读完整手册。**
 
-See `CONTRIBUTING.md` for clone, branch, Pull Request, and validation instructions.
+| 文档                                | 入口                                                            |
+| ----------------------------------- | --------------------------------------------------------------- |
+| **Fluent AI 完整使用指南（推荐）**  | [docs/用户操作指南.md](docs/用户操作指南.md)                    |
+| 快速排障：Fluent/Discovery/CAD 导入 | [查看故障排查章节](docs/用户操作指南.md#13-故障排查)            |
+| 七步 Watertight 工作流              | [查看工作流章节](docs/用户操作指南.md#8-七步-watertight-工作流) |
+| 应用自动化与实时同步                | [查看实时同步章节](docs/用户操作指南.md#9-应用自动化与实时同步) |
+| 开发、测试与打包                    | [查看开发构建章节](docs/用户操作指南.md#14-更新卸载与开发构建)  |
+| 团队协作说明                        | [CONTRIBUTING.md](CONTRIBUTING.md)                              |
 
-## Current Status
+完整手册覆盖：安装与校验、首次启动、Fluent/Meshing 连接、模型导入、自动化创建、七步工作流、双向同步、多模型批处理、数据备份、常见错误、CAD Reader 主机名修复、开发构建和交付验收。
 
-- **M0 - Fluent feasibility: PASSED**
-- **M1 - Engineering foundation: PASSED**
-- **M2 - IPC and sidecar supervision: PASSED**
-- **M3 - Database and domain model: PASSED**
-- **M4 - Electron security and file capabilities: PASSED**
-- **M5 - UI framework and design system: PASSED**
-- **M6 - FluentAdapter and SettingCatalog: PASSED**
-- **M7 - First end-to-end vertical slice: PASSED**
-- **M8 - Complete Meshing automation and apply workflows: PASSED**
-- **M9 - Delivery lifecycle and packaging: PASSED**
-- **M10 - Product hardening: IN PROGRESS**
-- **M11 - Meshing connection, direct read/write, and FDL UI metadata: PASSED**
+---
 
-The application now supports a real, persisted vertical workflow:
+## 当前能力
 
-```text
-launch or attach Fluent
-→ connect and show status
-→ import a model through the native picker
-→ load the model into Fluent
-→ create a validated automation preset
-→ select the model
-→ apply the preset
-→ verify each setting by readback
-→ persist a job and sync log
-→ restore the previous value
-```
+- **Meshing 自动化预设**：按 Fluent Meshing 真实任务树保存参数。
+- **七步 Watertight 工作流**：导入几何、局部尺寸、表面网格、描述几何、更新区域、边界层、体网格。
+- **实时双向同步**：Fluent AI 修改写入 Fluent，Fluent 原生界面修改可回读。
+- **逐项回读验证**：写入后读取实际值，避免界面显示与 Fluent 状态不一致。
+- **多模型批处理**：同一预设按模型队列依次应用。
+- **模型库**：支持 Fluent 算例/网格与常见 CAD/几何格式。
+- **原生命名保留**：`.scdoc/.scdocx/.dsco` 和 `.pmdb` 可保留 Meshing 命名选择。
+- **中文/English 界面**：中文术语与 ANSYS 汉化版对齐，英文保持原版。
+- **本地数据安全**：SQLite、每日自动备份、手动备份与安全恢复。
+- **独立 Python Sidecar**：安装包自带 Python 3.12 与 PyFluent 运行环境。
 
-## Real Fluent Evidence
-
-The M7 validation ran through the real sidecar HTTP API and Fluent 2025 R2:
-
-- Catalog exposed 39 settings;
-- Fluent launched and reported a real PID and port;
-- model file imported into SQLite;
-- model loaded into Fluent;
-- automation created with `reference.area = 1.05`;
-- workflow applied the automation;
-- readback returned `1.05`;
-- previous value `1.0` restored;
-- job status reached `succeeded` with 100% progress;
-- apply and write sync logs were persisted;
-- Fluent disconnected cleanly;
-- sidecar exited with code 0.
-
-Evidence:
-
-- `docs/poc/reports/m7_workflow.json`
-- `docs/verification/m7-verification.md`
-
-## Architecture
+## 技术架构
 
 ```text
-React renderer
-    ├─ four-module Ant Design shell
-    ├─ real model import and automation forms
-    ├─ workflow apply controls
-    └─ typed Renderer service layer
-          ↓ narrow preload API
-Electron main process
-    ├─ sidecar supervisor
-    ├─ authenticated API proxy
-    ├─ native model-file picker
-    ├─ safeStorage credential vault
-    └─ user-data database path
-          ↓ 127.0.0.1 + bearer token
-FastAPI sidecar
-    ├─ authentication
-    ├─ business API
-    ├─ FluentService dedicated execution thread
-    ├─ SQLite repositories
-    ├─ jobs and sync logs
-    └─ PyFluentAdapter
-          ↓
-ANSYS Fluent 2025 R2
+React + TypeScript + Ant Design
+            ↓ Electron IPC
+Electron Main Process
+            ├─ Sidecar supervision
+            ├─ Native file picker
+            ├─ User data / backups
+            └─ Secure local storage
+            ↓ 127.0.0.1 + bearer token
+FastAPI Sidecar
+            ├─ SQLite repositories
+            ├─ Jobs and sync logs
+            ├─ Serialized Fluent executor
+            └─ PyFluent Meshing adapter
+            ↓
+ANSYS Fluent Meshing 2025 R2
 ```
 
-## Vertical-Slice Capabilities
+## 当前状态
 
-### Fluent connection
+| 里程碑       | 状态        | 说明                                                                         |
+| ------------ | ----------- | ---------------------------------------------------------------------------- |
+| M0–M7        | PASSED      | Fluent 可行性、工程基础、IPC、数据库、安全文件、Fluent Adapter、首条纵向流程 |
+| M8           | PASSED      | Watertight/Fault-tolerant schema、预设编辑、名称检查、写入回读               |
+| M9           | PASSED      | 交付生命周期、Sidecar、NSIS 安装包与安装冒烟测试                             |
+| M10          | IN PROGRESS | 产品加固、备份恢复、更多 Fluent 设置、签名准备                               |
+| M11          | PASSED      | Meshing UI、连接诊断、参数直读直写、427 项实机回读                           |
+| 实时 Meshing | PASSED      | 七步工作流执行、双向同步、模型队列、日志与状态反馈                           |
 
-- launch and attach configuration;
-- dedicated single-thread executor for PyFluent;
-- main-thread PyFluent preload in the sidecar to avoid worker-thread import deadlocks;
-- connection status with version, PID, host, and port;
-- explicit disconnect.
+详细进度见 [docs/PROGRESS.md](docs/PROGRESS.md)。
 
-### Model library
+## 安装包
 
-- native Electron file picker;
-- secure selection token;
-- model persistence with size and timestamp;
-- model load into Fluent;
-- metadata refresh API.
+当前 Windows x64 安装包：
 
-### Automation creation
+```text
+FluentAI-0.1.0-x64-Setup.exe
+```
 
-- Fluent-style preset workflow;
-- left-side groups matching Fluent concepts: General, Models, Solution, Reference Values;
-- real Fluent 2025 R2 enum choices for solver time/type, velocity formulation, viscous and k-omega models;
-- switches for boolean model options;
-- numeric controls for residual criteria and reference values;
-- explicit include/exclude selection for every preset item;
-- no manual setting-ID entry;
-- backend validation before persistence;
-- duplicate-name protection;
-- preset stored as versioned JSON.
+SHA-256：
 
-### Apply workflow
+```text
+03eda593d2c662149acf7fb5dfc799b67793bd9c50f6b9ffcf27ded449e65ec9
+```
 
-- choose a persisted model;
-- connect automatically when needed;
-- load the model;
-- apply the preset;
-- per-setting readback verification;
-- best-effort rollback on partial failure;
-- task lifecycle persisted in `jobs`;
-- apply/write results persisted in `sync_logs`;
-- recent sync logs shown in the automation page.
+说明：
 
-## Fluent API
+- 安装包不直接提交到 Git，避免大文件超过仓库限制。
+- 当前构建尚未配置 Authenticode 证书，Windows SmartScreen 可能提示未知发布者。
+- 安装前请核对 SHA-256，并从项目维护者提供的可信位置获取安装包。
 
-- `GET /api/fluent/status`
-- `POST /api/fluent/connect`
-- `POST /api/fluent/disconnect`
-- `GET /api/fluent/catalog`
-- `POST /api/fluent/settings/read`
-- `POST /api/fluent/settings/write`
-- `POST /api/fluent/presets/validate`
-- `POST /api/fluent/presets/apply`
-- `POST /api/models/{id}/open`
-- `POST /api/automations/{id}/apply`
+## 30 秒启动
 
-All endpoints require the per-launch bearer token.
+1. 启动 Fluent AI，等待 **FastAPI 侧车 · 已就绪**。
+2. 打开 **设置 → Fluent Meshing 连接**。
+3. 选择“启动新会话”，填写 `fluent.exe`，建议选择“显示 GUI”。
+4. 保存并连接，运行“连接与读写诊断”。
+5. 打开 **我的模型** 导入几何。
+6. 打开 **网格划分自动化** 创建预设。
+7. 点击预设的“应用”，选择模型并选择“应用并实时同步”。
+8. 在七步页面逐项检查参数并执行当前步骤。
 
-## Development and Verification
+完整步骤：[docs/用户操作指南.md](docs/用户操作指南.md)。
+
+## 支持的主要格式
+
+**Fluent 算例/网格：**
+
+```text
+.cas  .cas.h5  .msh  .msh.h5
+```
+
+**CAD / 几何：**
+
+```text
+.scdoc  .scdocx  .dsco  .pmdb
+.step   .stp     .stpz  .iges  .igs
+.x_t    .x_b     .sat   .sab
+.jt     .3dxml   .catpart  .catproduct
+.sldprt .sldasm  .ipt   .iam   .prt  .asm
+.par    .stl     .fmd   .tgf
+```
+
+推荐 Meshing 输入顺序：
+
+1. `.pmdb`
+2. 原生 `.scdoc/.scdocx/.dsco`
+3. `.step/.stp`
+4. 其它 B-Rep CAD 格式
+
+STEP 可能丢失命名选择；Watertight 节点可能拒绝 faceted `.fmd/.tgf`。详见完整手册的格式兼容性章节。
+
+## CAD 导入超时快速提示
+
+若 Fluent 报告：
+
+```text
+Timeout reached, failed to start Discovery!
+```
+
+先检查 Windows 计算机名与 Python/DNS 主机名是否不同：
+
+```powershell
+Write-Output $env:COMPUTERNAME
+[System.Net.Dns]::GetHostName()
+```
+
+不同名称会导致 Fluent 与 Discovery 查找不同的 `RunningCADs` 插件目录。完整修复脚本见：
+
+- [完整指南：SCDOC/DSCO 导入超时](docs/用户操作指南.md#133-scdoc--scdocx--dsco-导入超时)
+
+## 开发
+
+### 环境
+
+- Node.js 24+
+- pnpm 12.5.1+
+- Python 3.12+
+- ANSYS Fluent 2025 R2
+
+### 初始化
+
+```powershell
+pnpm install
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
+```
+
+### 开发与检查
 
 ```powershell
 pnpm dev
 pnpm check
 ```
 
-Expected final markers:
-
-```text
-M8_SCHEMA_CHECK_PASSED
-M8_APPLY_CHECK_PASSED
-```
-
-Run the real end-to-end workflow:
-
-```powershell
-& 'D:\Fluent AI\fluent-ai-app\.venv\Scripts\python.exe' `
-  'D:\Fluent AI\fluent-ai-app\scripts\validate_m7_workflow.py'
-```
-
-## Windows Packager
-
-Build the installable Windows x64 application:
+### Windows 安装包
 
 ```powershell
 pnpm package:win
 ```
 
-The command builds the Electron application, stages a standalone Python 3.12 sidecar, verifies the packaged sidecar, creates an NSIS installer, silently installs it, runs a packaged renderer/sidecar smoke test, and uninstalls the test installation.
+构建流程包含：
 
-Artifact:
+- TypeScript 检查；
+- Electron renderer/main/preload 构建；
+- Python 3.12 sidecar 暂存；
+- sidecar 启动与 HTTP 握手验证；
+- NSIS 安装包；
+- 静默安装；
+- 安装版启动与 sidecar smoke test；
+- SHA-256 和 release manifest。
+
+## 仓库
+
+Gitee：
 
 ```text
-release\FluentAI-0.1.0-x64-Setup.exe
+https://gitee.com/alcohol-free-beverage-station/fluent-ai-for-aic2026
 ```
 
-Current installer boundary: it is not Authenticode-signed. The Fluent AI application icon is included.
+协作流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-For signed releases, configure:
+## 验证证据
 
-```powershell
-$env:CSC_LINK = "D:\certificates\fluent-ai.pfx"
-$env:CSC_KEY_PASSWORD = "<password>"
-$env:FLUENT_AI_REQUIRE_SIGNING = "1"
-pnpm package:win
-```
+- [项目进度](docs/PROGRESS.md)
+- [已知问题](docs/KNOWN_ISSUES.md)
+- [Meshing 实时验证](docs/poc/reports/meshing-live-check.json)
+- [原生 SCDOC 导入验证](docs/poc/reports/meshing-live-start-acompact-native-junction.json)
+- [Meshing 接口验证](docs/poc/reports/meshing-interface-check.json)
+- [安装包冒烟测试](docs/poc/reports/installer-smoke.json)
+- [Sidecar 打包验证](docs/poc/reports/packaging-sidecar.json)
 
-The release pipeline writes `release-manifest.json` and a SHA-256 checksum, and refuses an unsigned artifact when required signing is enabled.
+## 许可与声明
 
-## Evidence
-
-- M7 verification: `docs/verification/m7-verification.md`
-- M9.2 packaging: `docs/verification/m9.2-verification.md`
-- M7 architecture decision: `docs/adr/0008-m7-vertical-slice.md`
-- M6 verification: `docs/verification/m6-verification.md`
-- M5 verification: `docs/verification/m5-verification.md`
-- M4 verification: `docs/verification/m4-verification.md`
-- M3 verification: `docs/verification/m3-verification.md`
-- M2 verification: `docs/verification/m2-verification.md`
-- M1 verification: `docs/verification/m1-verification.md`
-- M0 Fluent report: `docs/poc/fluent-2025R2.md`
-- Known boundaries: `docs/KNOWN_ISSUES.md`
-
-## M8 and M9 Progress
-
-Completed:
-
-- Fluent-style Solver preset editor;
-- real enum option lists from Fluent 2025 R2;
-- Watertight schema: 11 tasks and 562 arguments including nested templates;
-- Fault-tolerant schema: 25 tasks and 635 arguments including nested templates;
-- task/argument edit paths and allowed-value metadata extracted from PyFluent;
-- independent Meshing automation database model;
-- Meshing preset task/argument validation;
-- authenticated Meshing automation CRUD APIs.
-- exact live-name validation before any Meshing write;
-- Watertight and Fault-tolerant geometry import;
-- named compound-child creation and multiple local-sizing controls;
-- readback verification and strict stop-before-mesh behavior;
-- Solver automation edit and duplicate workflows;
-- model association and direct open-in-Fluent actions.
-- standalone Python sidecar staged into Electron resources;
-- Windows NSIS installer with silent install/uninstall smoke verification;
-- installed application verified to load the real renderer and reach sidecar readiness.
-- formal application icon;
-- daily and manual SQLite backups with integrity checks and safety restore;
-- sidecar development-dependency pruning.
-- Solver Methods, Initialization and Run Calculation branches with real read/write/restore verification.
-- Model-specific fluid material density and viscosity presets discovered after case load.
-- Named velocity-inlet, pressure-outlet and wall boundary-condition presets discovered from the active case.
-- Residual monitor options and per-equation residual monitor toggles.
-
-M9 completion includes:
-
-- recent-session restore across application restarts;
-- detailed job progress and cooperative cancellation;
-- server-side sync-log filtering by direction, status, model, automation, and text.
+本项目不是 ANSYS 官方产品。ANSYS、Fluent、Discovery、SpaceClaim 等名称和许可归 ANSYS, Inc. 所有。使用本应用前，请确认已获得相应 ANSYS 软件和许可。
