@@ -14,6 +14,7 @@ import type { CredentialStatus, DatabaseBackupInfo } from '../../../shared/contr
 import { FluentConnectionCard } from '../components/FluentConnectionCard'
 import { MeshingConnectionCard } from '../components/MeshingConnectionCard'
 import { PageContent } from '../components/PageState'
+import type { AppLanguage } from '../i18n'
 import { localizedRuntimeMessage } from '../i18n/runtimeMessages'
 import { fluentAiService } from '../services/fluentAi'
 import { useAppStore, type ThemeMode } from '../store/appStore'
@@ -22,7 +23,9 @@ export function SettingsPage() {
   const { t } = useTranslation()
   const { message, modal } = App.useApp()
   const themeMode = useAppStore((state) => state.themeMode)
+  const language = useAppStore((state) => state.language)
   const setThemeMode = useAppStore((state) => state.setThemeMode)
+  const setLanguage = useAppStore((state) => state.setLanguage)
   const [credentialStatus, setCredentialStatus] = useState<CredentialStatus | null>(null)
   const [backups, setBackups] = useState<DatabaseBackupInfo[]>([])
   const [backupBusy, setBackupBusy] = useState(false)
@@ -116,6 +119,24 @@ export function SettingsPage() {
                   { value: 'light', label: t('settings.light') },
                   { value: 'dark', label: t('settings.dark') },
                   { value: 'system', label: t('settings.system') },
+                ]}
+              />
+            </div>
+            <div className="setting-row">
+              <div>
+                <Typography.Text strong>{t('settings.language')}</Typography.Text>
+                <Typography.Paragraph type="secondary" className="setting-description">
+                  {t('settings.languageDescription')}
+                </Typography.Paragraph>
+              </div>
+              <Radio.Group
+                optionType="button"
+                buttonStyle="solid"
+                value={language}
+                onChange={(event) => setLanguage(event.target.value as AppLanguage)}
+                options={[
+                  { value: 'zh', label: t('settings.chinese') },
+                  { value: 'en', label: t('settings.english') },
                 ]}
               />
             </div>

@@ -98,6 +98,14 @@ class MeshingSchemaIndex:
             candidates = list(argument.get("children") or [])
         return argument
 
+    def get_task(
+        self,
+        workflow_type: MeshingWorkflowType,
+        task_path: list[str],
+    ) -> dict[str, Any] | None:
+        """Return one schema task by its full workflow path."""
+        return self._task_index.get(workflow_type, {}).get(tuple(task_path))
+
     def validate(self, preset: MeshingPresetDocument) -> MeshingPresetValidationReport:
         schema_id = f"fluent-meshing-25.2-{preset.workflow_type}"
         errors: list[str] = []

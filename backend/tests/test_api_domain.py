@@ -143,6 +143,15 @@ def test_model_api_validates_extension_and_file_existence(
     auth_headers: dict[str, str],
     tmp_path: Path,
 ) -> None:
+    scdocx = tmp_path / "middle.scdocx"
+    scdocx.write_bytes(b"spaceclaim exchange content")
+    accepted = app_client.post(
+        "/api/models",
+        headers=auth_headers,
+        json={"name": "middle", "file_path": str(scdocx), "tags": []},
+    )
+    assert accepted.status_code == 201
+
     wrong_extension = app_client.post(
         "/api/models",
         headers=auth_headers,

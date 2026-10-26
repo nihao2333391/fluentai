@@ -55,15 +55,12 @@ export interface PresetDocument {
   items: PresetItem[]
 }
 
-export interface AutomationInput {
+export interface Automation {
+  id: number
   name: string
   description: string
   preset: PresetDocument
   status: AutomationStatus
-}
-
-export interface Automation extends AutomationInput {
-  id: number
   created_at: string
   updated_at: string
 }
@@ -103,11 +100,6 @@ export interface ModelUpdateRequest {
   fileToken?: string
   description?: string
   tags?: string[]
-}
-
-export interface ModelAssociationRequest {
-  automationId: number
-  isDefault: boolean
 }
 
 export interface OpenModelRequest {
@@ -169,21 +161,12 @@ export interface SyncLogQuery {
   search?: string
 }
 
-export interface AutomationsApi {
-  list: () => Promise<Automation[]>
-  create: (payload: AutomationInput) => Promise<Automation>
-  get: (id: number) => Promise<Automation>
-  update: (id: number, payload: AutomationInput) => Promise<Automation>
-  delete: (id: number) => Promise<void>
-}
-
 export interface ModelsApi {
   list: () => Promise<Model[]>
   get: (id: number) => Promise<Model>
   pickFile: () => Promise<PickedModelFile | null>
   create: (payload: ModelCreateRequest) => Promise<Model>
   update: (id: number, payload: ModelUpdateRequest) => Promise<Model>
-  associate: (id: number, payload: ModelAssociationRequest) => Promise<Model>
   open: (id: number, payload: OpenModelRequest) => Promise<ModelOpenReport>
   refresh: (id: number) => Promise<Model>
   delete: (id: number) => Promise<void>
@@ -277,23 +260,6 @@ export interface PresetValidationReport {
   normalized_items: PresetItem[]
 }
 
-export interface ApplyAutomationRequest {
-  model_id: number
-  connection?: FluentConnectionConfig | null
-  load_case: boolean
-}
-
-export interface WorkflowReport {
-  status: 'success' | 'failed'
-  automation_id: number
-  model_id: number
-  job_id: string
-  message: string
-  connection: FluentStatus | null
-  apply_report: FluentOperationReport | null
-  sync_log_id: number | null
-}
-
 export interface FluentApi {
   status: () => Promise<FluentStatus>
   connect: (config: FluentConnectionConfig) => Promise<FluentStatus>
@@ -303,13 +269,6 @@ export interface FluentApi {
   writeSettings: (items: PresetItem[]) => Promise<FluentOperationReport>
   validatePreset: (preset: PresetDocument) => Promise<PresetValidationReport>
   applyPreset: (preset: PresetDocument) => Promise<FluentOperationReport>
-}
-
-export interface WorkflowsApi {
-  applyAutomation: (
-    automationId: number,
-    payload: ApplyAutomationRequest,
-  ) => Promise<WorkflowReport>
 }
 
 export type MeshingWorkflowType = 'watertight' | 'fault-tolerant'
@@ -507,12 +466,6 @@ export interface MeshingPresetValidationReport {
   item_count: number
 }
 
-export interface ApplyMeshingAutomationRequest {
-  model_id: number
-  connection?: FluentConnectionConfig | null
-  import_geometry: boolean
-}
-
 export interface MeshingArgumentWriteResult {
   task_path: string[]
   argument_path: string[]
@@ -523,44 +476,80 @@ export interface MeshingArgumentWriteResult {
   message: string
 }
 
-export interface MeshingNameCheck {
-  kind: 'label' | 'zone' | 'region' | 'object' | 'selection'
-  name: string
-  found: boolean
+export interface MeshingLiveSessionStart {
+  automation_id: number
+  model_ids: number[]
+  connection?: FluentConnectionConfig | null
 }
 
-export interface MeshingApplyReport {
-  workflow_type: MeshingWorkflowType
-  status: 'success' | 'failed'
-  results: MeshingArgumentWriteResult[]
-  name_checks: MeshingNameCheck[]
-  created_children: string[]
-  stopped_before: string[]
-  imported_model: string | null
-  missing_names: string[]
+export interface MeshingLiveStepRequest {
+  step_index: number
+}
+
+export interface MeshingLiveWriteRequest extends MeshingLiveStepRequest {
+  items: MeshingPresetItem[]
+}
+
+export interface MeshingLiveLogEntry {
+  sequence: number
+  timestamp: string
+  level: 'info' | 'success' | 'warning' | 'error'
+  message: string
+  model_id: number | null
+}
+
+export interface MeshingLiveStepState {
+  task_path: string[]
+  status: 'pending' | 'active' | 'running' | 'completed' | 'failed'
+  message: string
+}
+
+export interface MeshingLiveModelState {
+  model_id: number
+  name: string
+  file_path: string
+  status: 'pending' | 'importing' | 'ready' | 'completed' | 'failed'
   error: string | null
 }
 
-export interface MeshingWorkflowReport {
-  status: 'success' | 'failed'
+export interface MeshingLiveSessionSnapshot {
+  session_id: string
   automation_id: number
-  model_id: number
-  job_id: string
-  message: string
+  automation_name: string
+  workflow_type: MeshingWorkflowType
+  status: 'starting' | 'connected' | 'running' | 'waiting' | 'completed' | 'failed' | 'stopped'
   connection: FluentStatus | null
-  apply_report: MeshingApplyReport | null
-  sync_log_id: number | null
+  models: MeshingLiveModelState[]
+  current_model_index: number
+  current_step_index: number
+  steps: MeshingLiveStepState[]
+  logs: MeshingLiveLogEntry[]
+  message: string
 }
 
-export interface RecentSession {
-  model: Model | null
-  automation: Automation | null
-  meshing_automation: MeshingAutomation | null
-  updated_at: string | null
+export interface MeshingLiveStepReport {
+  status: 'success' | 'failed'
+  message: string
+  snapshot: MeshingLiveSessionSnapshot
+  step_index: number
+  task_path: string[]
+  write_report: MeshingWriteReport | null
+  read_report: MeshingReadReport | null
 }
 
-export interface SessionApi {
-  recent: () => Promise<RecentSession>
+export interface MeshingLiveApi {
+  start: (payload: MeshingLiveSessionStart) => Promise<MeshingLiveSessionSnapshot>
+  get: (sessionId: string) => Promise<MeshingLiveSessionSnapshot>
+  enterStep: (sessionId: string, payload: MeshingLiveStepRequest) => Promise<MeshingLiveStepReport>
+  readStep: (sessionId: string, stepIndex: number) => Promise<MeshingLiveStepReport>
+  writeStep: (sessionId: string, payload: MeshingLiveWriteRequest) => Promise<MeshingLiveStepReport>
+  executeStep: (
+    sessionId: string,
+    payload: MeshingLiveStepRequest,
+  ) => Promise<MeshingLiveStepReport>
+  nextModel: (sessionId: string) => Promise<MeshingLiveSessionSnapshot>
+  retryModel: (sessionId: string) => Promise<MeshingLiveSessionSnapshot>
+  stop: (sessionId: string) => Promise<MeshingLiveSessionSnapshot>
 }
 
 export interface DatabaseBackupInfo {
@@ -606,22 +595,19 @@ export interface MeshingAutomationsApi {
   update: (id: number, payload: MeshingAutomationInput) => Promise<MeshingAutomation>
   delete: (id: number) => Promise<void>
   validate: (id: number) => Promise<MeshingPresetValidationReport>
-  apply: (id: number, payload: ApplyMeshingAutomationRequest) => Promise<MeshingWorkflowReport>
 }
 
 export interface FluentAIApi {
   readonly platform: string
   readonly sidecar: SidecarApi
-  readonly automations: AutomationsApi
   readonly models: ModelsApi
   readonly settings: SettingsApi
   readonly jobs: JobsApi
   readonly syncLogs: SyncLogsApi
-  readonly session: SessionApi
   readonly system: SystemApi
   readonly credentials: CredentialsApi
   readonly fluent: FluentApi
-  readonly workflows: WorkflowsApi
   readonly meshing: MeshingApi
+  readonly meshingLive: MeshingLiveApi
   readonly meshingAutomations: MeshingAutomationsApi
 }

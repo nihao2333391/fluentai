@@ -21,16 +21,6 @@ const model = {
   updated_at: 'now',
 }
 
-const automation = {
-  id: 3,
-  name: 'Wing automation',
-  description: '',
-  status: 'active',
-  preset: { schema_version: 1, fluent_version: '25.2.0', items: [] },
-  created_at: 'now',
-  updated_at: 'now',
-}
-
 describe('MyModelsPage', () => {
   beforeEach(() => {
     useSidecarStore.setState({
@@ -55,12 +45,11 @@ describe('MyModelsPage', () => {
         pickFile: vi.fn(),
         create: vi.fn(),
       },
-      automations: { list: vi.fn().mockResolvedValue([automation]) },
     } as unknown as FluentAIApi
     Object.defineProperty(window, 'fluentAI', { configurable: true, value: api })
   })
 
-  it('shows the default automation and opens a solver model', async () => {
+  it('opens a solver model', async () => {
     render(
       <AppProviders>
         <MemoryRouter>
@@ -69,7 +58,7 @@ describe('MyModelsPage', () => {
       </AppProviders>,
     )
 
-    expect(await screen.findByText('Wing automation')).toBeInTheDocument()
+    expect(await screen.findByText('wing.cas.h5')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '打开' }))
 
     await waitFor(() => {

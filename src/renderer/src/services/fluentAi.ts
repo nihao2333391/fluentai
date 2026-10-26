@@ -1,15 +1,14 @@
 import type {
-  ApplyAutomationRequest,
-  ApplyMeshingAutomationRequest,
-  AutomationInput,
   FluentAIApi,
   FluentConnectionConfig,
   MeshingAutomationInput,
+  MeshingLiveSessionStart,
+  MeshingLiveStepRequest,
+  MeshingLiveWriteRequest,
   MeshingPresetDocument,
   MeshingReadRequest,
   MeshingWriteRequest,
   MeshingWorkflowType,
-  ModelAssociationRequest,
   ModelCreateRequest,
   OpenModelRequest,
   ModelUpdateRequest,
@@ -28,14 +27,6 @@ export function getFluentAIApi(): FluentAIApi {
 }
 
 export const fluentAiService = {
-  automations: {
-    list: () => getFluentAIApi().automations.list(),
-    create: (payload: AutomationInput) => getFluentAIApi().automations.create(payload),
-    get: (id: number) => getFluentAIApi().automations.get(id),
-    update: (id: number, payload: AutomationInput) =>
-      getFluentAIApi().automations.update(id, payload),
-    delete: (id: number) => getFluentAIApi().automations.delete(id),
-  },
   models: {
     list: () => getFluentAIApi().models.list(),
     get: (id: number) => getFluentAIApi().models.get(id),
@@ -43,8 +34,6 @@ export const fluentAiService = {
     create: (payload: ModelCreateRequest) => getFluentAIApi().models.create(payload),
     update: (id: number, payload: ModelUpdateRequest) =>
       getFluentAIApi().models.update(id, payload),
-    associate: (id: number, payload: ModelAssociationRequest) =>
-      getFluentAIApi().models.associate(id, payload),
     open: (id: number, payload: OpenModelRequest) => getFluentAIApi().models.open(id, payload),
     refresh: (id: number) => getFluentAIApi().models.refresh(id),
     delete: (id: number) => getFluentAIApi().models.delete(id),
@@ -60,9 +49,6 @@ export const fluentAiService = {
   },
   syncLogs: {
     list: (query?: SyncLogQuery) => getFluentAIApi().syncLogs.list(query),
-  },
-  session: {
-    recent: () => getFluentAIApi().session.recent(),
   },
   system: {
     listBackups: () => getFluentAIApi().system.listBackups(),
@@ -97,8 +83,21 @@ export const fluentAiService = {
       getFluentAIApi().meshingAutomations.update(id, payload),
     delete: (id: number) => getFluentAIApi().meshingAutomations.delete(id),
     validate: (id: number) => getFluentAIApi().meshingAutomations.validate(id),
-    apply: (id: number, payload: ApplyMeshingAutomationRequest) =>
-      getFluentAIApi().meshingAutomations.apply(id, payload),
+  },
+  meshingLive: {
+    start: (payload: MeshingLiveSessionStart) => getFluentAIApi().meshingLive.start(payload),
+    get: (sessionId: string) => getFluentAIApi().meshingLive.get(sessionId),
+    enterStep: (sessionId: string, payload: MeshingLiveStepRequest) =>
+      getFluentAIApi().meshingLive.enterStep(sessionId, payload),
+    readStep: (sessionId: string, stepIndex: number) =>
+      getFluentAIApi().meshingLive.readStep(sessionId, stepIndex),
+    writeStep: (sessionId: string, payload: MeshingLiveWriteRequest) =>
+      getFluentAIApi().meshingLive.writeStep(sessionId, payload),
+    executeStep: (sessionId: string, payload: MeshingLiveStepRequest) =>
+      getFluentAIApi().meshingLive.executeStep(sessionId, payload),
+    nextModel: (sessionId: string) => getFluentAIApi().meshingLive.nextModel(sessionId),
+    retryModel: (sessionId: string) => getFluentAIApi().meshingLive.retryModel(sessionId),
+    stop: (sessionId: string) => getFluentAIApi().meshingLive.stop(sessionId),
   },
   fluent: {
     status: () => getFluentAIApi().fluent.status(),
@@ -109,9 +108,5 @@ export const fluentAiService = {
     writeSettings: (items: PresetItem[]) => getFluentAIApi().fluent.writeSettings(items),
     validatePreset: (preset: PresetDocument) => getFluentAIApi().fluent.validatePreset(preset),
     applyPreset: (preset: PresetDocument) => getFluentAIApi().fluent.applyPreset(preset),
-  },
-  workflows: {
-    applyAutomation: (automationId: number, payload: ApplyAutomationRequest) =>
-      getFluentAIApi().workflows.applyAutomation(automationId, payload),
   },
 }

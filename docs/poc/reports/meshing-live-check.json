@@ -1,0 +1,6625 @@
+{
+  "status": "passed",
+  "started_at_utc": "2026-10-26T08:28:26.653960+00:00",
+  "started_session": {
+    "session_id": "a100dae2-86c9-431c-90c9-4a9584c94676",
+    "automation_id": 1,
+    "automation_name": "Live Meshing verification",
+    "workflow_type": "watertight",
+    "status": "waiting",
+    "connection": {
+      "connected": true,
+      "mode": "launch",
+      "version": "Ansys Fluent 2025 R2",
+      "pid": 9724,
+      "host": "localhost",
+      "port": 51469
+    },
+    "models": [
+      {
+        "model_id": 1,
+        "name": "wenqiuli.dsco",
+        "file_path": "D:\\Fluent AI\\wql.meshed_files\\dp0\\FFF\\Fluent\\FM_ComputerOfWeiJiabao_9648\\wenqiuli.dsco.pmdb",
+        "status": "ready",
+        "error": null
+      }
+    ],
+    "current_model_index": 0,
+    "current_step_index": 1,
+    "steps": [
+      {
+        "task_path": [
+          "import_geometry"
+        ],
+        "status": "completed",
+        "message": "几何已导入。"
+      },
+      {
+        "task_path": [
+          "add_local_sizing"
+        ],
+        "status": "pending",
+        "message": ""
+      },
+      {
+        "task_path": [
+          "create_surface_mesh"
+        ],
+        "status": "pending",
+        "message": ""
+      },
+      {
+        "task_path": [
+          "describe_geometry"
+        ],
+        "status": "pending",
+        "message": ""
+      },
+      {
+        "task_path": [
+          "update_regions"
+        ],
+        "status": "pending",
+        "message": ""
+      },
+      {
+        "task_path": [
+          "add_boundary_layer"
+        ],
+        "status": "pending",
+        "message": ""
+      },
+      {
+        "task_path": [
+          "create_volume_mesh"
+        ],
+        "status": "pending",
+        "message": ""
+      }
+    ],
+    "logs": [
+      {
+        "sequence": 1,
+        "timestamp": "2026-10-26T08:28:26.705588+00:00",
+        "level": "info",
+        "message": "正在启动 Fluent Meshing: Live Meshing verification",
+        "model_id": null
+      },
+      {
+        "sequence": 2,
+        "timestamp": "2026-10-26T08:28:42.060730+00:00",
+        "level": "success",
+        "message": "Fluent Meshing 已连接, 请执行导入几何模型。",
+        "model_id": null
+      },
+      {
+        "sequence": 3,
+        "timestamp": "2026-10-26T08:28:42.642209+00:00",
+        "level": "success",
+        "message": "已写入第 1 步的 1 项预设并回读。",
+        "model_id": 1
+      },
+      {
+        "sequence": 4,
+        "timestamp": "2026-10-26T08:28:43.114275+00:00",
+        "level": "info",
+        "message": "正在执行导入几何模型: wenqiuli.dsco",
+        "model_id": 1
+      },
+      {
+        "sequence": 5,
+        "timestamp": "2026-10-26T08:28:43.280662+00:00",
+        "level": "info",
+        "message": "正在导入几何: wenqiuli.dsco",
+        "model_id": 1
+      },
+      {
+        "sequence": 6,
+        "timestamp": "2026-10-26T08:28:43.428008+00:00",
+        "level": "info",
+        "message": "Warning: PMDB file will not be saved as the same is being imported.",
+        "model_id": 1
+      },
+      {
+        "sequence": 7,
+        "timestamp": "2026-10-26T08:28:43.432516+00:00",
+        "level": "info",
+        "message": "Importing one geom object per program-controlled and one zone per body ...",
+        "model_id": 1
+      },
+      {
+        "sequence": 8,
+        "timestamp": "2026-10-26T08:28:43.769076+00:00",
+        "level": "info",
+        "message": "D:\\\\Ansys2025R2\\\\ANSYS Inc\\\\v252\\\\commonfiles\\\\CPython\\\\3_10\\\\winx64\\\\Release\\\\python\\\\..\\\\Ansys\\\\TGrid\\\\CADReaders.py started by MECH on ComputerOfWeiJiabao winx64 on Mon Oct 26 16:28:43 2026",
+        "model_id": 1
+      },
+      {
+        "sequence": 9,
+        "timestamp": "2026-10-26T08:28:43.772076+00:00",
+        "level": "info",
+        "message": "using Python 3.10.16 (remotes/origin/14d18b8e2626165312e076b70cf60f0faa8db8d5-dirty:14d18b8e, May 20 2) [MSC v.1942 64 bit (AMD64)]",
+        "model_id": 1
+      },
+      {
+        "sequence": 10,
+        "timestamp": "2026-10-26T08:28:43.774076+00:00",
+        "level": "info",
+        "message": "using Ansys.Meshing.FieldMesher build Jun 13 2025 15:24:50",
+        "model_id": 1
+      },
+      {
+        "sequence": 11,
+        "timestamp": "2026-10-26T08:28:43.786567+00:00",
+        "level": "info",
+        "message": "running ANSYS TGrid CADToTGridConverter ...",
+        "model_id": 1
+      },
+      {
+        "sequence": 12,
+        "timestamp": "2026-10-26T08:28:43.786567+00:00",
+        "level": "info",
+        "message": "setting up parameters ...",
+        "model_id": 1
+      },
+      {
+        "sequence": 13,
+        "timestamp": "2026-10-26T08:28:43.795063+00:00",
+        "level": "info",
+        "message": "setting up parameters done.",
+        "model_id": 1
+      },
+      {
+        "sequence": 14,
+        "timestamp": "2026-10-26T08:28:43.795063+00:00",
+        "level": "info",
+        "message": "running conversion ...",
+        "model_id": 1
+      },
+      {
+        "sequence": 15,
+        "timestamp": "2026-10-26T08:28:43.804062+00:00",
+        "level": "info",
+        "message": "converting 1 file(s) from Workbench to FLTG using output path 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216/out1793003323.42543232216.tgf'",
+        "model_id": 1
+      },
+      {
+        "sequence": 16,
+        "timestamp": "2026-10-26T08:28:43.808063+00:00",
+        "level": "info",
+        "message": "converting file 'wenqiuli.dsco.pmdb' (1 of 1) from Workbench to FLTG using output path 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216'",
+        "model_id": 1
+      },
+      {
+        "sequence": 17,
+        "timestamp": "2026-10-26T08:28:43.808063+00:00",
+        "level": "info",
+        "message": "importing data ...",
+        "model_id": 1
+      },
+      {
+        "sequence": 18,
+        "timestamp": "2026-10-26T08:28:43.812063+00:00",
+        "level": "info",
+        "message": "importing meshing model from PartMgr from file 'D:\\\\Fluent AI\\\\wql.meshed_files\\\\dp0\\\\FFF\\\\Fluent\\\\FM_ComputerOfWeiJiabao_9648\\\\wenqiuli.dsco.pmdb' ...",
+        "model_id": 1
+      },
+      {
+        "sequence": 19,
+        "timestamp": "2026-10-26T08:28:43.884747+00:00",
+        "level": "info",
+        "message": "setting enclosure and symmetry processing to False",
+        "model_id": 1
+      },
+      {
+        "sequence": 20,
+        "timestamp": "2026-10-26T08:28:43.885748+00:00",
+        "level": "info",
+        "message": "setting transfer named selections to True",
+        "model_id": 1
+      },
+      {
+        "sequence": 21,
+        "timestamp": "2026-10-26T08:28:43.886748+00:00",
+        "level": "info",
+        "message": "setting named selection prefixes to ''",
+        "model_id": 1
+      },
+      {
+        "sequence": 22,
+        "timestamp": "2026-10-26T08:28:43.887748+00:00",
+        "level": "info",
+        "message": "setting mixed import resolution type to 'SolidAndSurface'",
+        "model_id": 1
+      },
+      {
+        "sequence": 23,
+        "timestamp": "2026-10-26T08:28:43.887748+00:00",
+        "level": "info",
+        "message": "setting target application to 'FluentMeshing'",
+        "model_id": 1
+      },
+      {
+        "sequence": 24,
+        "timestamp": "2026-10-26T08:28:43.889089+00:00",
+        "level": "info",
+        "message": "initializing part manager from file ...",
+        "model_id": 1
+      },
+      {
+        "sequence": 25,
+        "timestamp": "2026-10-26T08:28:43.961908+00:00",
+        "level": "info",
+        "message": "processing assembly 'D:\\\\Fluent AI\\\\wenqiuli.dsco' with ID 1 and reference key '<?xml version=\"1.0\" encoding=\"utf-16\"?>",
+        "model_id": 1
+      },
+      {
+        "sequence": 26,
+        "timestamp": "2026-10-26T08:28:43.964081+00:00",
+        "level": "info",
+        "message": "<IdTable xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">",
+        "model_id": 1
+      },
+      {
+        "sequence": 27,
+        "timestamp": "2026-10-26T08:28:43.964081+00:00",
+        "level": "info",
+        "message": "<Table>",
+        "model_id": 1
+      },
+      {
+        "sequence": 28,
+        "timestamp": "2026-10-26T08:28:43.964081+00:00",
+        "level": "info",
+        "message": "<Entry>",
+        "model_id": 1
+      },
+      {
+        "sequence": 29,
+        "timestamp": "2026-10-26T08:28:43.966085+00:00",
+        "level": "info",
+        "message": "<AssemblyVersionInfo>",
+        "model_id": 1
+      },
+      {
+        "sequence": 30,
+        "timestamp": "2026-10-26T08:28:43.968085+00:00",
+        "level": "info",
+        "message": "<AssemblySavedVersion>2147483647</AssemblySavedVersion>",
+        "model_id": 1
+      },
+      {
+        "sequence": 31,
+        "timestamp": "2026-10-26T08:28:43.970084+00:00",
+        "level": "info",
+        "message": "<AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>",
+        "model_id": 1
+      },
+      {
+        "sequence": 32,
+        "timestamp": "2026-10-26T08:28:43.971086+00:00",
+        "level": "info",
+        "message": "<IsLegacyLabel>false</IsLegacyLabel>",
+        "model_id": 1
+      },
+      {
+        "sequence": 33,
+        "timestamp": "2026-10-26T08:28:43.971086+00:00",
+        "level": "info",
+        "message": "</AssemblyVersionInfo>",
+        "model_id": 1
+      },
+      {
+        "sequence": 34,
+        "timestamp": "2026-10-26T08:28:43.973085+00:00",
+        "level": "info",
+        "message": "<Text>~sEf77bbb93-b90b-4962-9b2b-e44ca7515c7e.2_#</Text>",
+        "model_id": 1
+      },
+      {
+        "sequence": 35,
+        "timestamp": "2026-10-26T08:28:43.973085+00:00",
+        "level": "info",
+        "message": "<Id>10000</Id>",
+        "model_id": 1
+      },
+      {
+        "sequence": 36,
+        "timestamp": "2026-10-26T08:28:43.974084+00:00",
+        "level": "info",
+        "message": "<IsExploded>false</IsExploded>",
+        "model_id": 1
+      },
+      {
+        "sequence": 37,
+        "timestamp": "2026-10-26T08:28:43.974084+00:00",
+        "level": "info",
+        "message": "</Entry>",
+        "model_id": 1
+      },
+      {
+        "sequence": 38,
+        "timestamp": "2026-10-26T08:28:43.974084+00:00",
+        "level": "info",
+        "message": "</Table>",
+        "model_id": 1
+      },
+      {
+        "sequence": 39,
+        "timestamp": "2026-10-26T08:28:43.975085+00:00",
+        "level": "info",
+        "message": "<AssemblyVersionInfo>",
+        "model_id": 1
+      },
+      {
+        "sequence": 40,
+        "timestamp": "2026-10-26T08:28:43.976087+00:00",
+        "level": "info",
+        "message": "<AssemblySavedVersion>2147483647</AssemblySavedVersion>",
+        "model_id": 1
+      },
+      {
+        "sequence": 41,
+        "timestamp": "2026-10-26T08:28:43.979086+00:00",
+        "level": "info",
+        "message": "<AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>",
+        "model_id": 1
+      },
+      {
+        "sequence": 42,
+        "timestamp": "2026-10-26T08:28:43.980085+00:00",
+        "level": "info",
+        "message": "<IsLegacyLabel>false</IsLegacyLabel>",
+        "model_id": 1
+      },
+      {
+        "sequence": 43,
+        "timestamp": "2026-10-26T08:28:43.981085+00:00",
+        "level": "info",
+        "message": "</AssemblyVersionInfo>",
+        "model_id": 1
+      },
+      {
+        "sequence": 44,
+        "timestamp": "2026-10-26T08:28:43.982086+00:00",
+        "level": "info",
+        "message": "</IdTable>'",
+        "model_id": 1
+      },
+      {
+        "sequence": 45,
+        "timestamp": "2026-10-26T08:28:43.983086+00:00",
+        "level": "info",
+        "message": "length unit = [m]",
+        "model_id": 1
+      },
+      {
+        "sequence": 46,
+        "timestamp": "2026-10-26T08:28:43.983086+00:00",
+        "level": "info",
+        "message": "processing part 'wenqiuli' with ID 3",
+        "model_id": 1
+      },
+      {
+        "sequence": 47,
+        "timestamp": "2026-10-26T08:28:43.984087+00:00",
+        "level": "info",
+        "message": "processing named selection 'outlet'",
+        "model_id": 1
+      },
+      {
+        "sequence": 48,
+        "timestamp": "2026-10-26T08:28:43.985087+00:00",
+        "level": "info",
+        "message": "processing named selection 'inlet hot'",
+        "model_id": 1
+      },
+      {
+        "sequence": 49,
+        "timestamp": "2026-10-26T08:28:43.986085+00:00",
+        "level": "info",
+        "message": "processing named selection 'inlet cold'",
+        "model_id": 1
+      },
+      {
+        "sequence": 50,
+        "timestamp": "2026-10-26T08:28:43.988086+00:00",
+        "level": "info",
+        "message": "processing named selection 'wall big'",
+        "model_id": 1
+      },
+      {
+        "sequence": 51,
+        "timestamp": "2026-10-26T08:28:43.989088+00:00",
+        "level": "info",
+        "message": "processing named selection 'wall small'",
+        "model_id": 1
+      },
+      {
+        "sequence": 52,
+        "timestamp": "2026-10-26T08:28:43.990088+00:00",
+        "level": "info",
+        "message": "processing data ...",
+        "model_id": 1
+      },
+      {
+        "sequence": 53,
+        "timestamp": "2026-10-26T08:28:44.006085+00:00",
+        "level": "info",
+        "message": "removing named collections of entities ...",
+        "model_id": 1
+      },
+      {
+        "sequence": 54,
+        "timestamp": "2026-10-26T08:28:44.008086+00:00",
+        "level": "info",
+        "message": "removing named collections of entities stopped, no named collections selected.",
+        "model_id": 1
+      },
+      {
+        "sequence": 55,
+        "timestamp": "2026-10-26T08:28:44.010085+00:00",
+        "level": "info",
+        "message": "analyzing feature edges ...",
+        "model_id": 1
+      },
+      {
+        "sequence": 56,
+        "timestamp": "2026-10-26T08:28:44.011485+00:00",
+        "level": "info",
+        "message": "detecting feature edges, feature angle = 40 [deg] ...",
+        "model_id": 1
+      },
+      {
+        "sequence": 57,
+        "timestamp": "2026-10-26T08:28:44.015497+00:00",
+        "level": "info",
+        "message": "Data information",
+        "model_id": 1
+      },
+      {
+        "sequence": 58,
+        "timestamp": "2026-10-26T08:28:44.016488+00:00",
+        "level": "info",
+        "message": "Meshing model",
+        "model_id": 1
+      },
+      {
+        "sequence": 59,
+        "timestamp": "2026-10-26T08:28:44.017489+00:00",
+        "level": "info",
+        "message": "Attributes:",
+        "model_id": 1
+      },
+      {
+        "sequence": 60,
+        "timestamp": "2026-10-26T08:28:44.018489+00:00",
+        "level": "info",
+        "message": "'LengthUnit': '[mm]'",
+        "model_id": 1
+      },
+      {
+        "sequence": 61,
+        "timestamp": "2026-10-26T08:28:44.019488+00:00",
+        "level": "info",
+        "message": "Entity summary:",
+        "model_id": 1
+      },
+      {
+        "sequence": 62,
+        "timestamp": "2026-10-26T08:28:44.021488+00:00",
+        "level": "info",
+        "message": "Collection: 5",
+        "model_id": 1
+      },
+      {
+        "sequence": 63,
+        "timestamp": "2026-10-26T08:28:44.021488+00:00",
+        "level": "info",
+        "message": "Component : 2",
+        "model_id": 1
+      },
+      {
+        "sequence": 64,
+        "timestamp": "2026-10-26T08:28:44.023489+00:00",
+        "level": "info",
+        "message": "Body      : 1",
+        "model_id": 1
+      },
+      {
+        "sequence": 65,
+        "timestamp": "2026-10-26T08:28:44.024488+00:00",
+        "level": "info",
+        "message": "Shell     : 1",
+        "model_id": 1
+      },
+      {
+        "sequence": 66,
+        "timestamp": "2026-10-26T08:28:44.025488+00:00",
+        "level": "info",
+        "message": "Face      : 11",
+        "model_id": 1
+      },
+      {
+        "sequence": 67,
+        "timestamp": "2026-10-26T08:28:44.026927+00:00",
+        "level": "info",
+        "message": "Loop      : 20",
+        "model_id": 1
+      },
+      {
+        "sequence": 68,
+        "timestamp": "2026-10-26T08:28:44.028932+00:00",
+        "level": "info",
+        "message": "Edge      : 10",
+        "model_id": 1
+      },
+      {
+        "sequence": 69,
+        "timestamp": "2026-10-26T08:28:44.029933+00:00",
+        "level": "info",
+        "message": "Vertex    : 1",
+        "model_id": 1
+      },
+      {
+        "sequence": 70,
+        "timestamp": "2026-10-26T08:28:44.030933+00:00",
+        "level": "info",
+        "message": "Surface   : 11",
+        "model_id": 1
+      },
+      {
+        "sequence": 71,
+        "timestamp": "2026-10-26T08:28:44.031932+00:00",
+        "level": "info",
+        "message": "Curve     : 10",
+        "model_id": 1
+      },
+      {
+        "sequence": 72,
+        "timestamp": "2026-10-26T08:28:44.032932+00:00",
+        "level": "info",
+        "message": "Tessellation summary:",
+        "model_id": 1
+      },
+      {
+        "sequence": 73,
+        "timestamp": "2026-10-26T08:28:44.033932+00:00",
+        "level": "info",
+        "message": "Face facets  : 1114",
+        "model_id": 1
+      },
+      {
+        "sequence": 74,
+        "timestamp": "2026-10-26T08:28:44.034932+00:00",
+        "level": "info",
+        "message": "Edge segments: 521",
+        "model_id": 1
+      },
+      {
+        "sequence": 75,
+        "timestamp": "2026-10-26T08:28:44.035934+00:00",
+        "level": "info",
+        "message": "Bounding box:",
+        "model_id": 1
+      },
+      {
+        "sequence": 76,
+        "timestamp": "2026-10-26T08:28:44.038932+00:00",
+        "level": "info",
+        "message": "(-2, -49.83786392211914, -49.95944976806641) x (1324, 50, 200)",
+        "model_id": 1
+      },
+      {
+        "sequence": 77,
+        "timestamp": "2026-10-26T08:28:44.040931+00:00",
+        "level": "info",
+        "message": "Assembly component hierarchy:",
+        "model_id": 1
+      },
+      {
+        "sequence": 78,
+        "timestamp": "2026-10-26T08:28:44.041932+00:00",
+        "level": "info",
+        "message": "'D:\\\\Fluent AI\\\\wenqiuli.dsco'",
+        "model_id": 1
+      },
+      {
+        "sequence": 79,
+        "timestamp": "2026-10-26T08:28:44.042934+00:00",
+        "level": "info",
+        "message": "'wenqiuli'",
+        "model_id": 1
+      },
+      {
+        "sequence": 80,
+        "timestamp": "2026-10-26T08:28:44.043933+00:00",
+        "level": "info",
+        "message": "NamedCollections:",
+        "model_id": 1
+      },
+      {
+        "sequence": 81,
+        "timestamp": "2026-10-26T08:28:44.044933+00:00",
+        "level": "info",
+        "message": "'outlet'",
+        "model_id": 1
+      },
+      {
+        "sequence": 82,
+        "timestamp": "2026-10-26T08:28:44.045932+00:00",
+        "level": "info",
+        "message": "'inlet hot'",
+        "model_id": 1
+      },
+      {
+        "sequence": 83,
+        "timestamp": "2026-10-26T08:28:44.046933+00:00",
+        "level": "info",
+        "message": "'inlet cold'",
+        "model_id": 1
+      },
+      {
+        "sequence": 84,
+        "timestamp": "2026-10-26T08:28:44.047931+00:00",
+        "level": "info",
+        "message": "'wall big'",
+        "model_id": 1
+      },
+      {
+        "sequence": 85,
+        "timestamp": "2026-10-26T08:28:44.049933+00:00",
+        "level": "info",
+        "message": "'wall small'",
+        "model_id": 1
+      },
+      {
+        "sequence": 86,
+        "timestamp": "2026-10-26T08:28:44.053932+00:00",
+        "level": "info",
+        "message": "exporting FLTG data to file 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216\\\\out1793003323.42543232216.tgf' ...",
+        "model_id": 1
+      },
+      {
+        "sequence": 87,
+        "timestamp": "2026-10-26T08:28:44.066932+00:00",
+        "level": "info",
+        "message": "writing face-based mesh file 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216\\\\out1793003323.42543232216.tgf' ...",
+        "model_id": 1
+      },
+      {
+        "sequence": 88,
+        "timestamp": "2026-10-26T08:28:44.067932+00:00",
+        "level": "info",
+        "message": "======== Exported Data ========",
+        "model_id": 1
+      },
+      {
+        "sequence": 89,
+        "timestamp": "2026-10-26T08:28:44.068932+00:00",
+        "level": "info",
+        "message": "Entity summary:",
+        "model_id": 1
+      },
+      {
+        "sequence": 90,
+        "timestamp": "2026-10-26T08:28:44.068932+00:00",
+        "level": "info",
+        "message": "Object       : 1",
+        "model_id": 1
+      },
+      {
+        "sequence": 91,
+        "timestamp": "2026-10-26T08:28:44.069933+00:00",
+        "level": "info",
+        "message": "Object region: 7",
+        "model_id": 1
+      },
+      {
+        "sequence": 92,
+        "timestamp": "2026-10-26T08:28:44.070932+00:00",
+        "level": "info",
+        "message": "Zone         : 12",
+        "model_id": 1
+      },
+      {
+        "sequence": 93,
+        "timestamp": "2026-10-26T08:28:44.071933+00:00",
+        "level": "info",
+        "message": "running conversion done.",
+        "model_id": 1
+      },
+      {
+        "sequence": 94,
+        "timestamp": "2026-10-26T08:28:44.073933+00:00",
+        "level": "info",
+        "message": "running ANSYS TGrid CADToTGridConverter done.",
+        "model_id": 1
+      },
+      {
+        "sequence": 95,
+        "timestamp": "2026-10-26T08:28:44.074932+00:00",
+        "level": "info",
+        "message": "ran ANSYS TGrid CADToTGridConverter in 0.294 [s]",
+        "model_id": 1
+      },
+      {
+        "sequence": 96,
+        "timestamp": "2026-10-26T08:28:45.661466+00:00",
+        "level": "info",
+        "message": "Reading \"D:\\Fluent AI\\fluent-ai-app\\FM_ComputerOfWeiJiabao_32216/out1793003323.42543232216.tgf\"...",
+        "model_id": 1
+      },
+      {
+        "sequence": 97,
+        "timestamp": "2026-10-26T08:28:45.671469+00:00",
+        "level": "info",
+        "message": "nodes: 933",
+        "model_id": 1
+      },
+      {
+        "sequence": 98,
+        "timestamp": "2026-10-26T08:28:45.671469+00:00",
+        "level": "info",
+        "message": "edges: 369",
+        "model_id": 1
+      },
+      {
+        "sequence": 99,
+        "timestamp": "2026-10-26T08:28:45.672470+00:00",
+        "level": "info",
+        "message": "faces: 1056",
+        "model_id": 1
+      },
+      {
+        "sequence": 100,
+        "timestamp": "2026-10-26T08:28:45.672470+00:00",
+        "level": "info",
+        "message": "cells: 0",
+        "model_id": 1
+      },
+      {
+        "sequence": 101,
+        "timestamp": "2026-10-26T08:28:45.682784+00:00",
+        "level": "info",
+        "message": "generating pointers...done.",
+        "model_id": 1
+      },
+      {
+        "sequence": 102,
+        "timestamp": "2026-10-26T08:28:45.683784+00:00",
+        "level": "info",
+        "message": "extracting boundary entities...",
+        "model_id": 1
+      },
+      {
+        "sequence": 103,
+        "timestamp": "2026-10-26T08:28:45.684785+00:00",
+        "level": "info",
+        "message": "933 boundary nodes.",
+        "model_id": 1
+      },
+      {
+        "sequence": 104,
+        "timestamp": "2026-10-26T08:28:45.684785+00:00",
+        "level": "info",
+        "message": "1056 boundary faces.",
+        "model_id": 1
+      },
+      {
+        "sequence": 105,
+        "timestamp": "2026-10-26T08:28:45.685784+00:00",
+        "level": "info",
+        "message": "5 boundary face zones.",
+        "model_id": 1
+      },
+      {
+        "sequence": 106,
+        "timestamp": "2026-10-26T08:28:45.685784+00:00",
+        "level": "info",
+        "message": "done.",
+        "model_id": 1
+      },
+      {
+        "sequence": 107,
+        "timestamp": "2026-10-26T08:28:45.843917+00:00",
+        "level": "info",
+        "message": "analyzing boundary connectivity...done.",
+        "model_id": 1
+      },
+      {
+        "sequence": 108,
+        "timestamp": "2026-10-26T08:28:45.860918+00:00",
+        "level": "info",
+        "message": "---------------- Import of wenqiuli, consisting of one single part/object , complete.",
+        "model_id": 1
+      },
+      {
+        "sequence": 109,
+        "timestamp": "2026-10-26T08:28:45.890291+00:00",
+        "level": "info",
+        "message": "---------------- Import complete in  0.04 minutes.",
+        "model_id": 1
+      },
+      {
+        "sequence": 110,
+        "timestamp": "2026-10-26T08:28:46.741296+00:00",
+        "level": "success",
+        "message": "已导入 wenqiuli.dsco, 可以开始添加局部尺寸。",
+        "model_id": 1
+      }
+    ],
+    "message": "已导入 wenqiuli.dsco, 可以开始添加局部尺寸。"
+  },
+  "imported_geometry": {
+    "status": "success",
+    "message": "几何已导入。",
+    "snapshot": {
+      "session_id": "a100dae2-86c9-431c-90c9-4a9584c94676",
+      "automation_id": 1,
+      "automation_name": "Live Meshing verification",
+      "workflow_type": "watertight",
+      "status": "waiting",
+      "connection": {
+        "connected": true,
+        "mode": "launch",
+        "version": "Ansys Fluent 2025 R2",
+        "pid": 9724,
+        "host": "localhost",
+        "port": 51469
+      },
+      "models": [
+        {
+          "model_id": 1,
+          "name": "wenqiuli.dsco",
+          "file_path": "D:\\Fluent AI\\wql.meshed_files\\dp0\\FFF\\Fluent\\FM_ComputerOfWeiJiabao_9648\\wenqiuli.dsco.pmdb",
+          "status": "ready",
+          "error": null
+        }
+      ],
+      "current_model_index": 0,
+      "current_step_index": 1,
+      "steps": [
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "status": "completed",
+          "message": "几何已导入。"
+        },
+        {
+          "task_path": [
+            "add_local_sizing"
+          ],
+          "status": "pending",
+          "message": ""
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "status": "pending",
+          "message": ""
+        },
+        {
+          "task_path": [
+            "describe_geometry"
+          ],
+          "status": "pending",
+          "message": ""
+        },
+        {
+          "task_path": [
+            "update_regions"
+          ],
+          "status": "pending",
+          "message": ""
+        },
+        {
+          "task_path": [
+            "add_boundary_layer"
+          ],
+          "status": "pending",
+          "message": ""
+        },
+        {
+          "task_path": [
+            "create_volume_mesh"
+          ],
+          "status": "pending",
+          "message": ""
+        }
+      ],
+      "logs": [
+        {
+          "sequence": 1,
+          "timestamp": "2026-10-26T08:28:26.705588+00:00",
+          "level": "info",
+          "message": "正在启动 Fluent Meshing: Live Meshing verification",
+          "model_id": null
+        },
+        {
+          "sequence": 2,
+          "timestamp": "2026-10-26T08:28:42.060730+00:00",
+          "level": "success",
+          "message": "Fluent Meshing 已连接, 请执行导入几何模型。",
+          "model_id": null
+        },
+        {
+          "sequence": 3,
+          "timestamp": "2026-10-26T08:28:42.642209+00:00",
+          "level": "success",
+          "message": "已写入第 1 步的 1 项预设并回读。",
+          "model_id": 1
+        },
+        {
+          "sequence": 4,
+          "timestamp": "2026-10-26T08:28:43.114275+00:00",
+          "level": "info",
+          "message": "正在执行导入几何模型: wenqiuli.dsco",
+          "model_id": 1
+        },
+        {
+          "sequence": 5,
+          "timestamp": "2026-10-26T08:28:43.280662+00:00",
+          "level": "info",
+          "message": "正在导入几何: wenqiuli.dsco",
+          "model_id": 1
+        },
+        {
+          "sequence": 6,
+          "timestamp": "2026-10-26T08:28:43.428008+00:00",
+          "level": "info",
+          "message": "Warning: PMDB file will not be saved as the same is being imported.",
+          "model_id": 1
+        },
+        {
+          "sequence": 7,
+          "timestamp": "2026-10-26T08:28:43.432516+00:00",
+          "level": "info",
+          "message": "Importing one geom object per program-controlled and one zone per body ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 8,
+          "timestamp": "2026-10-26T08:28:43.769076+00:00",
+          "level": "info",
+          "message": "D:\\\\Ansys2025R2\\\\ANSYS Inc\\\\v252\\\\commonfiles\\\\CPython\\\\3_10\\\\winx64\\\\Release\\\\python\\\\..\\\\Ansys\\\\TGrid\\\\CADReaders.py started by MECH on ComputerOfWeiJiabao winx64 on Mon Oct 26 16:28:43 2026",
+          "model_id": 1
+        },
+        {
+          "sequence": 9,
+          "timestamp": "2026-10-26T08:28:43.772076+00:00",
+          "level": "info",
+          "message": "using Python 3.10.16 (remotes/origin/14d18b8e2626165312e076b70cf60f0faa8db8d5-dirty:14d18b8e, May 20 2) [MSC v.1942 64 bit (AMD64)]",
+          "model_id": 1
+        },
+        {
+          "sequence": 10,
+          "timestamp": "2026-10-26T08:28:43.774076+00:00",
+          "level": "info",
+          "message": "using Ansys.Meshing.FieldMesher build Jun 13 2025 15:24:50",
+          "model_id": 1
+        },
+        {
+          "sequence": 11,
+          "timestamp": "2026-10-26T08:28:43.786567+00:00",
+          "level": "info",
+          "message": "running ANSYS TGrid CADToTGridConverter ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 12,
+          "timestamp": "2026-10-26T08:28:43.786567+00:00",
+          "level": "info",
+          "message": "setting up parameters ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 13,
+          "timestamp": "2026-10-26T08:28:43.795063+00:00",
+          "level": "info",
+          "message": "setting up parameters done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 14,
+          "timestamp": "2026-10-26T08:28:43.795063+00:00",
+          "level": "info",
+          "message": "running conversion ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 15,
+          "timestamp": "2026-10-26T08:28:43.804062+00:00",
+          "level": "info",
+          "message": "converting 1 file(s) from Workbench to FLTG using output path 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216/out1793003323.42543232216.tgf'",
+          "model_id": 1
+        },
+        {
+          "sequence": 16,
+          "timestamp": "2026-10-26T08:28:43.808063+00:00",
+          "level": "info",
+          "message": "converting file 'wenqiuli.dsco.pmdb' (1 of 1) from Workbench to FLTG using output path 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216'",
+          "model_id": 1
+        },
+        {
+          "sequence": 17,
+          "timestamp": "2026-10-26T08:28:43.808063+00:00",
+          "level": "info",
+          "message": "importing data ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 18,
+          "timestamp": "2026-10-26T08:28:43.812063+00:00",
+          "level": "info",
+          "message": "importing meshing model from PartMgr from file 'D:\\\\Fluent AI\\\\wql.meshed_files\\\\dp0\\\\FFF\\\\Fluent\\\\FM_ComputerOfWeiJiabao_9648\\\\wenqiuli.dsco.pmdb' ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 19,
+          "timestamp": "2026-10-26T08:28:43.884747+00:00",
+          "level": "info",
+          "message": "setting enclosure and symmetry processing to False",
+          "model_id": 1
+        },
+        {
+          "sequence": 20,
+          "timestamp": "2026-10-26T08:28:43.885748+00:00",
+          "level": "info",
+          "message": "setting transfer named selections to True",
+          "model_id": 1
+        },
+        {
+          "sequence": 21,
+          "timestamp": "2026-10-26T08:28:43.886748+00:00",
+          "level": "info",
+          "message": "setting named selection prefixes to ''",
+          "model_id": 1
+        },
+        {
+          "sequence": 22,
+          "timestamp": "2026-10-26T08:28:43.887748+00:00",
+          "level": "info",
+          "message": "setting mixed import resolution type to 'SolidAndSurface'",
+          "model_id": 1
+        },
+        {
+          "sequence": 23,
+          "timestamp": "2026-10-26T08:28:43.887748+00:00",
+          "level": "info",
+          "message": "setting target application to 'FluentMeshing'",
+          "model_id": 1
+        },
+        {
+          "sequence": 24,
+          "timestamp": "2026-10-26T08:28:43.889089+00:00",
+          "level": "info",
+          "message": "initializing part manager from file ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 25,
+          "timestamp": "2026-10-26T08:28:43.961908+00:00",
+          "level": "info",
+          "message": "processing assembly 'D:\\\\Fluent AI\\\\wenqiuli.dsco' with ID 1 and reference key '<?xml version=\"1.0\" encoding=\"utf-16\"?>",
+          "model_id": 1
+        },
+        {
+          "sequence": 26,
+          "timestamp": "2026-10-26T08:28:43.964081+00:00",
+          "level": "info",
+          "message": "<IdTable xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">",
+          "model_id": 1
+        },
+        {
+          "sequence": 27,
+          "timestamp": "2026-10-26T08:28:43.964081+00:00",
+          "level": "info",
+          "message": "<Table>",
+          "model_id": 1
+        },
+        {
+          "sequence": 28,
+          "timestamp": "2026-10-26T08:28:43.964081+00:00",
+          "level": "info",
+          "message": "<Entry>",
+          "model_id": 1
+        },
+        {
+          "sequence": 29,
+          "timestamp": "2026-10-26T08:28:43.966085+00:00",
+          "level": "info",
+          "message": "<AssemblyVersionInfo>",
+          "model_id": 1
+        },
+        {
+          "sequence": 30,
+          "timestamp": "2026-10-26T08:28:43.968085+00:00",
+          "level": "info",
+          "message": "<AssemblySavedVersion>2147483647</AssemblySavedVersion>",
+          "model_id": 1
+        },
+        {
+          "sequence": 31,
+          "timestamp": "2026-10-26T08:28:43.970084+00:00",
+          "level": "info",
+          "message": "<AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>",
+          "model_id": 1
+        },
+        {
+          "sequence": 32,
+          "timestamp": "2026-10-26T08:28:43.971086+00:00",
+          "level": "info",
+          "message": "<IsLegacyLabel>false</IsLegacyLabel>",
+          "model_id": 1
+        },
+        {
+          "sequence": 33,
+          "timestamp": "2026-10-26T08:28:43.971086+00:00",
+          "level": "info",
+          "message": "</AssemblyVersionInfo>",
+          "model_id": 1
+        },
+        {
+          "sequence": 34,
+          "timestamp": "2026-10-26T08:28:43.973085+00:00",
+          "level": "info",
+          "message": "<Text>~sEf77bbb93-b90b-4962-9b2b-e44ca7515c7e.2_#</Text>",
+          "model_id": 1
+        },
+        {
+          "sequence": 35,
+          "timestamp": "2026-10-26T08:28:43.973085+00:00",
+          "level": "info",
+          "message": "<Id>10000</Id>",
+          "model_id": 1
+        },
+        {
+          "sequence": 36,
+          "timestamp": "2026-10-26T08:28:43.974084+00:00",
+          "level": "info",
+          "message": "<IsExploded>false</IsExploded>",
+          "model_id": 1
+        },
+        {
+          "sequence": 37,
+          "timestamp": "2026-10-26T08:28:43.974084+00:00",
+          "level": "info",
+          "message": "</Entry>",
+          "model_id": 1
+        },
+        {
+          "sequence": 38,
+          "timestamp": "2026-10-26T08:28:43.974084+00:00",
+          "level": "info",
+          "message": "</Table>",
+          "model_id": 1
+        },
+        {
+          "sequence": 39,
+          "timestamp": "2026-10-26T08:28:43.975085+00:00",
+          "level": "info",
+          "message": "<AssemblyVersionInfo>",
+          "model_id": 1
+        },
+        {
+          "sequence": 40,
+          "timestamp": "2026-10-26T08:28:43.976087+00:00",
+          "level": "info",
+          "message": "<AssemblySavedVersion>2147483647</AssemblySavedVersion>",
+          "model_id": 1
+        },
+        {
+          "sequence": 41,
+          "timestamp": "2026-10-26T08:28:43.979086+00:00",
+          "level": "info",
+          "message": "<AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>",
+          "model_id": 1
+        },
+        {
+          "sequence": 42,
+          "timestamp": "2026-10-26T08:28:43.980085+00:00",
+          "level": "info",
+          "message": "<IsLegacyLabel>false</IsLegacyLabel>",
+          "model_id": 1
+        },
+        {
+          "sequence": 43,
+          "timestamp": "2026-10-26T08:28:43.981085+00:00",
+          "level": "info",
+          "message": "</AssemblyVersionInfo>",
+          "model_id": 1
+        },
+        {
+          "sequence": 44,
+          "timestamp": "2026-10-26T08:28:43.982086+00:00",
+          "level": "info",
+          "message": "</IdTable>'",
+          "model_id": 1
+        },
+        {
+          "sequence": 45,
+          "timestamp": "2026-10-26T08:28:43.983086+00:00",
+          "level": "info",
+          "message": "length unit = [m]",
+          "model_id": 1
+        },
+        {
+          "sequence": 46,
+          "timestamp": "2026-10-26T08:28:43.983086+00:00",
+          "level": "info",
+          "message": "processing part 'wenqiuli' with ID 3",
+          "model_id": 1
+        },
+        {
+          "sequence": 47,
+          "timestamp": "2026-10-26T08:28:43.984087+00:00",
+          "level": "info",
+          "message": "processing named selection 'outlet'",
+          "model_id": 1
+        },
+        {
+          "sequence": 48,
+          "timestamp": "2026-10-26T08:28:43.985087+00:00",
+          "level": "info",
+          "message": "processing named selection 'inlet hot'",
+          "model_id": 1
+        },
+        {
+          "sequence": 49,
+          "timestamp": "2026-10-26T08:28:43.986085+00:00",
+          "level": "info",
+          "message": "processing named selection 'inlet cold'",
+          "model_id": 1
+        },
+        {
+          "sequence": 50,
+          "timestamp": "2026-10-26T08:28:43.988086+00:00",
+          "level": "info",
+          "message": "processing named selection 'wall big'",
+          "model_id": 1
+        },
+        {
+          "sequence": 51,
+          "timestamp": "2026-10-26T08:28:43.989088+00:00",
+          "level": "info",
+          "message": "processing named selection 'wall small'",
+          "model_id": 1
+        },
+        {
+          "sequence": 52,
+          "timestamp": "2026-10-26T08:28:43.990088+00:00",
+          "level": "info",
+          "message": "processing data ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 53,
+          "timestamp": "2026-10-26T08:28:44.006085+00:00",
+          "level": "info",
+          "message": "removing named collections of entities ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 54,
+          "timestamp": "2026-10-26T08:28:44.008086+00:00",
+          "level": "info",
+          "message": "removing named collections of entities stopped, no named collections selected.",
+          "model_id": 1
+        },
+        {
+          "sequence": 55,
+          "timestamp": "2026-10-26T08:28:44.010085+00:00",
+          "level": "info",
+          "message": "analyzing feature edges ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 56,
+          "timestamp": "2026-10-26T08:28:44.011485+00:00",
+          "level": "info",
+          "message": "detecting feature edges, feature angle = 40 [deg] ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 57,
+          "timestamp": "2026-10-26T08:28:44.015497+00:00",
+          "level": "info",
+          "message": "Data information",
+          "model_id": 1
+        },
+        {
+          "sequence": 58,
+          "timestamp": "2026-10-26T08:28:44.016488+00:00",
+          "level": "info",
+          "message": "Meshing model",
+          "model_id": 1
+        },
+        {
+          "sequence": 59,
+          "timestamp": "2026-10-26T08:28:44.017489+00:00",
+          "level": "info",
+          "message": "Attributes:",
+          "model_id": 1
+        },
+        {
+          "sequence": 60,
+          "timestamp": "2026-10-26T08:28:44.018489+00:00",
+          "level": "info",
+          "message": "'LengthUnit': '[mm]'",
+          "model_id": 1
+        },
+        {
+          "sequence": 61,
+          "timestamp": "2026-10-26T08:28:44.019488+00:00",
+          "level": "info",
+          "message": "Entity summary:",
+          "model_id": 1
+        },
+        {
+          "sequence": 62,
+          "timestamp": "2026-10-26T08:28:44.021488+00:00",
+          "level": "info",
+          "message": "Collection: 5",
+          "model_id": 1
+        },
+        {
+          "sequence": 63,
+          "timestamp": "2026-10-26T08:28:44.021488+00:00",
+          "level": "info",
+          "message": "Component : 2",
+          "model_id": 1
+        },
+        {
+          "sequence": 64,
+          "timestamp": "2026-10-26T08:28:44.023489+00:00",
+          "level": "info",
+          "message": "Body      : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 65,
+          "timestamp": "2026-10-26T08:28:44.024488+00:00",
+          "level": "info",
+          "message": "Shell     : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 66,
+          "timestamp": "2026-10-26T08:28:44.025488+00:00",
+          "level": "info",
+          "message": "Face      : 11",
+          "model_id": 1
+        },
+        {
+          "sequence": 67,
+          "timestamp": "2026-10-26T08:28:44.026927+00:00",
+          "level": "info",
+          "message": "Loop      : 20",
+          "model_id": 1
+        },
+        {
+          "sequence": 68,
+          "timestamp": "2026-10-26T08:28:44.028932+00:00",
+          "level": "info",
+          "message": "Edge      : 10",
+          "model_id": 1
+        },
+        {
+          "sequence": 69,
+          "timestamp": "2026-10-26T08:28:44.029933+00:00",
+          "level": "info",
+          "message": "Vertex    : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 70,
+          "timestamp": "2026-10-26T08:28:44.030933+00:00",
+          "level": "info",
+          "message": "Surface   : 11",
+          "model_id": 1
+        },
+        {
+          "sequence": 71,
+          "timestamp": "2026-10-26T08:28:44.031932+00:00",
+          "level": "info",
+          "message": "Curve     : 10",
+          "model_id": 1
+        },
+        {
+          "sequence": 72,
+          "timestamp": "2026-10-26T08:28:44.032932+00:00",
+          "level": "info",
+          "message": "Tessellation summary:",
+          "model_id": 1
+        },
+        {
+          "sequence": 73,
+          "timestamp": "2026-10-26T08:28:44.033932+00:00",
+          "level": "info",
+          "message": "Face facets  : 1114",
+          "model_id": 1
+        },
+        {
+          "sequence": 74,
+          "timestamp": "2026-10-26T08:28:44.034932+00:00",
+          "level": "info",
+          "message": "Edge segments: 521",
+          "model_id": 1
+        },
+        {
+          "sequence": 75,
+          "timestamp": "2026-10-26T08:28:44.035934+00:00",
+          "level": "info",
+          "message": "Bounding box:",
+          "model_id": 1
+        },
+        {
+          "sequence": 76,
+          "timestamp": "2026-10-26T08:28:44.038932+00:00",
+          "level": "info",
+          "message": "(-2, -49.83786392211914, -49.95944976806641) x (1324, 50, 200)",
+          "model_id": 1
+        },
+        {
+          "sequence": 77,
+          "timestamp": "2026-10-26T08:28:44.040931+00:00",
+          "level": "info",
+          "message": "Assembly component hierarchy:",
+          "model_id": 1
+        },
+        {
+          "sequence": 78,
+          "timestamp": "2026-10-26T08:28:44.041932+00:00",
+          "level": "info",
+          "message": "'D:\\\\Fluent AI\\\\wenqiuli.dsco'",
+          "model_id": 1
+        },
+        {
+          "sequence": 79,
+          "timestamp": "2026-10-26T08:28:44.042934+00:00",
+          "level": "info",
+          "message": "'wenqiuli'",
+          "model_id": 1
+        },
+        {
+          "sequence": 80,
+          "timestamp": "2026-10-26T08:28:44.043933+00:00",
+          "level": "info",
+          "message": "NamedCollections:",
+          "model_id": 1
+        },
+        {
+          "sequence": 81,
+          "timestamp": "2026-10-26T08:28:44.044933+00:00",
+          "level": "info",
+          "message": "'outlet'",
+          "model_id": 1
+        },
+        {
+          "sequence": 82,
+          "timestamp": "2026-10-26T08:28:44.045932+00:00",
+          "level": "info",
+          "message": "'inlet hot'",
+          "model_id": 1
+        },
+        {
+          "sequence": 83,
+          "timestamp": "2026-10-26T08:28:44.046933+00:00",
+          "level": "info",
+          "message": "'inlet cold'",
+          "model_id": 1
+        },
+        {
+          "sequence": 84,
+          "timestamp": "2026-10-26T08:28:44.047931+00:00",
+          "level": "info",
+          "message": "'wall big'",
+          "model_id": 1
+        },
+        {
+          "sequence": 85,
+          "timestamp": "2026-10-26T08:28:44.049933+00:00",
+          "level": "info",
+          "message": "'wall small'",
+          "model_id": 1
+        },
+        {
+          "sequence": 86,
+          "timestamp": "2026-10-26T08:28:44.053932+00:00",
+          "level": "info",
+          "message": "exporting FLTG data to file 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216\\\\out1793003323.42543232216.tgf' ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 87,
+          "timestamp": "2026-10-26T08:28:44.066932+00:00",
+          "level": "info",
+          "message": "writing face-based mesh file 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216\\\\out1793003323.42543232216.tgf' ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 88,
+          "timestamp": "2026-10-26T08:28:44.067932+00:00",
+          "level": "info",
+          "message": "======== Exported Data ========",
+          "model_id": 1
+        },
+        {
+          "sequence": 89,
+          "timestamp": "2026-10-26T08:28:44.068932+00:00",
+          "level": "info",
+          "message": "Entity summary:",
+          "model_id": 1
+        },
+        {
+          "sequence": 90,
+          "timestamp": "2026-10-26T08:28:44.068932+00:00",
+          "level": "info",
+          "message": "Object       : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 91,
+          "timestamp": "2026-10-26T08:28:44.069933+00:00",
+          "level": "info",
+          "message": "Object region: 7",
+          "model_id": 1
+        },
+        {
+          "sequence": 92,
+          "timestamp": "2026-10-26T08:28:44.070932+00:00",
+          "level": "info",
+          "message": "Zone         : 12",
+          "model_id": 1
+        },
+        {
+          "sequence": 93,
+          "timestamp": "2026-10-26T08:28:44.071933+00:00",
+          "level": "info",
+          "message": "running conversion done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 94,
+          "timestamp": "2026-10-26T08:28:44.073933+00:00",
+          "level": "info",
+          "message": "running ANSYS TGrid CADToTGridConverter done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 95,
+          "timestamp": "2026-10-26T08:28:44.074932+00:00",
+          "level": "info",
+          "message": "ran ANSYS TGrid CADToTGridConverter in 0.294 [s]",
+          "model_id": 1
+        },
+        {
+          "sequence": 96,
+          "timestamp": "2026-10-26T08:28:45.661466+00:00",
+          "level": "info",
+          "message": "Reading \"D:\\Fluent AI\\fluent-ai-app\\FM_ComputerOfWeiJiabao_32216/out1793003323.42543232216.tgf\"...",
+          "model_id": 1
+        },
+        {
+          "sequence": 97,
+          "timestamp": "2026-10-26T08:28:45.671469+00:00",
+          "level": "info",
+          "message": "nodes: 933",
+          "model_id": 1
+        },
+        {
+          "sequence": 98,
+          "timestamp": "2026-10-26T08:28:45.671469+00:00",
+          "level": "info",
+          "message": "edges: 369",
+          "model_id": 1
+        },
+        {
+          "sequence": 99,
+          "timestamp": "2026-10-26T08:28:45.672470+00:00",
+          "level": "info",
+          "message": "faces: 1056",
+          "model_id": 1
+        },
+        {
+          "sequence": 100,
+          "timestamp": "2026-10-26T08:28:45.672470+00:00",
+          "level": "info",
+          "message": "cells: 0",
+          "model_id": 1
+        },
+        {
+          "sequence": 101,
+          "timestamp": "2026-10-26T08:28:45.682784+00:00",
+          "level": "info",
+          "message": "generating pointers...done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 102,
+          "timestamp": "2026-10-26T08:28:45.683784+00:00",
+          "level": "info",
+          "message": "extracting boundary entities...",
+          "model_id": 1
+        },
+        {
+          "sequence": 103,
+          "timestamp": "2026-10-26T08:28:45.684785+00:00",
+          "level": "info",
+          "message": "933 boundary nodes.",
+          "model_id": 1
+        },
+        {
+          "sequence": 104,
+          "timestamp": "2026-10-26T08:28:45.684785+00:00",
+          "level": "info",
+          "message": "1056 boundary faces.",
+          "model_id": 1
+        },
+        {
+          "sequence": 105,
+          "timestamp": "2026-10-26T08:28:45.685784+00:00",
+          "level": "info",
+          "message": "5 boundary face zones.",
+          "model_id": 1
+        },
+        {
+          "sequence": 106,
+          "timestamp": "2026-10-26T08:28:45.685784+00:00",
+          "level": "info",
+          "message": "done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 107,
+          "timestamp": "2026-10-26T08:28:45.843917+00:00",
+          "level": "info",
+          "message": "analyzing boundary connectivity...done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 108,
+          "timestamp": "2026-10-26T08:28:45.860918+00:00",
+          "level": "info",
+          "message": "---------------- Import of wenqiuli, consisting of one single part/object , complete.",
+          "model_id": 1
+        },
+        {
+          "sequence": 109,
+          "timestamp": "2026-10-26T08:28:45.890291+00:00",
+          "level": "info",
+          "message": "---------------- Import complete in  0.04 minutes.",
+          "model_id": 1
+        },
+        {
+          "sequence": 110,
+          "timestamp": "2026-10-26T08:28:46.741296+00:00",
+          "level": "success",
+          "message": "已导入 wenqiuli.dsco, 可以开始添加局部尺寸。",
+          "model_id": 1
+        }
+      ],
+      "message": "已导入 wenqiuli.dsco, 可以开始添加局部尺寸。"
+    },
+    "step_index": 0,
+    "task_path": [
+      "import_geometry"
+    ],
+    "write_report": null,
+    "read_report": {
+      "workflow_type": "watertight",
+      "status": "success",
+      "task_names": [
+        "update_regions",
+        "create_regions",
+        "describe_geometry",
+        "enclose_fluid_regions",
+        "update_boundaries",
+        "import_geometry",
+        "create_surface_mesh",
+        "create_volume_mesh",
+        "apply_share_topology",
+        "add_boundary_layer",
+        "add_local_sizing"
+      ],
+      "items": [
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "file_format"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "CAD",
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "import_type"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "Single File",
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "length_unit"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "m",
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "mesh_unit"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "m",
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "use_body_labels"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "No",
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "import_cad_preferences",
+            "show_import_cad_preferences"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "import_cad_preferences",
+            "automatic_object_creation"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "yes",
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "import_cad_preferences",
+            "faceted_bodies"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "no",
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "import_cad_preferences",
+            "ci_separation"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "none",
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "import_cad_preferences",
+            "ci_separation_angle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 40.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "import_cad_preferences",
+            "ci_refaceting"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "import_cad_preferences",
+            "ci_tolerence"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "import_cad_preferences",
+            "max_facet_length"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "import_cad_preferences",
+            "edge_label"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "no",
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "import_cad_preferences",
+            "merge_nodes"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "yes",
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "import_cad_preferences",
+            "extract_angle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 40.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "file_name"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "D:\\Fluent AI\\wql.meshed_files\\dp0\\FFF\\Fluent\\FM_ComputerOfWeiJiabao_9648\\wenqiuli.dsco.pmdb",
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "file_names"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": null,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "mesh_file_name"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": null,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "num_parts"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 1.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "append_mesh"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "directory"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": null,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "pattern"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": null,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "extract_features"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": true,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "feature_angle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 40.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "create_cad_assemblies"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "one_object_per"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "Program-controlled",
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "one_zone_per"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "body",
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "open_all_cad_in_subdirectories"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "save_pmdb_intermediate_file"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "import_part_names"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "use_part_or_body_as_suffix"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "import_named_selections"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": true,
+          "error": null
+        },
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "import_curvature_data_from_cad"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": true,
+          "error": null
+        }
+      ],
+      "error": null
+    }
+  },
+  "entered_surface_step": {
+    "status": "success",
+    "message": "",
+    "snapshot": {
+      "session_id": "a100dae2-86c9-431c-90c9-4a9584c94676",
+      "automation_id": 1,
+      "automation_name": "Live Meshing verification",
+      "workflow_type": "watertight",
+      "status": "waiting",
+      "connection": {
+        "connected": true,
+        "mode": "launch",
+        "version": "Ansys Fluent 2025 R2",
+        "pid": 9724,
+        "host": "localhost",
+        "port": 51469
+      },
+      "models": [
+        {
+          "model_id": 1,
+          "name": "wenqiuli.dsco",
+          "file_path": "D:\\Fluent AI\\wql.meshed_files\\dp0\\FFF\\Fluent\\FM_ComputerOfWeiJiabao_9648\\wenqiuli.dsco.pmdb",
+          "status": "ready",
+          "error": null
+        }
+      ],
+      "current_model_index": 0,
+      "current_step_index": 2,
+      "steps": [
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "status": "completed",
+          "message": "几何已导入。"
+        },
+        {
+          "task_path": [
+            "add_local_sizing"
+          ],
+          "status": "pending",
+          "message": ""
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "status": "active",
+          "message": ""
+        },
+        {
+          "task_path": [
+            "describe_geometry"
+          ],
+          "status": "pending",
+          "message": ""
+        },
+        {
+          "task_path": [
+            "update_regions"
+          ],
+          "status": "pending",
+          "message": ""
+        },
+        {
+          "task_path": [
+            "add_boundary_layer"
+          ],
+          "status": "pending",
+          "message": ""
+        },
+        {
+          "task_path": [
+            "create_volume_mesh"
+          ],
+          "status": "pending",
+          "message": ""
+        }
+      ],
+      "logs": [
+        {
+          "sequence": 1,
+          "timestamp": "2026-10-26T08:28:26.705588+00:00",
+          "level": "info",
+          "message": "正在启动 Fluent Meshing: Live Meshing verification",
+          "model_id": null
+        },
+        {
+          "sequence": 2,
+          "timestamp": "2026-10-26T08:28:42.060730+00:00",
+          "level": "success",
+          "message": "Fluent Meshing 已连接, 请执行导入几何模型。",
+          "model_id": null
+        },
+        {
+          "sequence": 3,
+          "timestamp": "2026-10-26T08:28:42.642209+00:00",
+          "level": "success",
+          "message": "已写入第 1 步的 1 项预设并回读。",
+          "model_id": 1
+        },
+        {
+          "sequence": 4,
+          "timestamp": "2026-10-26T08:28:43.114275+00:00",
+          "level": "info",
+          "message": "正在执行导入几何模型: wenqiuli.dsco",
+          "model_id": 1
+        },
+        {
+          "sequence": 5,
+          "timestamp": "2026-10-26T08:28:43.280662+00:00",
+          "level": "info",
+          "message": "正在导入几何: wenqiuli.dsco",
+          "model_id": 1
+        },
+        {
+          "sequence": 6,
+          "timestamp": "2026-10-26T08:28:43.428008+00:00",
+          "level": "info",
+          "message": "Warning: PMDB file will not be saved as the same is being imported.",
+          "model_id": 1
+        },
+        {
+          "sequence": 7,
+          "timestamp": "2026-10-26T08:28:43.432516+00:00",
+          "level": "info",
+          "message": "Importing one geom object per program-controlled and one zone per body ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 8,
+          "timestamp": "2026-10-26T08:28:43.769076+00:00",
+          "level": "info",
+          "message": "D:\\\\Ansys2025R2\\\\ANSYS Inc\\\\v252\\\\commonfiles\\\\CPython\\\\3_10\\\\winx64\\\\Release\\\\python\\\\..\\\\Ansys\\\\TGrid\\\\CADReaders.py started by MECH on ComputerOfWeiJiabao winx64 on Mon Oct 26 16:28:43 2026",
+          "model_id": 1
+        },
+        {
+          "sequence": 9,
+          "timestamp": "2026-10-26T08:28:43.772076+00:00",
+          "level": "info",
+          "message": "using Python 3.10.16 (remotes/origin/14d18b8e2626165312e076b70cf60f0faa8db8d5-dirty:14d18b8e, May 20 2) [MSC v.1942 64 bit (AMD64)]",
+          "model_id": 1
+        },
+        {
+          "sequence": 10,
+          "timestamp": "2026-10-26T08:28:43.774076+00:00",
+          "level": "info",
+          "message": "using Ansys.Meshing.FieldMesher build Jun 13 2025 15:24:50",
+          "model_id": 1
+        },
+        {
+          "sequence": 11,
+          "timestamp": "2026-10-26T08:28:43.786567+00:00",
+          "level": "info",
+          "message": "running ANSYS TGrid CADToTGridConverter ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 12,
+          "timestamp": "2026-10-26T08:28:43.786567+00:00",
+          "level": "info",
+          "message": "setting up parameters ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 13,
+          "timestamp": "2026-10-26T08:28:43.795063+00:00",
+          "level": "info",
+          "message": "setting up parameters done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 14,
+          "timestamp": "2026-10-26T08:28:43.795063+00:00",
+          "level": "info",
+          "message": "running conversion ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 15,
+          "timestamp": "2026-10-26T08:28:43.804062+00:00",
+          "level": "info",
+          "message": "converting 1 file(s) from Workbench to FLTG using output path 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216/out1793003323.42543232216.tgf'",
+          "model_id": 1
+        },
+        {
+          "sequence": 16,
+          "timestamp": "2026-10-26T08:28:43.808063+00:00",
+          "level": "info",
+          "message": "converting file 'wenqiuli.dsco.pmdb' (1 of 1) from Workbench to FLTG using output path 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216'",
+          "model_id": 1
+        },
+        {
+          "sequence": 17,
+          "timestamp": "2026-10-26T08:28:43.808063+00:00",
+          "level": "info",
+          "message": "importing data ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 18,
+          "timestamp": "2026-10-26T08:28:43.812063+00:00",
+          "level": "info",
+          "message": "importing meshing model from PartMgr from file 'D:\\\\Fluent AI\\\\wql.meshed_files\\\\dp0\\\\FFF\\\\Fluent\\\\FM_ComputerOfWeiJiabao_9648\\\\wenqiuli.dsco.pmdb' ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 19,
+          "timestamp": "2026-10-26T08:28:43.884747+00:00",
+          "level": "info",
+          "message": "setting enclosure and symmetry processing to False",
+          "model_id": 1
+        },
+        {
+          "sequence": 20,
+          "timestamp": "2026-10-26T08:28:43.885748+00:00",
+          "level": "info",
+          "message": "setting transfer named selections to True",
+          "model_id": 1
+        },
+        {
+          "sequence": 21,
+          "timestamp": "2026-10-26T08:28:43.886748+00:00",
+          "level": "info",
+          "message": "setting named selection prefixes to ''",
+          "model_id": 1
+        },
+        {
+          "sequence": 22,
+          "timestamp": "2026-10-26T08:28:43.887748+00:00",
+          "level": "info",
+          "message": "setting mixed import resolution type to 'SolidAndSurface'",
+          "model_id": 1
+        },
+        {
+          "sequence": 23,
+          "timestamp": "2026-10-26T08:28:43.887748+00:00",
+          "level": "info",
+          "message": "setting target application to 'FluentMeshing'",
+          "model_id": 1
+        },
+        {
+          "sequence": 24,
+          "timestamp": "2026-10-26T08:28:43.889089+00:00",
+          "level": "info",
+          "message": "initializing part manager from file ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 25,
+          "timestamp": "2026-10-26T08:28:43.961908+00:00",
+          "level": "info",
+          "message": "processing assembly 'D:\\\\Fluent AI\\\\wenqiuli.dsco' with ID 1 and reference key '<?xml version=\"1.0\" encoding=\"utf-16\"?>",
+          "model_id": 1
+        },
+        {
+          "sequence": 26,
+          "timestamp": "2026-10-26T08:28:43.964081+00:00",
+          "level": "info",
+          "message": "<IdTable xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">",
+          "model_id": 1
+        },
+        {
+          "sequence": 27,
+          "timestamp": "2026-10-26T08:28:43.964081+00:00",
+          "level": "info",
+          "message": "<Table>",
+          "model_id": 1
+        },
+        {
+          "sequence": 28,
+          "timestamp": "2026-10-26T08:28:43.964081+00:00",
+          "level": "info",
+          "message": "<Entry>",
+          "model_id": 1
+        },
+        {
+          "sequence": 29,
+          "timestamp": "2026-10-26T08:28:43.966085+00:00",
+          "level": "info",
+          "message": "<AssemblyVersionInfo>",
+          "model_id": 1
+        },
+        {
+          "sequence": 30,
+          "timestamp": "2026-10-26T08:28:43.968085+00:00",
+          "level": "info",
+          "message": "<AssemblySavedVersion>2147483647</AssemblySavedVersion>",
+          "model_id": 1
+        },
+        {
+          "sequence": 31,
+          "timestamp": "2026-10-26T08:28:43.970084+00:00",
+          "level": "info",
+          "message": "<AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>",
+          "model_id": 1
+        },
+        {
+          "sequence": 32,
+          "timestamp": "2026-10-26T08:28:43.971086+00:00",
+          "level": "info",
+          "message": "<IsLegacyLabel>false</IsLegacyLabel>",
+          "model_id": 1
+        },
+        {
+          "sequence": 33,
+          "timestamp": "2026-10-26T08:28:43.971086+00:00",
+          "level": "info",
+          "message": "</AssemblyVersionInfo>",
+          "model_id": 1
+        },
+        {
+          "sequence": 34,
+          "timestamp": "2026-10-26T08:28:43.973085+00:00",
+          "level": "info",
+          "message": "<Text>~sEf77bbb93-b90b-4962-9b2b-e44ca7515c7e.2_#</Text>",
+          "model_id": 1
+        },
+        {
+          "sequence": 35,
+          "timestamp": "2026-10-26T08:28:43.973085+00:00",
+          "level": "info",
+          "message": "<Id>10000</Id>",
+          "model_id": 1
+        },
+        {
+          "sequence": 36,
+          "timestamp": "2026-10-26T08:28:43.974084+00:00",
+          "level": "info",
+          "message": "<IsExploded>false</IsExploded>",
+          "model_id": 1
+        },
+        {
+          "sequence": 37,
+          "timestamp": "2026-10-26T08:28:43.974084+00:00",
+          "level": "info",
+          "message": "</Entry>",
+          "model_id": 1
+        },
+        {
+          "sequence": 38,
+          "timestamp": "2026-10-26T08:28:43.974084+00:00",
+          "level": "info",
+          "message": "</Table>",
+          "model_id": 1
+        },
+        {
+          "sequence": 39,
+          "timestamp": "2026-10-26T08:28:43.975085+00:00",
+          "level": "info",
+          "message": "<AssemblyVersionInfo>",
+          "model_id": 1
+        },
+        {
+          "sequence": 40,
+          "timestamp": "2026-10-26T08:28:43.976087+00:00",
+          "level": "info",
+          "message": "<AssemblySavedVersion>2147483647</AssemblySavedVersion>",
+          "model_id": 1
+        },
+        {
+          "sequence": 41,
+          "timestamp": "2026-10-26T08:28:43.979086+00:00",
+          "level": "info",
+          "message": "<AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>",
+          "model_id": 1
+        },
+        {
+          "sequence": 42,
+          "timestamp": "2026-10-26T08:28:43.980085+00:00",
+          "level": "info",
+          "message": "<IsLegacyLabel>false</IsLegacyLabel>",
+          "model_id": 1
+        },
+        {
+          "sequence": 43,
+          "timestamp": "2026-10-26T08:28:43.981085+00:00",
+          "level": "info",
+          "message": "</AssemblyVersionInfo>",
+          "model_id": 1
+        },
+        {
+          "sequence": 44,
+          "timestamp": "2026-10-26T08:28:43.982086+00:00",
+          "level": "info",
+          "message": "</IdTable>'",
+          "model_id": 1
+        },
+        {
+          "sequence": 45,
+          "timestamp": "2026-10-26T08:28:43.983086+00:00",
+          "level": "info",
+          "message": "length unit = [m]",
+          "model_id": 1
+        },
+        {
+          "sequence": 46,
+          "timestamp": "2026-10-26T08:28:43.983086+00:00",
+          "level": "info",
+          "message": "processing part 'wenqiuli' with ID 3",
+          "model_id": 1
+        },
+        {
+          "sequence": 47,
+          "timestamp": "2026-10-26T08:28:43.984087+00:00",
+          "level": "info",
+          "message": "processing named selection 'outlet'",
+          "model_id": 1
+        },
+        {
+          "sequence": 48,
+          "timestamp": "2026-10-26T08:28:43.985087+00:00",
+          "level": "info",
+          "message": "processing named selection 'inlet hot'",
+          "model_id": 1
+        },
+        {
+          "sequence": 49,
+          "timestamp": "2026-10-26T08:28:43.986085+00:00",
+          "level": "info",
+          "message": "processing named selection 'inlet cold'",
+          "model_id": 1
+        },
+        {
+          "sequence": 50,
+          "timestamp": "2026-10-26T08:28:43.988086+00:00",
+          "level": "info",
+          "message": "processing named selection 'wall big'",
+          "model_id": 1
+        },
+        {
+          "sequence": 51,
+          "timestamp": "2026-10-26T08:28:43.989088+00:00",
+          "level": "info",
+          "message": "processing named selection 'wall small'",
+          "model_id": 1
+        },
+        {
+          "sequence": 52,
+          "timestamp": "2026-10-26T08:28:43.990088+00:00",
+          "level": "info",
+          "message": "processing data ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 53,
+          "timestamp": "2026-10-26T08:28:44.006085+00:00",
+          "level": "info",
+          "message": "removing named collections of entities ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 54,
+          "timestamp": "2026-10-26T08:28:44.008086+00:00",
+          "level": "info",
+          "message": "removing named collections of entities stopped, no named collections selected.",
+          "model_id": 1
+        },
+        {
+          "sequence": 55,
+          "timestamp": "2026-10-26T08:28:44.010085+00:00",
+          "level": "info",
+          "message": "analyzing feature edges ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 56,
+          "timestamp": "2026-10-26T08:28:44.011485+00:00",
+          "level": "info",
+          "message": "detecting feature edges, feature angle = 40 [deg] ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 57,
+          "timestamp": "2026-10-26T08:28:44.015497+00:00",
+          "level": "info",
+          "message": "Data information",
+          "model_id": 1
+        },
+        {
+          "sequence": 58,
+          "timestamp": "2026-10-26T08:28:44.016488+00:00",
+          "level": "info",
+          "message": "Meshing model",
+          "model_id": 1
+        },
+        {
+          "sequence": 59,
+          "timestamp": "2026-10-26T08:28:44.017489+00:00",
+          "level": "info",
+          "message": "Attributes:",
+          "model_id": 1
+        },
+        {
+          "sequence": 60,
+          "timestamp": "2026-10-26T08:28:44.018489+00:00",
+          "level": "info",
+          "message": "'LengthUnit': '[mm]'",
+          "model_id": 1
+        },
+        {
+          "sequence": 61,
+          "timestamp": "2026-10-26T08:28:44.019488+00:00",
+          "level": "info",
+          "message": "Entity summary:",
+          "model_id": 1
+        },
+        {
+          "sequence": 62,
+          "timestamp": "2026-10-26T08:28:44.021488+00:00",
+          "level": "info",
+          "message": "Collection: 5",
+          "model_id": 1
+        },
+        {
+          "sequence": 63,
+          "timestamp": "2026-10-26T08:28:44.021488+00:00",
+          "level": "info",
+          "message": "Component : 2",
+          "model_id": 1
+        },
+        {
+          "sequence": 64,
+          "timestamp": "2026-10-26T08:28:44.023489+00:00",
+          "level": "info",
+          "message": "Body      : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 65,
+          "timestamp": "2026-10-26T08:28:44.024488+00:00",
+          "level": "info",
+          "message": "Shell     : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 66,
+          "timestamp": "2026-10-26T08:28:44.025488+00:00",
+          "level": "info",
+          "message": "Face      : 11",
+          "model_id": 1
+        },
+        {
+          "sequence": 67,
+          "timestamp": "2026-10-26T08:28:44.026927+00:00",
+          "level": "info",
+          "message": "Loop      : 20",
+          "model_id": 1
+        },
+        {
+          "sequence": 68,
+          "timestamp": "2026-10-26T08:28:44.028932+00:00",
+          "level": "info",
+          "message": "Edge      : 10",
+          "model_id": 1
+        },
+        {
+          "sequence": 69,
+          "timestamp": "2026-10-26T08:28:44.029933+00:00",
+          "level": "info",
+          "message": "Vertex    : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 70,
+          "timestamp": "2026-10-26T08:28:44.030933+00:00",
+          "level": "info",
+          "message": "Surface   : 11",
+          "model_id": 1
+        },
+        {
+          "sequence": 71,
+          "timestamp": "2026-10-26T08:28:44.031932+00:00",
+          "level": "info",
+          "message": "Curve     : 10",
+          "model_id": 1
+        },
+        {
+          "sequence": 72,
+          "timestamp": "2026-10-26T08:28:44.032932+00:00",
+          "level": "info",
+          "message": "Tessellation summary:",
+          "model_id": 1
+        },
+        {
+          "sequence": 73,
+          "timestamp": "2026-10-26T08:28:44.033932+00:00",
+          "level": "info",
+          "message": "Face facets  : 1114",
+          "model_id": 1
+        },
+        {
+          "sequence": 74,
+          "timestamp": "2026-10-26T08:28:44.034932+00:00",
+          "level": "info",
+          "message": "Edge segments: 521",
+          "model_id": 1
+        },
+        {
+          "sequence": 75,
+          "timestamp": "2026-10-26T08:28:44.035934+00:00",
+          "level": "info",
+          "message": "Bounding box:",
+          "model_id": 1
+        },
+        {
+          "sequence": 76,
+          "timestamp": "2026-10-26T08:28:44.038932+00:00",
+          "level": "info",
+          "message": "(-2, -49.83786392211914, -49.95944976806641) x (1324, 50, 200)",
+          "model_id": 1
+        },
+        {
+          "sequence": 77,
+          "timestamp": "2026-10-26T08:28:44.040931+00:00",
+          "level": "info",
+          "message": "Assembly component hierarchy:",
+          "model_id": 1
+        },
+        {
+          "sequence": 78,
+          "timestamp": "2026-10-26T08:28:44.041932+00:00",
+          "level": "info",
+          "message": "'D:\\\\Fluent AI\\\\wenqiuli.dsco'",
+          "model_id": 1
+        },
+        {
+          "sequence": 79,
+          "timestamp": "2026-10-26T08:28:44.042934+00:00",
+          "level": "info",
+          "message": "'wenqiuli'",
+          "model_id": 1
+        },
+        {
+          "sequence": 80,
+          "timestamp": "2026-10-26T08:28:44.043933+00:00",
+          "level": "info",
+          "message": "NamedCollections:",
+          "model_id": 1
+        },
+        {
+          "sequence": 81,
+          "timestamp": "2026-10-26T08:28:44.044933+00:00",
+          "level": "info",
+          "message": "'outlet'",
+          "model_id": 1
+        },
+        {
+          "sequence": 82,
+          "timestamp": "2026-10-26T08:28:44.045932+00:00",
+          "level": "info",
+          "message": "'inlet hot'",
+          "model_id": 1
+        },
+        {
+          "sequence": 83,
+          "timestamp": "2026-10-26T08:28:44.046933+00:00",
+          "level": "info",
+          "message": "'inlet cold'",
+          "model_id": 1
+        },
+        {
+          "sequence": 84,
+          "timestamp": "2026-10-26T08:28:44.047931+00:00",
+          "level": "info",
+          "message": "'wall big'",
+          "model_id": 1
+        },
+        {
+          "sequence": 85,
+          "timestamp": "2026-10-26T08:28:44.049933+00:00",
+          "level": "info",
+          "message": "'wall small'",
+          "model_id": 1
+        },
+        {
+          "sequence": 86,
+          "timestamp": "2026-10-26T08:28:44.053932+00:00",
+          "level": "info",
+          "message": "exporting FLTG data to file 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216\\\\out1793003323.42543232216.tgf' ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 87,
+          "timestamp": "2026-10-26T08:28:44.066932+00:00",
+          "level": "info",
+          "message": "writing face-based mesh file 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216\\\\out1793003323.42543232216.tgf' ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 88,
+          "timestamp": "2026-10-26T08:28:44.067932+00:00",
+          "level": "info",
+          "message": "======== Exported Data ========",
+          "model_id": 1
+        },
+        {
+          "sequence": 89,
+          "timestamp": "2026-10-26T08:28:44.068932+00:00",
+          "level": "info",
+          "message": "Entity summary:",
+          "model_id": 1
+        },
+        {
+          "sequence": 90,
+          "timestamp": "2026-10-26T08:28:44.068932+00:00",
+          "level": "info",
+          "message": "Object       : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 91,
+          "timestamp": "2026-10-26T08:28:44.069933+00:00",
+          "level": "info",
+          "message": "Object region: 7",
+          "model_id": 1
+        },
+        {
+          "sequence": 92,
+          "timestamp": "2026-10-26T08:28:44.070932+00:00",
+          "level": "info",
+          "message": "Zone         : 12",
+          "model_id": 1
+        },
+        {
+          "sequence": 93,
+          "timestamp": "2026-10-26T08:28:44.071933+00:00",
+          "level": "info",
+          "message": "running conversion done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 94,
+          "timestamp": "2026-10-26T08:28:44.073933+00:00",
+          "level": "info",
+          "message": "running ANSYS TGrid CADToTGridConverter done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 95,
+          "timestamp": "2026-10-26T08:28:44.074932+00:00",
+          "level": "info",
+          "message": "ran ANSYS TGrid CADToTGridConverter in 0.294 [s]",
+          "model_id": 1
+        },
+        {
+          "sequence": 96,
+          "timestamp": "2026-10-26T08:28:45.661466+00:00",
+          "level": "info",
+          "message": "Reading \"D:\\Fluent AI\\fluent-ai-app\\FM_ComputerOfWeiJiabao_32216/out1793003323.42543232216.tgf\"...",
+          "model_id": 1
+        },
+        {
+          "sequence": 97,
+          "timestamp": "2026-10-26T08:28:45.671469+00:00",
+          "level": "info",
+          "message": "nodes: 933",
+          "model_id": 1
+        },
+        {
+          "sequence": 98,
+          "timestamp": "2026-10-26T08:28:45.671469+00:00",
+          "level": "info",
+          "message": "edges: 369",
+          "model_id": 1
+        },
+        {
+          "sequence": 99,
+          "timestamp": "2026-10-26T08:28:45.672470+00:00",
+          "level": "info",
+          "message": "faces: 1056",
+          "model_id": 1
+        },
+        {
+          "sequence": 100,
+          "timestamp": "2026-10-26T08:28:45.672470+00:00",
+          "level": "info",
+          "message": "cells: 0",
+          "model_id": 1
+        },
+        {
+          "sequence": 101,
+          "timestamp": "2026-10-26T08:28:45.682784+00:00",
+          "level": "info",
+          "message": "generating pointers...done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 102,
+          "timestamp": "2026-10-26T08:28:45.683784+00:00",
+          "level": "info",
+          "message": "extracting boundary entities...",
+          "model_id": 1
+        },
+        {
+          "sequence": 103,
+          "timestamp": "2026-10-26T08:28:45.684785+00:00",
+          "level": "info",
+          "message": "933 boundary nodes.",
+          "model_id": 1
+        },
+        {
+          "sequence": 104,
+          "timestamp": "2026-10-26T08:28:45.684785+00:00",
+          "level": "info",
+          "message": "1056 boundary faces.",
+          "model_id": 1
+        },
+        {
+          "sequence": 105,
+          "timestamp": "2026-10-26T08:28:45.685784+00:00",
+          "level": "info",
+          "message": "5 boundary face zones.",
+          "model_id": 1
+        },
+        {
+          "sequence": 106,
+          "timestamp": "2026-10-26T08:28:45.685784+00:00",
+          "level": "info",
+          "message": "done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 107,
+          "timestamp": "2026-10-26T08:28:45.843917+00:00",
+          "level": "info",
+          "message": "analyzing boundary connectivity...done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 108,
+          "timestamp": "2026-10-26T08:28:45.860918+00:00",
+          "level": "info",
+          "message": "---------------- Import of wenqiuli, consisting of one single part/object , complete.",
+          "model_id": 1
+        },
+        {
+          "sequence": 109,
+          "timestamp": "2026-10-26T08:28:45.890291+00:00",
+          "level": "info",
+          "message": "---------------- Import complete in  0.04 minutes.",
+          "model_id": 1
+        },
+        {
+          "sequence": 110,
+          "timestamp": "2026-10-26T08:28:46.741296+00:00",
+          "level": "success",
+          "message": "已导入 wenqiuli.dsco, 可以开始添加局部尺寸。",
+          "model_id": 1
+        },
+        {
+          "sequence": 111,
+          "timestamp": "2026-10-26T08:28:47.676973+00:00",
+          "level": "success",
+          "message": "已写入第 3 步的 2 项预设并回读。",
+          "model_id": 1
+        }
+      ],
+      "message": ""
+    },
+    "step_index": 2,
+    "task_path": [
+      "create_surface_mesh"
+    ],
+    "write_report": {
+      "workflow_type": "watertight",
+      "status": "success",
+      "results": [
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "min_size"
+          ],
+          "compound_child_name": null,
+          "expected": 0.0005,
+          "actual": 0.0005,
+          "success": true,
+          "message": ""
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "max_size"
+          ],
+          "compound_child_name": null,
+          "expected": 0.002,
+          "actual": 0.002,
+          "success": true,
+          "message": ""
+        }
+      ],
+      "verified": true,
+      "error": null
+    },
+    "read_report": {
+      "workflow_type": "watertight",
+      "status": "success",
+      "task_names": [
+        "update_regions",
+        "create_regions",
+        "describe_geometry",
+        "enclose_fluid_regions",
+        "update_boundaries",
+        "import_geometry",
+        "create_surface_mesh",
+        "create_volume_mesh",
+        "apply_share_topology",
+        "add_boundary_layer",
+        "add_local_sizing"
+      ],
+      "items": [
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "use_size_files"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "No",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "remesh_imported_mesh"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "All",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "min_size"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.0005,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "max_size"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.002,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "growth_rate"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 1.2,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "size_functions"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "Curvature & Proximity",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "object_based_controls"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "No",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "curvature_normal_angle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 18.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "cells_per_gap"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 1.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "scope_proximity_to"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "edges",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "size_field_file"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": null,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "size_control_file"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": null,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "save_size_field"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "save_size_field_file"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": null,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "draw_size_control"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": true,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "preview_sizefield"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "auto_create_scoped_sizing"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": true,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "surface_mesh_method"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "Standard",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "separation_required"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "No",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "separation_angle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 40.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "remesh_selection_type"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "label",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "remesh_zone_list"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": [],
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "remesh_label_list"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": [],
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "show_surface_mesh_preferences"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "self_intersect_check"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "yes",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "fold_face_limit"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 10.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_separation"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "auto",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_separation_angle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 40.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "auto_assign_zone_types"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "yes",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_quality_improve"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "yes",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_quality_improve_limit"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.8,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_quality_max_angle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 80.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_quality_collapse_limit"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.95,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_remove_step"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "no",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_step_width"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "set_volume_mesh_max_size"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "no",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "volume_mesh_max_size"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 33.15,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "tvm_auto_control_creation"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "yes",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "auto_surface_remesh"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "auto",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "auto_merge"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": true,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "import_type"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "Single File",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "append_mesh"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_faceting_file_name"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "directory"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": null,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "pattern"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": null,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "length_unit"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "mm",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "tesselation_method"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "CFD Surface Mesh",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "original_zones"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": [],
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "execute_share_topology"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "No",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_faceting_controls",
+            "refine_faceting"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_faceting_controls",
+            "tolerance"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_faceting_controls",
+            "max_size"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "extract_features"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": true,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "feature_angle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 40.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "create_cad_assemblies"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "one_object_per"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "Program-controlled",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "one_zone_per"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "body",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "open_all_cad_in_subdirectories"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "save_pmdb_intermediate_file"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "import_part_names"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "use_part_or_body_as_suffix"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "import_named_selections"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": true,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "import_curvature_data_from_cad"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": true,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "show_share_topology_preferences"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "share_topology_angle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 40.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "relative_share_topology_tolerance"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.1,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "number_of_join_tries"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 3,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "st_tolerance_increment"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.05,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "execute_join_intersect"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "Join Only",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "st_rename_internals"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "yes",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "operation"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "Join-Intersect",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "connect_label_wildcard"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "*int*",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "intf_label_list"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": [],
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "per_label_list"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": [],
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "fluid_label_wildcard"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "*fluid",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "model_is_periodic"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "no",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "advanced_improve"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "no",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "allow_defeaturing"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "no",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "preview_size_toggle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        }
+      ],
+      "error": null
+    }
+  },
+  "executed_surface_step": {
+    "status": "success",
+    "message": "create_surface_mesh completed.",
+    "snapshot": {
+      "session_id": "a100dae2-86c9-431c-90c9-4a9584c94676",
+      "automation_id": 1,
+      "automation_name": "Live Meshing verification",
+      "workflow_type": "watertight",
+      "status": "waiting",
+      "connection": {
+        "connected": true,
+        "mode": "launch",
+        "version": "Ansys Fluent 2025 R2",
+        "pid": 9724,
+        "host": "localhost",
+        "port": 51469
+      },
+      "models": [
+        {
+          "model_id": 1,
+          "name": "wenqiuli.dsco",
+          "file_path": "D:\\Fluent AI\\wql.meshed_files\\dp0\\FFF\\Fluent\\FM_ComputerOfWeiJiabao_9648\\wenqiuli.dsco.pmdb",
+          "status": "ready",
+          "error": null
+        }
+      ],
+      "current_model_index": 0,
+      "current_step_index": 3,
+      "steps": [
+        {
+          "task_path": [
+            "import_geometry"
+          ],
+          "status": "completed",
+          "message": "几何已导入。"
+        },
+        {
+          "task_path": [
+            "add_local_sizing"
+          ],
+          "status": "pending",
+          "message": ""
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "status": "completed",
+          "message": "create_surface_mesh completed."
+        },
+        {
+          "task_path": [
+            "describe_geometry"
+          ],
+          "status": "pending",
+          "message": ""
+        },
+        {
+          "task_path": [
+            "update_regions"
+          ],
+          "status": "pending",
+          "message": ""
+        },
+        {
+          "task_path": [
+            "add_boundary_layer"
+          ],
+          "status": "pending",
+          "message": ""
+        },
+        {
+          "task_path": [
+            "create_volume_mesh"
+          ],
+          "status": "pending",
+          "message": ""
+        }
+      ],
+      "logs": [
+        {
+          "sequence": 45,
+          "timestamp": "2026-10-26T08:28:43.983086+00:00",
+          "level": "info",
+          "message": "length unit = [m]",
+          "model_id": 1
+        },
+        {
+          "sequence": 46,
+          "timestamp": "2026-10-26T08:28:43.983086+00:00",
+          "level": "info",
+          "message": "processing part 'wenqiuli' with ID 3",
+          "model_id": 1
+        },
+        {
+          "sequence": 47,
+          "timestamp": "2026-10-26T08:28:43.984087+00:00",
+          "level": "info",
+          "message": "processing named selection 'outlet'",
+          "model_id": 1
+        },
+        {
+          "sequence": 48,
+          "timestamp": "2026-10-26T08:28:43.985087+00:00",
+          "level": "info",
+          "message": "processing named selection 'inlet hot'",
+          "model_id": 1
+        },
+        {
+          "sequence": 49,
+          "timestamp": "2026-10-26T08:28:43.986085+00:00",
+          "level": "info",
+          "message": "processing named selection 'inlet cold'",
+          "model_id": 1
+        },
+        {
+          "sequence": 50,
+          "timestamp": "2026-10-26T08:28:43.988086+00:00",
+          "level": "info",
+          "message": "processing named selection 'wall big'",
+          "model_id": 1
+        },
+        {
+          "sequence": 51,
+          "timestamp": "2026-10-26T08:28:43.989088+00:00",
+          "level": "info",
+          "message": "processing named selection 'wall small'",
+          "model_id": 1
+        },
+        {
+          "sequence": 52,
+          "timestamp": "2026-10-26T08:28:43.990088+00:00",
+          "level": "info",
+          "message": "processing data ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 53,
+          "timestamp": "2026-10-26T08:28:44.006085+00:00",
+          "level": "info",
+          "message": "removing named collections of entities ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 54,
+          "timestamp": "2026-10-26T08:28:44.008086+00:00",
+          "level": "info",
+          "message": "removing named collections of entities stopped, no named collections selected.",
+          "model_id": 1
+        },
+        {
+          "sequence": 55,
+          "timestamp": "2026-10-26T08:28:44.010085+00:00",
+          "level": "info",
+          "message": "analyzing feature edges ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 56,
+          "timestamp": "2026-10-26T08:28:44.011485+00:00",
+          "level": "info",
+          "message": "detecting feature edges, feature angle = 40 [deg] ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 57,
+          "timestamp": "2026-10-26T08:28:44.015497+00:00",
+          "level": "info",
+          "message": "Data information",
+          "model_id": 1
+        },
+        {
+          "sequence": 58,
+          "timestamp": "2026-10-26T08:28:44.016488+00:00",
+          "level": "info",
+          "message": "Meshing model",
+          "model_id": 1
+        },
+        {
+          "sequence": 59,
+          "timestamp": "2026-10-26T08:28:44.017489+00:00",
+          "level": "info",
+          "message": "Attributes:",
+          "model_id": 1
+        },
+        {
+          "sequence": 60,
+          "timestamp": "2026-10-26T08:28:44.018489+00:00",
+          "level": "info",
+          "message": "'LengthUnit': '[mm]'",
+          "model_id": 1
+        },
+        {
+          "sequence": 61,
+          "timestamp": "2026-10-26T08:28:44.019488+00:00",
+          "level": "info",
+          "message": "Entity summary:",
+          "model_id": 1
+        },
+        {
+          "sequence": 62,
+          "timestamp": "2026-10-26T08:28:44.021488+00:00",
+          "level": "info",
+          "message": "Collection: 5",
+          "model_id": 1
+        },
+        {
+          "sequence": 63,
+          "timestamp": "2026-10-26T08:28:44.021488+00:00",
+          "level": "info",
+          "message": "Component : 2",
+          "model_id": 1
+        },
+        {
+          "sequence": 64,
+          "timestamp": "2026-10-26T08:28:44.023489+00:00",
+          "level": "info",
+          "message": "Body      : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 65,
+          "timestamp": "2026-10-26T08:28:44.024488+00:00",
+          "level": "info",
+          "message": "Shell     : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 66,
+          "timestamp": "2026-10-26T08:28:44.025488+00:00",
+          "level": "info",
+          "message": "Face      : 11",
+          "model_id": 1
+        },
+        {
+          "sequence": 67,
+          "timestamp": "2026-10-26T08:28:44.026927+00:00",
+          "level": "info",
+          "message": "Loop      : 20",
+          "model_id": 1
+        },
+        {
+          "sequence": 68,
+          "timestamp": "2026-10-26T08:28:44.028932+00:00",
+          "level": "info",
+          "message": "Edge      : 10",
+          "model_id": 1
+        },
+        {
+          "sequence": 69,
+          "timestamp": "2026-10-26T08:28:44.029933+00:00",
+          "level": "info",
+          "message": "Vertex    : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 70,
+          "timestamp": "2026-10-26T08:28:44.030933+00:00",
+          "level": "info",
+          "message": "Surface   : 11",
+          "model_id": 1
+        },
+        {
+          "sequence": 71,
+          "timestamp": "2026-10-26T08:28:44.031932+00:00",
+          "level": "info",
+          "message": "Curve     : 10",
+          "model_id": 1
+        },
+        {
+          "sequence": 72,
+          "timestamp": "2026-10-26T08:28:44.032932+00:00",
+          "level": "info",
+          "message": "Tessellation summary:",
+          "model_id": 1
+        },
+        {
+          "sequence": 73,
+          "timestamp": "2026-10-26T08:28:44.033932+00:00",
+          "level": "info",
+          "message": "Face facets  : 1114",
+          "model_id": 1
+        },
+        {
+          "sequence": 74,
+          "timestamp": "2026-10-26T08:28:44.034932+00:00",
+          "level": "info",
+          "message": "Edge segments: 521",
+          "model_id": 1
+        },
+        {
+          "sequence": 75,
+          "timestamp": "2026-10-26T08:28:44.035934+00:00",
+          "level": "info",
+          "message": "Bounding box:",
+          "model_id": 1
+        },
+        {
+          "sequence": 76,
+          "timestamp": "2026-10-26T08:28:44.038932+00:00",
+          "level": "info",
+          "message": "(-2, -49.83786392211914, -49.95944976806641) x (1324, 50, 200)",
+          "model_id": 1
+        },
+        {
+          "sequence": 77,
+          "timestamp": "2026-10-26T08:28:44.040931+00:00",
+          "level": "info",
+          "message": "Assembly component hierarchy:",
+          "model_id": 1
+        },
+        {
+          "sequence": 78,
+          "timestamp": "2026-10-26T08:28:44.041932+00:00",
+          "level": "info",
+          "message": "'D:\\\\Fluent AI\\\\wenqiuli.dsco'",
+          "model_id": 1
+        },
+        {
+          "sequence": 79,
+          "timestamp": "2026-10-26T08:28:44.042934+00:00",
+          "level": "info",
+          "message": "'wenqiuli'",
+          "model_id": 1
+        },
+        {
+          "sequence": 80,
+          "timestamp": "2026-10-26T08:28:44.043933+00:00",
+          "level": "info",
+          "message": "NamedCollections:",
+          "model_id": 1
+        },
+        {
+          "sequence": 81,
+          "timestamp": "2026-10-26T08:28:44.044933+00:00",
+          "level": "info",
+          "message": "'outlet'",
+          "model_id": 1
+        },
+        {
+          "sequence": 82,
+          "timestamp": "2026-10-26T08:28:44.045932+00:00",
+          "level": "info",
+          "message": "'inlet hot'",
+          "model_id": 1
+        },
+        {
+          "sequence": 83,
+          "timestamp": "2026-10-26T08:28:44.046933+00:00",
+          "level": "info",
+          "message": "'inlet cold'",
+          "model_id": 1
+        },
+        {
+          "sequence": 84,
+          "timestamp": "2026-10-26T08:28:44.047931+00:00",
+          "level": "info",
+          "message": "'wall big'",
+          "model_id": 1
+        },
+        {
+          "sequence": 85,
+          "timestamp": "2026-10-26T08:28:44.049933+00:00",
+          "level": "info",
+          "message": "'wall small'",
+          "model_id": 1
+        },
+        {
+          "sequence": 86,
+          "timestamp": "2026-10-26T08:28:44.053932+00:00",
+          "level": "info",
+          "message": "exporting FLTG data to file 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216\\\\out1793003323.42543232216.tgf' ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 87,
+          "timestamp": "2026-10-26T08:28:44.066932+00:00",
+          "level": "info",
+          "message": "writing face-based mesh file 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216\\\\out1793003323.42543232216.tgf' ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 88,
+          "timestamp": "2026-10-26T08:28:44.067932+00:00",
+          "level": "info",
+          "message": "======== Exported Data ========",
+          "model_id": 1
+        },
+        {
+          "sequence": 89,
+          "timestamp": "2026-10-26T08:28:44.068932+00:00",
+          "level": "info",
+          "message": "Entity summary:",
+          "model_id": 1
+        },
+        {
+          "sequence": 90,
+          "timestamp": "2026-10-26T08:28:44.068932+00:00",
+          "level": "info",
+          "message": "Object       : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 91,
+          "timestamp": "2026-10-26T08:28:44.069933+00:00",
+          "level": "info",
+          "message": "Object region: 7",
+          "model_id": 1
+        },
+        {
+          "sequence": 92,
+          "timestamp": "2026-10-26T08:28:44.070932+00:00",
+          "level": "info",
+          "message": "Zone         : 12",
+          "model_id": 1
+        },
+        {
+          "sequence": 93,
+          "timestamp": "2026-10-26T08:28:44.071933+00:00",
+          "level": "info",
+          "message": "running conversion done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 94,
+          "timestamp": "2026-10-26T08:28:44.073933+00:00",
+          "level": "info",
+          "message": "running ANSYS TGrid CADToTGridConverter done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 95,
+          "timestamp": "2026-10-26T08:28:44.074932+00:00",
+          "level": "info",
+          "message": "ran ANSYS TGrid CADToTGridConverter in 0.294 [s]",
+          "model_id": 1
+        },
+        {
+          "sequence": 96,
+          "timestamp": "2026-10-26T08:28:45.661466+00:00",
+          "level": "info",
+          "message": "Reading \"D:\\Fluent AI\\fluent-ai-app\\FM_ComputerOfWeiJiabao_32216/out1793003323.42543232216.tgf\"...",
+          "model_id": 1
+        },
+        {
+          "sequence": 97,
+          "timestamp": "2026-10-26T08:28:45.671469+00:00",
+          "level": "info",
+          "message": "nodes: 933",
+          "model_id": 1
+        },
+        {
+          "sequence": 98,
+          "timestamp": "2026-10-26T08:28:45.671469+00:00",
+          "level": "info",
+          "message": "edges: 369",
+          "model_id": 1
+        },
+        {
+          "sequence": 99,
+          "timestamp": "2026-10-26T08:28:45.672470+00:00",
+          "level": "info",
+          "message": "faces: 1056",
+          "model_id": 1
+        },
+        {
+          "sequence": 100,
+          "timestamp": "2026-10-26T08:28:45.672470+00:00",
+          "level": "info",
+          "message": "cells: 0",
+          "model_id": 1
+        },
+        {
+          "sequence": 101,
+          "timestamp": "2026-10-26T08:28:45.682784+00:00",
+          "level": "info",
+          "message": "generating pointers...done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 102,
+          "timestamp": "2026-10-26T08:28:45.683784+00:00",
+          "level": "info",
+          "message": "extracting boundary entities...",
+          "model_id": 1
+        },
+        {
+          "sequence": 103,
+          "timestamp": "2026-10-26T08:28:45.684785+00:00",
+          "level": "info",
+          "message": "933 boundary nodes.",
+          "model_id": 1
+        },
+        {
+          "sequence": 104,
+          "timestamp": "2026-10-26T08:28:45.684785+00:00",
+          "level": "info",
+          "message": "1056 boundary faces.",
+          "model_id": 1
+        },
+        {
+          "sequence": 105,
+          "timestamp": "2026-10-26T08:28:45.685784+00:00",
+          "level": "info",
+          "message": "5 boundary face zones.",
+          "model_id": 1
+        },
+        {
+          "sequence": 106,
+          "timestamp": "2026-10-26T08:28:45.685784+00:00",
+          "level": "info",
+          "message": "done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 107,
+          "timestamp": "2026-10-26T08:28:45.843917+00:00",
+          "level": "info",
+          "message": "analyzing boundary connectivity...done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 108,
+          "timestamp": "2026-10-26T08:28:45.860918+00:00",
+          "level": "info",
+          "message": "---------------- Import of wenqiuli, consisting of one single part/object , complete.",
+          "model_id": 1
+        },
+        {
+          "sequence": 109,
+          "timestamp": "2026-10-26T08:28:45.890291+00:00",
+          "level": "info",
+          "message": "---------------- Import complete in  0.04 minutes.",
+          "model_id": 1
+        },
+        {
+          "sequence": 110,
+          "timestamp": "2026-10-26T08:28:46.741296+00:00",
+          "level": "success",
+          "message": "已导入 wenqiuli.dsco, 可以开始添加局部尺寸。",
+          "model_id": 1
+        },
+        {
+          "sequence": 111,
+          "timestamp": "2026-10-26T08:28:47.676973+00:00",
+          "level": "success",
+          "message": "已写入第 3 步的 2 项预设并回读。",
+          "model_id": 1
+        },
+        {
+          "sequence": 112,
+          "timestamp": "2026-10-26T08:28:54.355813+00:00",
+          "level": "info",
+          "message": "正在执行: create_surface_mesh",
+          "model_id": 1
+        },
+        {
+          "sequence": 113,
+          "timestamp": "2026-10-26T08:28:54.427317+00:00",
+          "level": "info",
+          "message": "Writing \"D:\\Fluent AI\\fluent-ai-app\\FM_ComputerOfWeiJiabao_32216\\TaskObject3.msh.h5\" ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 114,
+          "timestamp": "2026-10-26T08:28:54.813548+00:00",
+          "level": "info",
+          "message": "writing 1 node zones",
+          "model_id": 1
+        },
+        {
+          "sequence": 115,
+          "timestamp": "2026-10-26T08:28:54.816554+00:00",
+          "level": "info",
+          "message": "writing 7 edge zones",
+          "model_id": 1
+        },
+        {
+          "sequence": 116,
+          "timestamp": "2026-10-26T08:28:54.818554+00:00",
+          "level": "info",
+          "message": "writing 5 face zones",
+          "model_id": 1
+        },
+        {
+          "sequence": 117,
+          "timestamp": "2026-10-26T08:28:54.820548+00:00",
+          "level": "info",
+          "message": "writing node curvature data",
+          "model_id": 1
+        },
+        {
+          "sequence": 118,
+          "timestamp": "2026-10-26T08:28:54.929269+00:00",
+          "level": "info",
+          "message": "done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 119,
+          "timestamp": "2026-10-26T08:28:54.930269+00:00",
+          "level": "info",
+          "message": "---------------- The Global Min size was adjusted to 0.0005",
+          "model_id": 1
+        },
+        {
+          "sequence": 120,
+          "timestamp": "2026-10-26T08:28:54.934273+00:00",
+          "level": "info",
+          "message": "Importing one mesh object per program-controlled and one zone per body ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 121,
+          "timestamp": "2026-10-26T08:28:55.226838+00:00",
+          "level": "info",
+          "message": "D:\\\\Ansys2025R2\\\\ANSYS Inc\\\\v252\\\\commonfiles\\\\CPython\\\\3_10\\\\winx64\\\\Release\\\\python\\\\..\\\\Ansys\\\\TGrid\\\\CADReaders.py started by MECH on ComputerOfWeiJiabao winx64 on Mon Oct 26 16:28:55 2026",
+          "model_id": 1
+        },
+        {
+          "sequence": 122,
+          "timestamp": "2026-10-26T08:28:55.229343+00:00",
+          "level": "info",
+          "message": "using Python 3.10.16 (remotes/origin/14d18b8e2626165312e076b70cf60f0faa8db8d5-dirty:14d18b8e, May 20 2) [MSC v.1942 64 bit (AMD64)]",
+          "model_id": 1
+        },
+        {
+          "sequence": 123,
+          "timestamp": "2026-10-26T08:28:55.230340+00:00",
+          "level": "info",
+          "message": "using Ansys.Meshing.FieldMesher build Jun 13 2025 15:24:50",
+          "model_id": 1
+        },
+        {
+          "sequence": 124,
+          "timestamp": "2026-10-26T08:28:55.236337+00:00",
+          "level": "info",
+          "message": "running ANSYS TGrid CADToTGridConverter ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 125,
+          "timestamp": "2026-10-26T08:28:55.237341+00:00",
+          "level": "info",
+          "message": "setting up parameters ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 126,
+          "timestamp": "2026-10-26T08:28:55.238339+00:00",
+          "level": "info",
+          "message": "setting up parameters done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 127,
+          "timestamp": "2026-10-26T08:28:55.238339+00:00",
+          "level": "info",
+          "message": "running conversion ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 128,
+          "timestamp": "2026-10-26T08:28:55.242338+00:00",
+          "level": "info",
+          "message": "converting 1 file(s) from Workbench to FLTG using output path 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216/out1793003334.9302732216.tgf'",
+          "model_id": 1
+        },
+        {
+          "sequence": 129,
+          "timestamp": "2026-10-26T08:28:55.245338+00:00",
+          "level": "info",
+          "message": "converting file 'wenqiuli.dsco.pmdb' (1 of 1) from Workbench to FLTG using output path 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216'",
+          "model_id": 1
+        },
+        {
+          "sequence": 130,
+          "timestamp": "2026-10-26T08:28:55.245338+00:00",
+          "level": "info",
+          "message": "importing data ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 131,
+          "timestamp": "2026-10-26T08:28:55.248339+00:00",
+          "level": "info",
+          "message": "importing meshing model from PartMgr from file 'D:\\\\Fluent AI\\\\wql.meshed_files\\\\dp0\\\\FFF\\\\Fluent\\\\FM_ComputerOfWeiJiabao_9648\\\\wenqiuli.dsco.pmdb' ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 132,
+          "timestamp": "2026-10-26T08:28:55.249337+00:00",
+          "level": "info",
+          "message": "setting enclosure and symmetry processing to False",
+          "model_id": 1
+        },
+        {
+          "sequence": 133,
+          "timestamp": "2026-10-26T08:28:55.251338+00:00",
+          "level": "info",
+          "message": "setting transfer named selections to True",
+          "model_id": 1
+        },
+        {
+          "sequence": 134,
+          "timestamp": "2026-10-26T08:28:55.251338+00:00",
+          "level": "info",
+          "message": "setting named selection prefixes to ''",
+          "model_id": 1
+        },
+        {
+          "sequence": 135,
+          "timestamp": "2026-10-26T08:28:55.253338+00:00",
+          "level": "info",
+          "message": "setting mixed import resolution type to 'SolidAndSurface'",
+          "model_id": 1
+        },
+        {
+          "sequence": 136,
+          "timestamp": "2026-10-26T08:28:55.254338+00:00",
+          "level": "info",
+          "message": "setting target application to 'FluentMeshing'",
+          "model_id": 1
+        },
+        {
+          "sequence": 137,
+          "timestamp": "2026-10-26T08:28:55.255338+00:00",
+          "level": "info",
+          "message": "initializing part manager from file ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 138,
+          "timestamp": "2026-10-26T08:28:55.271338+00:00",
+          "level": "info",
+          "message": "processing assembly 'D:\\\\Fluent AI\\\\wenqiuli.dsco' with ID 1 and reference key '<?xml version=\"1.0\" encoding=\"utf-16\"?>",
+          "model_id": 1
+        },
+        {
+          "sequence": 139,
+          "timestamp": "2026-10-26T08:28:55.274337+00:00",
+          "level": "info",
+          "message": "<IdTable xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">",
+          "model_id": 1
+        },
+        {
+          "sequence": 140,
+          "timestamp": "2026-10-26T08:28:55.274337+00:00",
+          "level": "info",
+          "message": "<Table>",
+          "model_id": 1
+        },
+        {
+          "sequence": 141,
+          "timestamp": "2026-10-26T08:28:55.274337+00:00",
+          "level": "info",
+          "message": "<Entry>",
+          "model_id": 1
+        },
+        {
+          "sequence": 142,
+          "timestamp": "2026-10-26T08:28:55.275602+00:00",
+          "level": "info",
+          "message": "<AssemblyVersionInfo>",
+          "model_id": 1
+        },
+        {
+          "sequence": 143,
+          "timestamp": "2026-10-26T08:28:55.277607+00:00",
+          "level": "info",
+          "message": "<AssemblySavedVersion>2147483647</AssemblySavedVersion>",
+          "model_id": 1
+        },
+        {
+          "sequence": 144,
+          "timestamp": "2026-10-26T08:28:55.279608+00:00",
+          "level": "info",
+          "message": "<AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>",
+          "model_id": 1
+        },
+        {
+          "sequence": 145,
+          "timestamp": "2026-10-26T08:28:55.280607+00:00",
+          "level": "info",
+          "message": "<IsLegacyLabel>false</IsLegacyLabel>",
+          "model_id": 1
+        },
+        {
+          "sequence": 146,
+          "timestamp": "2026-10-26T08:28:55.281607+00:00",
+          "level": "info",
+          "message": "</AssemblyVersionInfo>",
+          "model_id": 1
+        },
+        {
+          "sequence": 147,
+          "timestamp": "2026-10-26T08:28:55.282607+00:00",
+          "level": "info",
+          "message": "<Text>~sEf77bbb93-b90b-4962-9b2b-e44ca7515c7e.2_#</Text>",
+          "model_id": 1
+        },
+        {
+          "sequence": 148,
+          "timestamp": "2026-10-26T08:28:55.282607+00:00",
+          "level": "info",
+          "message": "<Id>10000</Id>",
+          "model_id": 1
+        },
+        {
+          "sequence": 149,
+          "timestamp": "2026-10-26T08:28:55.283606+00:00",
+          "level": "info",
+          "message": "<IsExploded>false</IsExploded>",
+          "model_id": 1
+        },
+        {
+          "sequence": 150,
+          "timestamp": "2026-10-26T08:28:55.283606+00:00",
+          "level": "info",
+          "message": "</Entry>",
+          "model_id": 1
+        },
+        {
+          "sequence": 151,
+          "timestamp": "2026-10-26T08:28:55.283606+00:00",
+          "level": "info",
+          "message": "</Table>",
+          "model_id": 1
+        },
+        {
+          "sequence": 152,
+          "timestamp": "2026-10-26T08:28:55.284607+00:00",
+          "level": "info",
+          "message": "<AssemblyVersionInfo>",
+          "model_id": 1
+        },
+        {
+          "sequence": 153,
+          "timestamp": "2026-10-26T08:28:55.285607+00:00",
+          "level": "info",
+          "message": "<AssemblySavedVersion>2147483647</AssemblySavedVersion>",
+          "model_id": 1
+        },
+        {
+          "sequence": 154,
+          "timestamp": "2026-10-26T08:28:55.287617+00:00",
+          "level": "info",
+          "message": "<AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>",
+          "model_id": 1
+        },
+        {
+          "sequence": 155,
+          "timestamp": "2026-10-26T08:28:55.288615+00:00",
+          "level": "info",
+          "message": "<IsLegacyLabel>false</IsLegacyLabel>",
+          "model_id": 1
+        },
+        {
+          "sequence": 156,
+          "timestamp": "2026-10-26T08:28:55.289606+00:00",
+          "level": "info",
+          "message": "</AssemblyVersionInfo>",
+          "model_id": 1
+        },
+        {
+          "sequence": 157,
+          "timestamp": "2026-10-26T08:28:55.289606+00:00",
+          "level": "info",
+          "message": "</IdTable>'",
+          "model_id": 1
+        },
+        {
+          "sequence": 158,
+          "timestamp": "2026-10-26T08:28:55.290607+00:00",
+          "level": "info",
+          "message": "length unit = [m]",
+          "model_id": 1
+        },
+        {
+          "sequence": 159,
+          "timestamp": "2026-10-26T08:28:55.291617+00:00",
+          "level": "info",
+          "message": "processing part 'wenqiuli' with ID 3",
+          "model_id": 1
+        },
+        {
+          "sequence": 160,
+          "timestamp": "2026-10-26T08:28:55.292608+00:00",
+          "level": "info",
+          "message": "processing named selection 'outlet'",
+          "model_id": 1
+        },
+        {
+          "sequence": 161,
+          "timestamp": "2026-10-26T08:28:55.293608+00:00",
+          "level": "info",
+          "message": "processing named selection 'inlet hot'",
+          "model_id": 1
+        },
+        {
+          "sequence": 162,
+          "timestamp": "2026-10-26T08:28:55.294607+00:00",
+          "level": "info",
+          "message": "processing named selection 'inlet cold'",
+          "model_id": 1
+        },
+        {
+          "sequence": 163,
+          "timestamp": "2026-10-26T08:28:55.295608+00:00",
+          "level": "info",
+          "message": "processing named selection 'wall big'",
+          "model_id": 1
+        },
+        {
+          "sequence": 164,
+          "timestamp": "2026-10-26T08:28:55.297607+00:00",
+          "level": "info",
+          "message": "processing named selection 'wall small'",
+          "model_id": 1
+        },
+        {
+          "sequence": 165,
+          "timestamp": "2026-10-26T08:28:55.297607+00:00",
+          "level": "info",
+          "message": "processing data ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 166,
+          "timestamp": "2026-10-26T08:28:55.439219+00:00",
+          "level": "info",
+          "message": "saving size function background grid to file 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216\\\\wenqiuli.sf' ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 167,
+          "timestamp": "2026-10-26T08:28:55.441218+00:00",
+          "level": "info",
+          "message": "writing size function background grid file 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216\\\\wenqiuli.sf' ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 168,
+          "timestamp": "2026-10-26T08:28:55.441218+00:00",
+          "level": "info",
+          "message": "Vertices already exist",
+          "model_id": 1
+        },
+        {
+          "sequence": 169,
+          "timestamp": "2026-10-26T08:28:55.519620+00:00",
+          "level": "info",
+          "message": "initializing size function background grid done in 0.233 [s]",
+          "model_id": 1
+        },
+        {
+          "sequence": 170,
+          "timestamp": "2026-10-26T08:28:57.360906+00:00",
+          "level": "info",
+          "message": "tessellating 11 faces done in 1.835 [s]",
+          "model_id": 1
+        },
+        {
+          "sequence": 171,
+          "timestamp": "2026-10-26T08:28:57.372893+00:00",
+          "level": "info",
+          "message": "removing named collections of entities ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 172,
+          "timestamp": "2026-10-26T08:28:57.374894+00:00",
+          "level": "info",
+          "message": "removing named collections of entities stopped, no named collections selected.",
+          "model_id": 1
+        },
+        {
+          "sequence": 173,
+          "timestamp": "2026-10-26T08:28:57.375900+00:00",
+          "level": "info",
+          "message": "analyzing feature edges ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 174,
+          "timestamp": "2026-10-26T08:28:57.377901+00:00",
+          "level": "info",
+          "message": "detecting feature edges, feature angle = 40 [deg], secondary feature angle = 5 [deg] ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 175,
+          "timestamp": "2026-10-26T08:28:57.418898+00:00",
+          "level": "info",
+          "message": "Data information",
+          "model_id": 1
+        },
+        {
+          "sequence": 176,
+          "timestamp": "2026-10-26T08:28:57.418898+00:00",
+          "level": "info",
+          "message": "Meshing model",
+          "model_id": 1
+        },
+        {
+          "sequence": 177,
+          "timestamp": "2026-10-26T08:28:57.419894+00:00",
+          "level": "info",
+          "message": "Attributes:",
+          "model_id": 1
+        },
+        {
+          "sequence": 178,
+          "timestamp": "2026-10-26T08:28:57.421901+00:00",
+          "level": "info",
+          "message": "'LengthUnit': '[m]'",
+          "model_id": 1
+        },
+        {
+          "sequence": 179,
+          "timestamp": "2026-10-26T08:28:57.421901+00:00",
+          "level": "info",
+          "message": "Entity summary:",
+          "model_id": 1
+        },
+        {
+          "sequence": 180,
+          "timestamp": "2026-10-26T08:28:57.423902+00:00",
+          "level": "info",
+          "message": "Collection: 5",
+          "model_id": 1
+        },
+        {
+          "sequence": 181,
+          "timestamp": "2026-10-26T08:28:57.423902+00:00",
+          "level": "info",
+          "message": "Component : 2",
+          "model_id": 1
+        },
+        {
+          "sequence": 182,
+          "timestamp": "2026-10-26T08:28:57.425893+00:00",
+          "level": "info",
+          "message": "Body      : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 183,
+          "timestamp": "2026-10-26T08:28:57.426901+00:00",
+          "level": "info",
+          "message": "Shell     : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 184,
+          "timestamp": "2026-10-26T08:28:57.427901+00:00",
+          "level": "info",
+          "message": "Face      : 11",
+          "model_id": 1
+        },
+        {
+          "sequence": 185,
+          "timestamp": "2026-10-26T08:28:57.428901+00:00",
+          "level": "info",
+          "message": "Loop      : 20",
+          "model_id": 1
+        },
+        {
+          "sequence": 186,
+          "timestamp": "2026-10-26T08:28:57.429901+00:00",
+          "level": "info",
+          "message": "Edge      : 10",
+          "model_id": 1
+        },
+        {
+          "sequence": 187,
+          "timestamp": "2026-10-26T08:28:57.430903+00:00",
+          "level": "info",
+          "message": "Vertex    : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 188,
+          "timestamp": "2026-10-26T08:28:57.432995+00:00",
+          "level": "info",
+          "message": "Surface   : 11",
+          "model_id": 1
+        },
+        {
+          "sequence": 189,
+          "timestamp": "2026-10-26T08:28:57.434000+00:00",
+          "level": "info",
+          "message": "Curve     : 10",
+          "model_id": 1
+        },
+        {
+          "sequence": 190,
+          "timestamp": "2026-10-26T08:28:57.435000+00:00",
+          "level": "info",
+          "message": "Tessellation summary:",
+          "model_id": 1
+        },
+        {
+          "sequence": 191,
+          "timestamp": "2026-10-26T08:28:57.435999+00:00",
+          "level": "info",
+          "message": "Face facets  : 218194",
+          "model_id": 1
+        },
+        {
+          "sequence": 192,
+          "timestamp": "2026-10-26T08:28:57.436998+00:00",
+          "level": "info",
+          "message": "Edge segments: 1106",
+          "model_id": 1
+        },
+        {
+          "sequence": 193,
+          "timestamp": "2026-10-26T08:28:57.436998+00:00",
+          "level": "info",
+          "message": "Bounding box:",
+          "model_id": 1
+        },
+        {
+          "sequence": 194,
+          "timestamp": "2026-10-26T08:28:57.438999+00:00",
+          "level": "info",
+          "message": "(-0.002000000094994903, -0.05000000074505806, -0.04999960213899612) x (1.324000000953674, 0.04999980330467224, 0.2000000029802322)",
+          "model_id": 1
+        },
+        {
+          "sequence": 195,
+          "timestamp": "2026-10-26T08:28:57.440000+00:00",
+          "level": "info",
+          "message": "Assembly component hierarchy:",
+          "model_id": 1
+        },
+        {
+          "sequence": 196,
+          "timestamp": "2026-10-26T08:28:57.440999+00:00",
+          "level": "info",
+          "message": "'D:\\\\Fluent AI\\\\wenqiuli.dsco'",
+          "model_id": 1
+        },
+        {
+          "sequence": 197,
+          "timestamp": "2026-10-26T08:28:57.441998+00:00",
+          "level": "info",
+          "message": "'wenqiuli'",
+          "model_id": 1
+        },
+        {
+          "sequence": 198,
+          "timestamp": "2026-10-26T08:28:57.441998+00:00",
+          "level": "info",
+          "message": "NamedCollections:",
+          "model_id": 1
+        },
+        {
+          "sequence": 199,
+          "timestamp": "2026-10-26T08:28:57.442999+00:00",
+          "level": "info",
+          "message": "'outlet'",
+          "model_id": 1
+        },
+        {
+          "sequence": 200,
+          "timestamp": "2026-10-26T08:28:57.443999+00:00",
+          "level": "info",
+          "message": "'inlet hot'",
+          "model_id": 1
+        },
+        {
+          "sequence": 201,
+          "timestamp": "2026-10-26T08:28:57.444999+00:00",
+          "level": "info",
+          "message": "'inlet cold'",
+          "model_id": 1
+        },
+        {
+          "sequence": 202,
+          "timestamp": "2026-10-26T08:28:57.445998+00:00",
+          "level": "info",
+          "message": "'wall big'",
+          "model_id": 1
+        },
+        {
+          "sequence": 203,
+          "timestamp": "2026-10-26T08:28:57.446998+00:00",
+          "level": "info",
+          "message": "'wall small'",
+          "model_id": 1
+        },
+        {
+          "sequence": 204,
+          "timestamp": "2026-10-26T08:28:57.450000+00:00",
+          "level": "info",
+          "message": "exporting FLTG data to file 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216\\\\out1793003334.9302732216.tgf' ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 205,
+          "timestamp": "2026-10-26T08:28:57.527999+00:00",
+          "level": "info",
+          "message": "writing face-based mesh file 'D:\\\\Fluent AI\\\\fluent-ai-app\\\\FM_ComputerOfWeiJiabao_32216\\\\out1793003334.9302732216.tgf' ...",
+          "model_id": 1
+        },
+        {
+          "sequence": 206,
+          "timestamp": "2026-10-26T08:28:57.598678+00:00",
+          "level": "info",
+          "message": "======== Exported Data ========",
+          "model_id": 1
+        },
+        {
+          "sequence": 207,
+          "timestamp": "2026-10-26T08:28:57.598678+00:00",
+          "level": "info",
+          "message": "Entity summary:",
+          "model_id": 1
+        },
+        {
+          "sequence": 208,
+          "timestamp": "2026-10-26T08:28:57.598678+00:00",
+          "level": "info",
+          "message": "Object       : 1",
+          "model_id": 1
+        },
+        {
+          "sequence": 209,
+          "timestamp": "2026-10-26T08:28:57.599792+00:00",
+          "level": "info",
+          "message": "Object region: 7",
+          "model_id": 1
+        },
+        {
+          "sequence": 210,
+          "timestamp": "2026-10-26T08:28:57.599792+00:00",
+          "level": "info",
+          "message": "Zone         : 14",
+          "model_id": 1
+        },
+        {
+          "sequence": 211,
+          "timestamp": "2026-10-26T08:28:57.600727+00:00",
+          "level": "info",
+          "message": "running conversion done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 212,
+          "timestamp": "2026-10-26T08:28:57.600727+00:00",
+          "level": "info",
+          "message": "running ANSYS TGrid CADToTGridConverter done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 213,
+          "timestamp": "2026-10-26T08:28:57.601678+00:00",
+          "level": "info",
+          "message": "ran ANSYS TGrid CADToTGridConverter in 2.364 [s]",
+          "model_id": 1
+        },
+        {
+          "sequence": 214,
+          "timestamp": "2026-10-26T08:28:57.670986+00:00",
+          "level": "info",
+          "message": "Reading \"D:\\Fluent AI\\fluent-ai-app\\FM_ComputerOfWeiJiabao_32216/out1793003334.9302732216.tgf\"...",
+          "model_id": 1
+        },
+        {
+          "sequence": 215,
+          "timestamp": "2026-10-26T08:28:57.682993+00:00",
+          "level": "info",
+          "message": "nodes: 110214",
+          "model_id": 1
+        },
+        {
+          "sequence": 216,
+          "timestamp": "2026-10-26T08:28:57.683993+00:00",
+          "level": "info",
+          "message": "edges: 1106",
+          "model_id": 1
+        },
+        {
+          "sequence": 217,
+          "timestamp": "2026-10-26T08:28:57.683993+00:00",
+          "level": "info",
+          "message": "faces: 218194",
+          "model_id": 1
+        },
+        {
+          "sequence": 218,
+          "timestamp": "2026-10-26T08:28:57.685393+00:00",
+          "level": "info",
+          "message": "cells: 0",
+          "model_id": 1
+        },
+        {
+          "sequence": 219,
+          "timestamp": "2026-10-26T08:28:57.767850+00:00",
+          "level": "info",
+          "message": "appending mesh...",
+          "model_id": 1
+        },
+        {
+          "sequence": 220,
+          "timestamp": "2026-10-26T08:28:57.769863+00:00",
+          "level": "info",
+          "message": "done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 221,
+          "timestamp": "2026-10-26T08:28:57.778852+00:00",
+          "level": "info",
+          "message": "generating pointers...done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 222,
+          "timestamp": "2026-10-26T08:28:57.778852+00:00",
+          "level": "info",
+          "message": "extracting boundary entities...",
+          "model_id": 1
+        },
+        {
+          "sequence": 223,
+          "timestamp": "2026-10-26T08:28:57.785850+00:00",
+          "level": "info",
+          "message": "111147 boundary nodes.",
+          "model_id": 1
+        },
+        {
+          "sequence": 224,
+          "timestamp": "2026-10-26T08:28:57.785850+00:00",
+          "level": "info",
+          "message": "219250 boundary faces.",
+          "model_id": 1
+        },
+        {
+          "sequence": 225,
+          "timestamp": "2026-10-26T08:28:57.786850+00:00",
+          "level": "info",
+          "message": "10 boundary face zones.",
+          "model_id": 1
+        },
+        {
+          "sequence": 226,
+          "timestamp": "2026-10-26T08:28:57.786850+00:00",
+          "level": "info",
+          "message": "done.",
+          "model_id": 1
+        },
+        {
+          "sequence": 227,
+          "timestamp": "2026-10-26T08:28:57.844025+00:00",
+          "level": "info",
+          "message": "Reading \"D:\\Fluent AI\\fluent-ai-app\\FM_ComputerOfWeiJiabao_32216\\wenqiuli.sf\"...",
+          "model_id": 1
+        },
+        {
+          "sequence": 228,
+          "timestamp": "2026-10-26T08:28:57.850024+00:00",
+          "level": "info",
+          "message": "ANSYS(R) TGLib(TM) 3D, revision 24.1.0",
+          "model_id": 1
+        },
+        {
+          "sequence": 229,
+          "timestamp": "2026-10-26T08:28:57.909606+00:00",
+          "level": "info",
+          "message": "Read 256689 vertices",
+          "model_id": 1
+        },
+        {
+          "sequence": 230,
+          "timestamp": "2026-10-26T08:28:58.909483+00:00",
+          "level": "info",
+          "message": "0 faces marked.",
+          "model_id": 1
+        },
+        {
+          "sequence": 231,
+          "timestamp": "2026-10-26T08:28:59.099159+00:00",
+          "level": "info",
+          "message": "computing regions...done",
+          "model_id": 1
+        },
+        {
+          "sequence": 232,
+          "timestamp": "2026-10-26T08:28:59.856348+00:00",
+          "level": "info",
+          "message": "------------------------- --------------------- -------------------- ---------------- ----------",
+          "model_id": 1
+        },
+        {
+          "sequence": 233,
+          "timestamp": "2026-10-26T08:28:59.858347+00:00",
+          "level": "info",
+          "message": "name skewed-cells (> 0.80)    averaged-skewness maximum-skewness face count",
+          "model_id": 1
+        },
+        {
+          "sequence": 234,
+          "timestamp": "2026-10-26T08:28:59.859363+00:00",
+          "level": "info",
+          "message": "------------------------- --------------------- -------------------- ---------------- ----------",
+          "model_id": 1
+        },
+        {
+          "sequence": 235,
+          "timestamp": "2026-10-26T08:28:59.873747+00:00",
+          "level": "info",
+          "message": "wenqiuli                     0         0.0044453452       0.43879221     218194",
+          "model_id": 1
+        },
+        {
+          "sequence": 236,
+          "timestamp": "2026-10-26T08:28:59.876848+00:00",
+          "level": "info",
+          "message": "------------------------- --------------------- -------------------- ---------------- ----------",
+          "model_id": 1
+        },
+        {
+          "sequence": 237,
+          "timestamp": "2026-10-26T08:28:59.879849+00:00",
+          "level": "info",
+          "message": "name skewed-cells (> 0.80)    averaged-skewness maximum-skewness face count",
+          "model_id": 1
+        },
+        {
+          "sequence": 238,
+          "timestamp": "2026-10-26T08:28:59.882854+00:00",
+          "level": "info",
+          "message": "------------------------- --------------------- -------------------- ---------------- ----------",
+          "model_id": 1
+        },
+        {
+          "sequence": 239,
+          "timestamp": "2026-10-26T08:28:59.898856+00:00",
+          "level": "info",
+          "message": "wenqiuli-wenqiuli                     0         0.0044453452       0.43879221     218194",
+          "model_id": 1
+        },
+        {
+          "sequence": 240,
+          "timestamp": "2026-10-26T08:28:59.901848+00:00",
+          "level": "info",
+          "message": "---------------- After Surface mesh, the model consists of 1 fluid/solid regions and 0 voids.",
+          "model_id": 1
+        },
+        {
+          "sequence": 241,
+          "timestamp": "2026-10-26T08:28:59.914848+00:00",
+          "level": "info",
+          "message": "---------------- Surface Meshing of wenqiuli complete in  0.08 minutes, with a maximum skewness of  0.44.",
+          "model_id": 1
+        },
+        {
+          "sequence": 242,
+          "timestamp": "2026-10-26T08:29:00.025986+00:00",
+          "level": "info",
+          "message": "execute create_surface_mesh",
+          "model_id": 1
+        },
+        {
+          "sequence": 243,
+          "timestamp": "2026-10-26T08:29:00.025986+00:00",
+          "level": "info",
+          "message": "True",
+          "model_id": 1
+        },
+        {
+          "sequence": 244,
+          "timestamp": "2026-10-26T08:29:10.186399+00:00",
+          "level": "success",
+          "message": "create_surface_mesh completed.",
+          "model_id": 1
+        }
+      ],
+      "message": "已切换到下一步: describe_geometry"
+    },
+    "step_index": 2,
+    "task_path": [
+      "create_surface_mesh"
+    ],
+    "write_report": null,
+    "read_report": {
+      "workflow_type": "watertight",
+      "status": "success",
+      "task_names": [
+        "update_regions",
+        "create_regions",
+        "describe_geometry",
+        "enclose_fluid_regions",
+        "update_boundaries",
+        "import_geometry",
+        "create_surface_mesh",
+        "create_volume_mesh",
+        "apply_share_topology",
+        "add_boundary_layer",
+        "add_local_sizing"
+      ],
+      "items": [
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "use_size_files"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "No",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "remesh_imported_mesh"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "All",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "min_size"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.0005,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "max_size"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.002,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "growth_rate"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 1.19999,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "size_functions"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "Curvature & Proximity",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "object_based_controls"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "No",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "curvature_normal_angle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 18.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "cells_per_gap"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 1.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "scope_proximity_to"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "edges",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "size_field_file"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": null,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "size_control_file"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": null,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "save_size_field"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "save_size_field_file"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": null,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "draw_size_control"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": true,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "preview_sizefield"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "auto_create_scoped_sizing"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": true,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cfd_surface_mesh_controls",
+            "surface_mesh_method"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "Standard",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "separation_required"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "No",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "separation_angle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 40.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "remesh_selection_type"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "label",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "remesh_zone_list"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": [],
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "remesh_label_list"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": [],
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "show_surface_mesh_preferences"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "self_intersect_check"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "yes",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "fold_face_limit"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 10.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_separation"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "auto",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_separation_angle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 40.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "auto_assign_zone_types"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "yes",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_quality_improve"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "yes",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_quality_improve_limit"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.8,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_quality_max_angle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 80.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_quality_collapse_limit"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.95,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_remove_step"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "no",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "sm_step_width"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "set_volume_mesh_max_size"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "no",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "volume_mesh_max_size"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 33.15,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "tvm_auto_control_creation"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "yes",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "auto_surface_remesh"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "auto",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "surface_mesh_preferences",
+            "auto_merge"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": true,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "import_type"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "Single File",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "append_mesh"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_faceting_file_name"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "directory"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": null,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "pattern"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": null,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "length_unit"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "mm",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "tesselation_method"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "CFD Surface Mesh",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "original_zones"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": [
+            "outlet",
+            "inlet-hot",
+            "inlet-cold",
+            "wall-big",
+            "wall-small"
+          ],
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "execute_share_topology"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "No",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_faceting_controls",
+            "refine_faceting"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_faceting_controls",
+            "tolerance"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_faceting_controls",
+            "max_size"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "extract_features"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": true,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "feature_angle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 40.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "create_cad_assemblies"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "one_object_per"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "Program-controlled",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "one_zone_per"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "body",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "open_all_cad_in_subdirectories"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "save_pmdb_intermediate_file"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "import_part_names"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "use_part_or_body_as_suffix"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "import_named_selections"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": true,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "cad_import_options",
+            "import_curvature_data_from_cad"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": true,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "show_share_topology_preferences"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "share_topology_angle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 40.0,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "relative_share_topology_tolerance"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.1,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "number_of_join_tries"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 3,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "st_tolerance_increment"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": 0.05,
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "execute_join_intersect"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "Join Only",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "st_rename_internals"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "yes",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "operation"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "Join-Intersect",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "connect_label_wildcard"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "*int*",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "intf_label_list"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": [],
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "per_label_list"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": [],
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "fluid_label_wildcard"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "*fluid",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "model_is_periodic"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "no",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "advanced_improve"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "no",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "share_topology_preferences",
+            "allow_defeaturing"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": "no",
+          "error": null
+        },
+        {
+          "task_path": [
+            "create_surface_mesh"
+          ],
+          "argument_path": [
+            "preview_size_toggle"
+          ],
+          "compound_child_name": null,
+          "found": true,
+          "value": false,
+          "error": null
+        }
+      ],
+      "error": null
+    }
+  },
+  "marker": "MESHING_LIVE_CHECK_PASSED",
+  "finished_at_utc": "2026-10-26T08:29:10.697429+00:00"
+}

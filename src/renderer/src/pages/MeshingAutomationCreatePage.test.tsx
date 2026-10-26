@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -10,6 +10,7 @@ import type {
   MeshingWorkflowSchema,
 } from '../../../shared/contracts'
 import { AppProviders } from '../app/AppProviders'
+import { useAppStore } from '../store/appStore'
 import { useSidecarStore } from '../store/sidecarStore'
 import { MeshingAutomationCreatePage } from './MeshingAutomationCreatePage'
 
@@ -239,8 +240,55 @@ const contract: MeshingWorkflowContract = {
   ],
 }
 
+const editAutomation = {
+  id: 11,
+  name: 'Venturi Meshing',
+  description: 'Editable preset',
+  model_family: 'Venturi family',
+  reference_model_id: null,
+  status: 'active' as const,
+  created_at: 'now',
+  updated_at: 'now',
+  preset: {
+    schema_version: 1 as const,
+    fluent_version: '25.2.0',
+    workflow_type: 'watertight' as const,
+    items: [
+      {
+        task_path: ['create_surface_mesh'],
+        argument_path: ['min_size'],
+        value: 0.005,
+        required: true,
+        compound_child_name: null,
+      },
+      {
+        task_path: ['add_local_sizing'],
+        argument_path: ['add_child'],
+        value: 'yes',
+        required: true,
+        compound_child_name: null,
+      },
+      {
+        task_path: ['add_local_sizing'],
+        argument_path: ['boi_control_name'],
+        value: 'facesize_custom',
+        required: true,
+        compound_child_name: 'facesize_custom',
+      },
+      {
+        task_path: ['add_local_sizing'],
+        argument_path: ['boi_size'],
+        value: 0.004,
+        required: true,
+        compound_child_name: 'facesize_custom',
+      },
+    ],
+  },
+}
+
 describe('MeshingAutomationCreatePage', () => {
   beforeEach(() => {
+    useAppStore.setState({ themeMode: 'system', language: 'zh' })
     useSidecarStore.setState({
       status: { state: 'ready', message: 'ready', version: '0.1.0', pid: 1, port: 5000 },
     })
@@ -254,9 +302,13 @@ describe('MeshingAutomationCreatePage', () => {
       meshing: {
         schema: vi.fn().mockResolvedValue(schema),
         workflowSchema: vi.fn().mockResolvedValue(contract),
-        validatePreset: vi.fn(),
+        validatePreset: vi.fn().mockResolvedValue({ valid: true, errors: [] }),
       },
-      meshingAutomations: { create: vi.fn() },
+      meshingAutomations: {
+        create: vi.fn(),
+        get: vi.fn().mockResolvedValue(editAutomation),
+        update: vi.fn(),
+      },
     } as unknown as FluentAIApi
     Object.defineProperty(window, 'fluentAI', { configurable: true, value: api })
   })
@@ -284,42 +336,42 @@ describe('MeshingAutomationCreatePage', () => {
     }
     expect(screen.queryByText('应用共享拓扑')).not.toBeInTheDocument()
 
-    expect(screen.getByText('Units')).toBeInTheDocument()
+    expect(screen.getByText('单位')).toBeInTheDocument()
     expect(screen.getByText('高级与状态选项 (1)')).toBeInTheDocument()
-    expect(screen.queryByText('Directory')).not.toBeInTheDocument()
+    expect(screen.queryByText('目录')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('switch'))
     fireEvent.click(await screen.findByText('开发者/内部参数 (1)'))
-    expect(await screen.findByText('Directory')).toBeInTheDocument()
+    expect(await screen.findByText('目录')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /生成表面网格/ }))
-    expect(await screen.findByText('Use Custom Size Field/Control Files?')).toBeInTheDocument()
-    expect(screen.getByText('Minimum Size [m]')).toBeInTheDocument()
-    expect(screen.getByText('Maximum Size [m]')).toBeInTheDocument()
-    expect(screen.getByText('Growth Rate')).toBeInTheDocument()
-    expect(screen.getByText('Size Functions')).toBeInTheDocument()
+    expect(await screen.findByText('是否要使用自定义尺寸场/控制文件？')).toBeInTheDocument()
+    expect(screen.getByText('最小尺寸 [m]')).toBeInTheDocument()
+    expect(screen.getByText('最大尺寸 [m]')).toBeInTheDocument()
+    expect(screen.getByText('增长率')).toBeInTheDocument()
+    expect(screen.getByText('尺寸函数')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /添加局部尺寸/ }))
     const localSizingToggle = screen.getByRole('combobox', {
-      name: 'Would you like to add local sizing?',
+      name: '是否要添加局部尺寸？',
     })
     fireEvent.mouseDown(localSizingToggle)
-    fireEvent.click(await screen.findByText('yes', { selector: '.ant-select-item-option-content' }))
+    fireEvent.click(await screen.findByText('是', { selector: '.ant-select-item-option-content' }))
     expect(await screen.findByDisplayValue('facesize_1')).toBeInTheDocument()
-    expect(await screen.findByText('Target Mesh Size [m]')).toBeInTheDocument()
+    expect(await screen.findByText('目标网格尺寸 [m]')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /添加复合子任务预设/ }))
     expect(await screen.findByDisplayValue('facesize_2')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /添加边界层/ }))
     expect(screen.getByDisplayValue('smooth-transition_1')).toBeInTheDocument()
-    expect(await screen.findByText('Number of Layers')).toBeInTheDocument()
+    expect(await screen.findByText('层数')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /添加复合子任务预设/ }))
     expect(await screen.findByDisplayValue('smooth-transition_2')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /更新区域/ }))
-    expect(await screen.findByText('Region Name')).toBeInTheDocument()
-    expect(screen.getByText('Region Type')).toBeInTheDocument()
+    expect(await screen.findByText('区域名称')).toBeInTheDocument()
+    expect(screen.getByText('区域类型')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /添加区域/ }))
-    fireEvent.change(screen.getByPlaceholderText('Region Name'), {
+    fireEvent.change(screen.getByPlaceholderText('区域名称'), {
       target: { value: 'wenqiuli' },
     })
     expect(screen.getByDisplayValue('wenqiuli')).toBeInTheDocument()
@@ -327,6 +379,59 @@ describe('MeshingAutomationCreatePage', () => {
     fireEvent.click(screen.getByRole('button', { name: /描述几何/ }))
     expect(await screen.findByText('几何结构仅由固体区域组成')).toBeInTheDocument()
     expect(screen.getByText('几何结构仅由没有空隙的流体区域组成')).toBeInTheDocument()
-    expect(screen.getByText('几何模型同时由流体和固体区域和/或空隙组成')).toBeInTheDocument()
+    expect(screen.getByText('几何结构同时由流体和固体区域和/或空隙组成')).toBeInTheDocument()
+
+    useAppStore.getState().setLanguage('en')
+    await waitFor(() => expect(screen.getByText('Geometry Type')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /Generate the Surface Mesh/ }))
+    expect(await screen.findByText('Use Custom Size Field/Control Files?')).toBeInTheDocument()
+    expect(screen.getByText('Minimum Size [m]')).toBeInTheDocument()
+  }, 60_000)
+
+  it('loads an existing preset and updates it in place', async () => {
+    render(
+      <AppProviders>
+        <MemoryRouter initialEntries={['/meshing/11/edit']}>
+          <MeshingAutomationCreatePage />
+        </MemoryRouter>
+      </AppProviders>,
+    )
+
+    expect(await screen.findByRole('heading', { name: '编辑网格划分自动化' })).toBeInTheDocument()
+    expect(await screen.findByDisplayValue('Venturi Meshing')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /添加局部尺寸/ }))
+    expect(await screen.findByDisplayValue('facesize_custom')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByDisplayValue('Venturi Meshing'), {
+      target: { value: 'Venturi Meshing Updated' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '更新网格划分自动化' }))
+
+    await waitFor(() => {
+      expect((window.fluentAI as FluentAIApi).meshingAutomations.update).toHaveBeenCalledWith(
+        11,
+        expect.objectContaining({
+          name: 'Venturi Meshing Updated',
+          model_family: 'Venturi family',
+          status: 'active',
+          preset: expect.objectContaining({
+            workflow_type: 'watertight',
+            items: expect.arrayContaining([
+              expect.objectContaining({
+                task_path: ['create_surface_mesh'],
+                argument_path: ['min_size'],
+                value: 0.005,
+              }),
+              expect.objectContaining({
+                task_path: ['add_local_sizing'],
+                argument_path: ['boi_size'],
+                value: 0.004,
+                compound_child_name: 'facesize_custom',
+              }),
+            ]),
+          }),
+        }),
+      )
+    })
   }, 60_000)
 })

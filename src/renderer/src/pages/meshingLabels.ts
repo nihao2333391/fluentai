@@ -1,6 +1,8 @@
 import type { TFunction } from 'i18next'
 
 import type { MeshingSchemaTask } from '../../../shared/contracts'
+import i18n from '../i18n'
+import { localizedAnsysTerm } from '../i18n/ansysLabels'
 
 const TASK_NAME_KEYS: Record<string, string> = {
   import_cad_and_part_management: 'importCadAndPartManagement',
@@ -49,7 +51,13 @@ const TASK_TYPE_KEYS: Record<string, string> = {
 
 export const localizedMeshingTaskName = (t: TFunction, task: MeshingSchemaTask): string => {
   const key = TASK_NAME_KEYS[task.python_name]
-  return key ? t(`meshing.taskNames.${key}`) : task.display_name
+  if (i18n.language.toLowerCase().startsWith('zh')) {
+    return localizedAnsysTerm(
+      task.display_name,
+      key ? t(`meshing.taskNames.${key}`) : task.display_name,
+    )
+  }
+  return task.display_name
 }
 
 export const localizedMeshingTaskType = (t: TFunction, taskType: string | null): string => {

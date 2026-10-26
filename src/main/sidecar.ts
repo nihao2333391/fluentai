@@ -21,6 +21,11 @@ type SidecarChild = ChildProcessByStdio<Writable, Readable, Readable>
 const DEFAULT_START_TIMEOUT_MS = 60_000
 const DEFAULT_STOP_TIMEOUT_MS = 5_000
 const DEFAULT_MAX_AUTO_RESTARTS = 2
+const DEFAULT_REQUEST_TIMEOUT_MS = 15_000
+
+interface SidecarRequestInit extends RequestInit {
+  timeoutMs?: number
+}
 
 export class SidecarManager extends EventEmitter {
   private readonly appRoot: string
@@ -80,7 +85,7 @@ export class SidecarManager extends EventEmitter {
     return this.startPromise
   }
 
-  async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  async request<T>(path: string, init: SidecarRequestInit = {}): Promise<T> {
     if (!path.startsWith('/api/')) {
       throw new Error('Sidecar requests must use an authenticated /api path.')
     }
@@ -88,16 +93,17 @@ export class SidecarManager extends EventEmitter {
       throw new Error('Sidecar is not ready.')
     }
 
-    const headers = new Headers(init.headers)
+    const { timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS, ...requestInit } = init
+    const headers = new Headers(requestInit.headers)
     headers.set('Authorization', `Bearer ${this.token}`)
-    if (init.body !== undefined && !headers.has('Content-Type')) {
+    if (requestInit.body !== undefined && !headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json')
     }
 
     const response = await fetch(`http://127.0.0.1:${this.port}${path}`, {
-      ...init,
+      ...requestInit,
       headers,
-      signal: init.signal ?? AbortSignal.timeout(15_000),
+      signal: requestInit.signal ?? AbortSignal.timeout(timeoutMs),
     })
 
     if (response.status === 204) {

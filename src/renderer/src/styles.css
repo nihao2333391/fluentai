@@ -624,6 +624,122 @@ select {
   margin-left: 10px;
 }
 
+.live-meshing-stepper .meshing-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.live-meshing-stepper .meshing-step:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.live-meshing-stepper .meshing-step small {
+  color: var(--app-muted);
+}
+
+.live-meshing-stepper .live-step-failed {
+  border-color: rgba(220, 38, 38, 0.55);
+  background: color-mix(in srgb, var(--app-panel-strong) 76%, rgba(220, 38, 38, 0.12));
+}
+
+.live-meshing-stepper .live-step-failed .meshing-step-icon {
+  color: #ef4444;
+}
+
+.live-meshing-stepper .live-step-running .meshing-step-icon {
+  color: #1677ff;
+}
+
+.live-step-panel .ant-card-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.meshing-live-model-actions {
+  margin-top: 12px;
+}
+
+.meshing-live-error {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+.meshing-live-add-child {
+  padding: 10px 12px;
+  border: 1px dashed var(--app-border);
+  border-radius: 10px;
+}
+
+.meshing-live-child-input {
+  width: 240px;
+}
+
+.live-parameter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 11px 13px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--app-panel-strong) 76%, transparent);
+}
+
+.live-parameter-row.is-external {
+  border-color: rgba(250, 173, 20, 0.65);
+  background: color-mix(in srgb, var(--app-panel-strong) 74%, rgba(250, 173, 20, 0.12));
+}
+
+.live-parameter-label {
+  min-width: 220px;
+}
+
+.live-parameter-path {
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.live-parameter-control {
+  flex: 0 1 340px;
+  min-width: 190px;
+}
+
+.meshing-live-logs {
+  display: flex;
+  max-height: 340px;
+  flex-direction: column;
+  gap: 5px;
+  overflow: auto;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 12px;
+}
+
+.meshing-live-log {
+  display: grid;
+  grid-template-columns: 90px 58px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding: 5px 7px;
+  border-radius: 7px;
+}
+
+.meshing-live-log.is-error {
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.meshing-live-log.is-success {
+  background: rgba(22, 163, 74, 0.08);
+}
+
 @media (max-width: 900px) {
   .meshing-workflow-tabs .ant-tabs-nav {
     min-width: 150px;
@@ -638,5 +754,20 @@ select {
   .meshing-argument-control {
     width: 100%;
     min-width: 0;
+  }
+
+  .live-parameter-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .live-parameter-control {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .meshing-live-child-input {
+    width: 100%;
   }
 }

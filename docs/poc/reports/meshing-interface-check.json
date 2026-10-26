@@ -1,13 +1,13 @@
 {
   "status": "passed",
-  "started_at_utc": "2026-10-24T14:10:37.089689+00:00",
+  "started_at_utc": "2026-10-26T10:49:42.107022+00:00",
   "connection": {
     "connected": true,
     "mode": "launch",
     "version": "Ansys Fluent 2025 R2",
-    "pid": 21620,
+    "pid": 9844,
     "host": "localhost",
-    "port": 55103
+    "port": 56179
   },
   "all_read": {
     "status": "success",
@@ -252,5 +252,5 @@
     "error": null
   },
   "marker": "MESHING_INTERFACE_CHECK_PASSED",
-  "finished_at_utc": "2026-10-24T14:11:37.754346+00:00"
+  "finished_at_utc": "2026-10-26T10:50:38.049387+00:00"
 }

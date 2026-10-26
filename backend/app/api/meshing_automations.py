@@ -12,6 +12,11 @@ from app.domain import (
     MeshingAutomationCreate,
     MeshingAutomationRead,
     MeshingAutomationUpdate,
+    MeshingLiveSessionSnapshot,
+    MeshingLiveSessionStart,
+    MeshingLiveStepReport,
+    MeshingLiveStepRequest,
+    MeshingLiveWriteRequest,
     MeshingPresetDocument,
     MeshingPresetValidationReport,
     MeshingReadReport,
@@ -167,3 +172,127 @@ def apply_meshing_automation(
     meshing: MeshingServiceDependency,
 ) -> MeshingWorkflowReport:
     return meshing.apply_automation(automation_id, payload)
+
+
+@router.post("/meshing/live-sessions", response_model=MeshingLiveSessionSnapshot)
+def start_live_meshing_session(
+    payload: MeshingLiveSessionStart,
+    meshing: MeshingServiceDependency,
+) -> MeshingLiveSessionSnapshot:
+    try:
+        return meshing.start_live_session(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/meshing/live-sessions/{session_id}", response_model=MeshingLiveSessionSnapshot)
+def get_live_meshing_session(
+    session_id: str,
+    meshing: MeshingServiceDependency,
+) -> MeshingLiveSessionSnapshot:
+    try:
+        return meshing.get_live_session(session_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post(
+    "/meshing/live-sessions/{session_id}/enter",
+    response_model=MeshingLiveStepReport,
+)
+def enter_live_meshing_step(
+    session_id: str,
+    payload: MeshingLiveStepRequest,
+    meshing: MeshingServiceDependency,
+) -> MeshingLiveStepReport:
+    try:
+        return meshing.enter_live_step(session_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get(
+    "/meshing/live-sessions/{session_id}/steps/{step_index}",
+    response_model=MeshingLiveStepReport,
+)
+def read_live_meshing_step(
+    session_id: str,
+    step_index: int,
+    meshing: MeshingServiceDependency,
+) -> MeshingLiveStepReport:
+    try:
+        return meshing.read_live_step(session_id, step_index)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post(
+    "/meshing/live-sessions/{session_id}/write",
+    response_model=MeshingLiveStepReport,
+)
+def write_live_meshing_values(
+    session_id: str,
+    payload: MeshingLiveWriteRequest,
+    meshing: MeshingServiceDependency,
+) -> MeshingLiveStepReport:
+    try:
+        return meshing.write_live_step(session_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post(
+    "/meshing/live-sessions/{session_id}/execute",
+    response_model=MeshingLiveStepReport,
+)
+def execute_live_meshing_step(
+    session_id: str,
+    payload: MeshingLiveStepRequest,
+    meshing: MeshingServiceDependency,
+) -> MeshingLiveStepReport:
+    try:
+        return meshing.execute_live_step(session_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post(
+    "/meshing/live-sessions/{session_id}/next-model",
+    response_model=MeshingLiveSessionSnapshot,
+)
+def next_live_meshing_model(
+    session_id: str,
+    meshing: MeshingServiceDependency,
+) -> MeshingLiveSessionSnapshot:
+    try:
+        return meshing.next_live_model(session_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post(
+    "/meshing/live-sessions/{session_id}/retry-model",
+    response_model=MeshingLiveSessionSnapshot,
+)
+def retry_live_meshing_model(
+    session_id: str,
+    meshing: MeshingServiceDependency,
+) -> MeshingLiveSessionSnapshot:
+    try:
+        return meshing.retry_live_model(session_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post(
+    "/meshing/live-sessions/{session_id}/stop",
+    response_model=MeshingLiveSessionSnapshot,
+)
+def stop_live_meshing_session(
+    session_id: str,
+    meshing: MeshingServiceDependency,
+) -> MeshingLiveSessionSnapshot:
+    try:
+        return meshing.stop_live_session(session_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

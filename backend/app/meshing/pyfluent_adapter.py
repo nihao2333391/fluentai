@@ -7,7 +7,7 @@ import math
 import os
 import re
 import sys
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -26,6 +26,7 @@ from app.domain import (
     MeshingReadItemResult,
     MeshingReadReport,
     MeshingReadRequest,
+    MeshingTaskExecutionReport,
     MeshingWorkflowType,
     MeshingWriteReport,
     MeshingWriteRequest,
@@ -335,6 +336,7 @@ class PyFluentMeshingAdapter:
         self._connection_mode = connection_mode
         self._workflow: Any | None = None
         self._workflow_type: str | None = None
+        self._transcript_callback_id: str | None = None
 
     def connect(self, config: FluentConnectionConfig) -> FluentStatus:
         if self._session is not None and self._is_active():
@@ -353,7 +355,7 @@ class PyFluentMeshingAdapter:
                 "start_timeout": config.start_timeout,
                 "cleanup_on_exit": config.cleanup_on_exit,
                 "start_watchdog": False,
-                "start_transcript": False,
+                "start_transcript": True,
             }
             if config.fluent_path:
                 launch_kwargs["fluent_path"] = config.fluent_path
@@ -364,7 +366,7 @@ class PyFluentMeshingAdapter:
                     server_info_file_name=config.server_info_file,
                     password=config.password,
                     cleanup_on_exit=False,
-                    start_transcript=False,
+                    start_transcript=True,
                 )
             else:
                 if config.port is None:
@@ -374,7 +376,7 @@ class PyFluentMeshingAdapter:
                     port=config.port,
                     password=config.password,
                     cleanup_on_exit=False,
-                    start_transcript=False,
+                    start_transcript=True,
                 )
         self._connection_mode = config.mode
         return self.status()
@@ -386,6 +388,7 @@ class PyFluentMeshingAdapter:
         self._connection_mode = None
         self._workflow = None
         self._workflow_type = None
+        self._transcript_callback_id = None
         if session is not None and mode == "launch":
             session.exit()
 
@@ -661,6 +664,51 @@ class PyFluentMeshingAdapter:
         except Exception as exc:
             report.error = f"{type(exc).__name__}: {exc}"
             return report
+
+    def execute_task(
+        self,
+        workflow_type: str,
+        task_path: list[str],
+    ) -> MeshingTaskExecutionReport:
+        """Execute one workflow task and return its console-facing result."""
+        report = MeshingTaskExecutionReport(
+            status="failed",
+            task_path=task_path,
+            output=[f"execute {'/'.join(task_path)}"],
+        )
+        try:
+            workflow = self._get_workflow(workflow_type)
+            task = _find_task(workflow, task_path)
+            result = task()
+            report.output.append("Task completed." if result is None else str(result))
+            report.status = "success"
+            report.message = f"{'/'.join(task_path)} completed."
+        except Exception as exc:
+            report.message = f"{type(exc).__name__}: {exc}"
+            report.output.append(report.message)
+        return report
+
+    def reset_workflow(self, workflow_type: str) -> None:
+        """Drop the cached workflow wrapper so the next model starts from a clean tree."""
+        self._workflow = None
+        self._workflow_type = None
+        self._get_workflow(workflow_type)
+
+    def register_transcript_callback(self, callback: Callable[[str], None]) -> str | None:
+        session = self._ensure_session()
+        transcript = getattr(session, "transcript", None)
+        if transcript is None:
+            return None
+        self._transcript_callback_id = transcript.register_callback(callback)
+        return str(self._transcript_callback_id)
+
+    def unregister_transcript_callback(self) -> None:
+        if self._transcript_callback_id is None or self._session is None:
+            return
+        transcript = getattr(self._session, "transcript", None)
+        if transcript is not None:
+            transcript.unregister_callback(self._transcript_callback_id)
+        self._transcript_callback_id = None
 
     def _ensure_session(self) -> Any:
         if self._session is None or not self._is_active():

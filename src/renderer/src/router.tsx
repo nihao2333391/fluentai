@@ -1,10 +1,9 @@
 import { createHashRouter, Navigate } from 'react-router-dom'
 
 import { AppLayout } from './app/AppLayout'
-import { AutomationCreatePage } from './pages/AutomationCreatePage'
 import { MeshingAutomationCreatePage } from './pages/MeshingAutomationCreatePage'
 import { MeshingAutomationsPage } from './pages/MeshingAutomationsPage'
-import { MyAutomationsPage } from './pages/MyAutomationsPage'
+import { MeshingLiveSyncPage } from './pages/MeshingLiveSyncPage'
 import { MyModelsPage } from './pages/MyModelsPage'
 import { SettingsPage } from './pages/SettingsPage'
 
@@ -14,12 +13,17 @@ export const appRoutes = [
     element: <AppLayout />,
     children: [
       { index: true, element: <Navigate to="/meshing" replace /> },
-      { path: 'automations/:id/edit', element: <AutomationCreatePage /> },
-      { path: 'automations/:id/duplicate', element: <AutomationCreatePage /> },
-      { path: 'automations', element: <MyAutomationsPage /> },
       { path: 'models', element: <MyModelsPage /> },
       { path: 'meshing', element: <MeshingAutomationsPage /> },
-      { path: 'meshing/create', element: <MeshingAutomationCreatePage /> },
+      {
+        path: 'meshing/create',
+        element: <MeshingAutomationCreatePage key="meshing-create" />,
+      },
+      {
+        path: 'meshing/:id/edit',
+        element: <MeshingAutomationCreatePage key="meshing-edit" />,
+      },
+      { path: 'meshing/live/:sessionId', element: <MeshingLiveSyncPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <Navigate to="/meshing" replace /> },
     ],

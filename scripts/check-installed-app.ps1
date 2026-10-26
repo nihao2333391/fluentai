@@ -10,13 +10,24 @@ if (-not $InstallerPath) {
   $InstallerPath = Join-Path $root "release\FluentAI-0.1.0-x64-Setup.exe"
 }
 if (-not $InstallDirectory) {
-  $InstallDirectory = Join-Path $root "build\installed-smoke"
+  $InstallDirectory = Join-Path ([System.IO.Path]::GetTempPath()) "fluent-ai-installed-smoke"
 }
 $installer = [System.IO.Path]::GetFullPath($InstallerPath)
 $installDir = [System.IO.Path]::GetFullPath($InstallDirectory)
-$allowedRoot = [System.IO.Path]::GetFullPath((Join-Path $root "build")) + [System.IO.Path]::DirectorySeparatorChar
-if (-not $installDir.StartsWith($allowedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-  throw "Install directory must stay under the project build directory: $installDir"
+$allowedRoot = [System.IO.Path]::GetFullPath((Join-Path $root "build"))
+$allowedTempRoot = [System.IO.Path]::GetFullPath(
+  (Join-Path ([System.IO.Path]::GetTempPath()) "fluent-ai-installed-smoke")
+)
+$isAllowed =
+  $installDir.Equals($allowedRoot, [System.StringComparison]::OrdinalIgnoreCase) -or
+  $installDir.StartsWith($allowedRoot + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase) -or
+  $installDir.Equals($allowedTempRoot, [System.StringComparison]::OrdinalIgnoreCase) -or
+  $installDir.StartsWith($allowedTempRoot + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)
+if (-not $isAllowed) {
+  throw "Install directory must stay under the project build directory or the Fluent AI smoke-test temp directory: $installDir"
+}
+if ($installDir -match '\s') {
+  throw "NSIS silent-install directory must not contain spaces: $installDir"
 }
 if (-not (Test-Path -LiteralPath $installer)) {
   throw "Installer was not found: $installer"

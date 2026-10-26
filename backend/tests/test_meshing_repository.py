@@ -1,7 +1,12 @@
 from pathlib import Path
 
 from app.database import Database
-from app.domain import MeshingAutomationCreate, MeshingPresetDocument, MeshingPresetItem
+from app.domain import (
+    MeshingAutomationCreate,
+    MeshingAutomationUpdate,
+    MeshingPresetDocument,
+    MeshingPresetItem,
+)
 from app.repositories.errors import RepositoryConflictError
 from app.repositories.meshing_automations import MeshingAutomationRepository
 
@@ -42,6 +47,16 @@ def test_meshing_automation_crud_and_unique_name(tmp_path: Path) -> None:
         pass
     else:
         raise AssertionError("Duplicate Meshing automation name was accepted")
+
+    update_payload = _create_payload("Venturi mesh updated").model_copy(
+        update={"description": "Updated preset", "model_family": "Venturi Mk II"}
+    )
+    updated = repository.update(created.id, MeshingAutomationUpdate(**update_payload.model_dump()))
+    assert updated.id == created.id
+    assert updated.name == "Venturi mesh updated"
+    assert updated.description == "Updated preset"
+    assert updated.model_family == "Venturi Mk II"
+    assert updated.updated_at >= created.updated_at
 
     repository.delete(created.id)
     assert repository.list() == []

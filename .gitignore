@@ -5,6 +5,7 @@ release/
 build/
 coverage/
 outputs/
+.dsh-office-*/
 .runtime/
 .venv/
 __pycache__/

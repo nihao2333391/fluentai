@@ -1,5 +1,6 @@
 """In-memory Meshing adapter for service and API tests."""
 
+from collections.abc import Callable
 from typing import Literal
 
 from app.domain import (
@@ -14,6 +15,7 @@ from app.domain import (
     MeshingReadItemResult,
     MeshingReadReport,
     MeshingReadRequest,
+    MeshingTaskExecutionReport,
     MeshingWriteReport,
     MeshingWriteRequest,
 )
@@ -25,6 +27,11 @@ class FakeMeshingAdapter:
         self.mode: Literal["launch", "attach"] | None = None
         self.known_names = set(known_names or {"wall-big", "wall-small", "inlet", "outlet"})
         self.applied_presets: list[tuple[MeshingPresetDocument, str, bool]] = []
+        self.executed_tasks: list[tuple[str, tuple[str, ...]]] = []
+        self.workflow_resets = 0
+        self.transcript_callback: Callable[[str], None] | None = None
+        self.last_config: FluentConnectionConfig | None = None
+        self.connect_calls = 0
         self.values: dict[
             tuple[tuple[str, ...], tuple[str, ...], str | None], MeshingPresetValue
         ] = {
@@ -35,6 +42,8 @@ class FakeMeshingAdapter:
         }
 
     def connect(self, config: FluentConnectionConfig) -> FluentStatus:
+        self.connect_calls += 1
+        self.last_config = config
         self.connected = True
         self.mode = config.mode
         return self.status()
@@ -81,10 +90,10 @@ class FakeMeshingAdapter:
             )
         return MeshingReadReport(
             workflow_type=request.workflow_type,
-            status="success" if all(item.found for item in items) else "failed",
+            status="success",
             task_names=["import_geometry", "add_local_sizing", "create_surface_mesh"],
             items=items,
-            error=None if all(item.found for item in items) else "Read failed.",
+            error=None,
         )
 
     def write_arguments(self, request: MeshingWriteRequest) -> MeshingWriteReport:
@@ -168,3 +177,32 @@ class FakeMeshingAdapter:
             missing_names=missing,
             error=("Missing required Meshing names: " + ", ".join(missing)) if missing else None,
         )
+
+    def execute_task(
+        self,
+        workflow_type: str,
+        task_path: list[str],
+    ) -> MeshingTaskExecutionReport:
+        if not self.connected:
+            return MeshingTaskExecutionReport(
+                status="failed",
+                task_path=task_path,
+                message="Fake Fluent Meshing is not connected.",
+            )
+        self.executed_tasks.append((workflow_type, tuple(task_path)))
+        return MeshingTaskExecutionReport(
+            status="success",
+            task_path=task_path,
+            message=f"{'/'.join(task_path)} completed.",
+            output=[f"execute {'/'.join(task_path)}", "Task completed."],
+        )
+
+    def reset_workflow(self, workflow_type: str) -> None:
+        self.workflow_resets += 1
+
+    def register_transcript_callback(self, callback: Callable[[str], None]) -> str | None:
+        self.transcript_callback = callback
+        return "fake-transcript"
+
+    def unregister_transcript_callback(self) -> None:
+        self.transcript_callback = None

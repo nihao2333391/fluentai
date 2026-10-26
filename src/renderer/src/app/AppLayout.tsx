@@ -1,5 +1,4 @@
 import {
-  AppstoreOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SettingOutlined,
@@ -38,11 +37,6 @@ export function AppLayout() {
             label: t('nav.meshingAutomations'),
           },
           {
-            key: '/automations',
-            icon: <AppstoreOutlined />,
-            label: t('nav.myAutomations'),
-          },
-          {
             key: '/models',
             icon: <DatabaseOutlined />,
             label: t('nav.myModels'),
@@ -65,13 +59,11 @@ export function AppLayout() {
     [t],
   )
 
-  const selectedKey = location.pathname.startsWith('/automations')
-    ? '/automations'
-    : location.pathname.startsWith('/models')
-      ? '/models'
-      : location.pathname.startsWith('/meshing')
-        ? '/meshing'
-        : '/settings'
+  const selectedKey = location.pathname.startsWith('/models')
+    ? '/models'
+    : location.pathname.startsWith('/meshing')
+      ? '/meshing'
+      : '/settings'
 
   return (
     <Layout className="app-layout">

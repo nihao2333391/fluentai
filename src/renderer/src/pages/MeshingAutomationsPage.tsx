@@ -1,23 +1,44 @@
-import { DeleteOutlined, PlayCircleOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
-import { Alert, App, Button, Modal, Select, Space, Table, Tag, Typography } from 'antd'
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PlayCircleOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons'
+import { App, Button, Modal, Select, Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
-import type { MeshingAutomation, MeshingWorkflowReport, Model } from '../../../shared/contracts'
+import type { MeshingAutomation, Model } from '../../../shared/contracts'
 import { EmptyState, ErrorState, LoadingState, PageContent } from '../components/PageState'
-import { localizedRuntimeMessage } from '../i18n/runtimeMessages'
 import { fluentAiService } from '../services/fluentAi'
 import { useSidecarStore } from '../store/sidecarStore'
 
 const MESHING_GEOMETRY_EXTENSIONS = [
+  '.cas',
+  '.msh',
   '.dsco',
   '.scdoc',
+  '.scdocx',
   '.step',
   '.stp',
+  '.stpz',
   '.iges',
   '.igs',
+  '.jt',
+  '.3dxml',
+  '.catpart',
+  '.catproduct',
+  '.sldprt',
+  '.sldasm',
+  '.ipt',
+  '.iam',
+  '.prt',
+  '.asm',
+  '.par',
+  '.stl',
   '.pmdb',
   '.fmd',
   '.tgf',
@@ -42,9 +63,8 @@ export function MeshingAutomationsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [applyAutomation, setApplyAutomation] = useState<MeshingAutomation | null>(null)
-  const [selectedModelId, setSelectedModelId] = useState<number | null>(null)
+  const [selectedModelIds, setSelectedModelIds] = useState<number[]>([])
   const [applying, setApplying] = useState(false)
-  const [applyReport, setApplyReport] = useState<MeshingWorkflowReport | null>(null)
 
   const fetchData = async (): Promise<[MeshingAutomation[], Model[]]> =>
     Promise.all([fluentAiService.meshingAutomations.list(), fluentAiService.models.list()])
@@ -95,39 +115,43 @@ export function MeshingAutomationsPage() {
 
   const openApply = (automation: MeshingAutomation): void => {
     setApplyAutomation(automation)
-    setSelectedModelId(automation.reference_model_id)
-    setApplyReport(null)
+    const geometryModels = models.filter(isMeshingGeometry)
+    const referenceAvailable = geometryModels.some(
+      (model) => model.id === automation.reference_model_id,
+    )
+    setSelectedModelIds(
+      referenceAvailable && automation.reference_model_id
+        ? [automation.reference_model_id]
+        : geometryModels[0]
+          ? [geometryModels[0].id]
+          : [],
+    )
   }
 
   const closeApply = (): void => {
     if (applying) return
     setApplyAutomation(null)
-    setSelectedModelId(null)
-    setApplyReport(null)
+    setSelectedModelIds([])
   }
 
   const apply = async (): Promise<void> => {
     if (!applyAutomation) return
-    if (!selectedModelId) {
+    if (selectedModelIds.length === 0) {
       message.warning(t('meshing.selectApplyModel'))
       return
     }
     setApplying(true)
-    setApplyReport(null)
     try {
-      const report = await fluentAiService.meshingAutomations.apply(applyAutomation.id, {
-        model_id: selectedModelId,
+      const session = await fluentAiService.meshingLive.start({
+        automation_id: applyAutomation.id,
+        model_ids: selectedModelIds,
         connection: null,
-        import_geometry: true,
       })
-      setApplyReport(report)
-      if (report.status === 'success') {
-        message.success(t('meshing.applySuccess'))
-      } else {
-        message.error(localizedRuntimeMessage(t, report.message))
-      }
+      message.success(t('meshing.liveStarted'))
+      navigate(`/meshing/live/${session.session_id}`)
     } catch (applyError) {
-      message.error(applyError instanceof Error ? applyError.message : String(applyError))
+      const detail = applyError instanceof Error ? applyError.message : String(applyError)
+      message.error(/timeout|aborted/i.test(detail) ? t('meshing.liveStartTimeout') : detail)
     } finally {
       setApplying(false)
     }
@@ -181,9 +205,17 @@ export function MeshingAutomationsPage() {
     {
       title: '',
       key: 'actions',
-      width: 130,
+      width: 190,
       render: (_, record) => (
         <Space size={4}>
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            onClick={() => navigate(`/meshing/${record.id}/edit`)}
+            aria-label={t('common.edit')}
+          >
+            {t('common.edit')}
+          </Button>
           <Button
             type="text"
             icon={<PlayCircleOutlined />}
@@ -246,7 +278,7 @@ export function MeshingAutomationsPage() {
       <Modal
         open={applyAutomation !== null}
         title={t('meshing.applyTitle', { name: applyAutomation?.name ?? '' })}
-        okText={t('common.apply')}
+        okText={t('meshing.liveApplyButton')}
         cancelText={t('common.cancel')}
         confirmLoading={applying}
         onOk={() => void apply()}
@@ -256,11 +288,12 @@ export function MeshingAutomationsPage() {
       >
         <Space direction="vertical" size={14} className="full-width">
           <Typography.Paragraph type="secondary" className="meshing-apply-note">
-            {t('meshing.applyDescription')}
+            {t('meshing.liveApplyDescription')}
           </Typography.Paragraph>
           <Select
-            value={selectedModelId}
-            onChange={setSelectedModelId}
+            mode="multiple"
+            value={selectedModelIds}
+            onChange={setSelectedModelIds}
             className="full-width"
             placeholder={t('meshing.selectApplyModel')}
             options={geometryModels.map((model) => ({
@@ -271,33 +304,6 @@ export function MeshingAutomationsPage() {
             showSearch
             optionFilterProp="label"
           />
-          {applyReport ? (
-            <Alert
-              type={applyReport.status === 'success' ? 'success' : 'error'}
-              showIcon
-              message={
-                applyReport.status === 'success'
-                  ? t('meshing.applyVerified', {
-                      count: applyReport.apply_report?.results.length ?? 0,
-                    })
-                  : localizedRuntimeMessage(t, applyReport.message)
-              }
-              description={
-                <Space direction="vertical" size={6}>
-                  <span>{t('meshing.applyStoppedBefore')}</span>
-                  {applyReport.apply_report?.missing_names.length ? (
-                    <Space wrap>
-                      {applyReport.apply_report.missing_names.map((name) => (
-                        <Tag color="red" key={name}>
-                          {name}
-                        </Tag>
-                      ))}
-                    </Space>
-                  ) : null}
-                </Space>
-              }
-            />
-          ) : null}
         </Space>
       </Modal>
     </PageContent>

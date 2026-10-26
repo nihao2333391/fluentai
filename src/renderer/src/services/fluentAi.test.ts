@@ -5,12 +5,16 @@ import { fluentAiService, getFluentAIApi } from './fluentAi'
 
 describe('fluentAiService', () => {
   it('delegates business operations through the preload API', async () => {
-    const automation = {
+    const model = {
       id: 1,
-      name: 'Baseline',
+      name: 'baseline.cas.h5',
+      file_path: 'D:\\models\\baseline.cas.h5',
+      file_size: 1024,
+      file_mtime: 'now',
       description: '',
-      status: 'draft' as const,
-      preset: { schema_version: 1 as const, fluent_version: null, items: [] },
+      tags: [],
+      automation_ids: [],
+      default_automation_id: null,
       created_at: 'now',
       updated_at: 'now',
     }
@@ -21,20 +25,12 @@ describe('fluentAiService', () => {
         restart: vi.fn(),
         onStatusChanged: vi.fn(),
       },
-      automations: {
-        list: vi.fn().mockResolvedValue([automation]),
-        create: vi.fn().mockResolvedValue(automation),
-        get: vi.fn().mockResolvedValue(automation),
-        update: vi.fn().mockResolvedValue(automation),
-        delete: vi.fn().mockResolvedValue(undefined),
-      },
       models: {
-        list: vi.fn(),
+        list: vi.fn().mockResolvedValue([model]),
         get: vi.fn(),
         pickFile: vi.fn(),
         create: vi.fn(),
         update: vi.fn(),
-        associate: vi.fn(),
         open: vi.fn(),
         refresh: vi.fn(),
         delete: vi.fn(),
@@ -42,7 +38,6 @@ describe('fluentAiService', () => {
       settings: { get: vi.fn(), update: vi.fn() },
       jobs: { list: vi.fn(), get: vi.fn(), cancel: vi.fn() },
       syncLogs: { list: vi.fn() },
-      session: { recent: vi.fn() },
       system: {
         listBackups: vi.fn(),
         createBackup: vi.fn(),
@@ -62,9 +57,6 @@ describe('fluentAiService', () => {
         writeSettings: vi.fn(),
         validatePreset: vi.fn(),
         applyPreset: vi.fn(),
-      },
-      workflows: {
-        applyAutomation: vi.fn(),
       },
       meshing: {
         status: vi.fn(),
@@ -89,13 +81,23 @@ describe('fluentAiService', () => {
         update: vi.fn(),
         delete: vi.fn(),
         validate: vi.fn(),
-        apply: vi.fn(),
+      },
+      meshingLive: {
+        start: vi.fn(),
+        get: vi.fn(),
+        enterStep: vi.fn(),
+        readStep: vi.fn(),
+        writeStep: vi.fn(),
+        executeStep: vi.fn(),
+        nextModel: vi.fn(),
+        retryModel: vi.fn(),
+        stop: vi.fn(),
       },
     } satisfies FluentAIApi
 
     Object.defineProperty(window, 'fluentAI', { configurable: true, value: api })
 
-    await expect(fluentAiService.automations.list()).resolves.toEqual([automation])
+    await expect(fluentAiService.models.list()).resolves.toEqual([model])
     expect(getFluentAIApi()).toBe(api)
   })
 

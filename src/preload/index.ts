@@ -1,10 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 import type {
-  ApplyAutomationRequest,
-  ApplyMeshingAutomationRequest,
-  Automation,
-  AutomationInput,
   CredentialStatus,
   DatabaseBackupInfo,
   DatabaseBackupList,
@@ -15,6 +11,11 @@ import type {
   Job,
   MeshingAutomation,
   MeshingAutomationInput,
+  MeshingLiveSessionSnapshot,
+  MeshingLiveSessionStart,
+  MeshingLiveStepReport,
+  MeshingLiveStepRequest,
+  MeshingLiveWriteRequest,
   MeshingPresetDocument,
   MeshingPresetValidationReport,
   MeshingReadReport,
@@ -23,11 +24,9 @@ import type {
   MeshingWorkflowContract,
   MeshingWorkflowSchema,
   MeshingWorkflowType,
-  MeshingWorkflowReport,
   MeshingWriteReport,
   MeshingWriteRequest,
   Model,
-  ModelAssociationRequest,
   ModelCreateRequest,
   ModelOpenReport,
   ModelUpdateRequest,
@@ -37,14 +36,12 @@ import type {
   PresetItem,
   PresetValidationReport,
   PresetValue,
-  RecentSession,
   RestoreDatabaseReport,
   SettingCatalogEntry,
   SettingsPayload,
   SidecarStatus,
   SyncLog,
   SyncLogQuery,
-  WorkflowReport,
 } from '../shared/contracts'
 
 const invoke = <T>(channel: string, ...args: unknown[]): Promise<T> =>
@@ -65,14 +62,6 @@ const api: FluentAIApi = Object.freeze({
       }
     },
   }),
-  automations: Object.freeze({
-    list: () => invoke<Automation[]>('automations:list'),
-    create: (payload: AutomationInput) => invoke<Automation>('automations:create', payload),
-    get: (id: number) => invoke<Automation>('automations:get', id),
-    update: (id: number, payload: AutomationInput) =>
-      invoke<Automation>('automations:update', id, payload),
-    delete: (id: number) => invoke<void>('automations:delete', id),
-  }),
   models: Object.freeze({
     list: () => invoke<Model[]>('models:list'),
     get: (id: number) => invoke<Model>('models:get', id),
@@ -80,8 +69,6 @@ const api: FluentAIApi = Object.freeze({
     create: (payload: ModelCreateRequest) => invoke<Model>('models:create', payload),
     update: (id: number, payload: ModelUpdateRequest) =>
       invoke<Model>('models:update', id, payload),
-    associate: (id: number, payload: ModelAssociationRequest) =>
-      invoke<Model>('models:associate', id, payload),
     open: (id: number, payload: OpenModelRequest) =>
       invoke<ModelOpenReport>('models:open', id, payload),
     refresh: (id: number) => invoke<Model>('models:refresh', id),
@@ -98,9 +85,6 @@ const api: FluentAIApi = Object.freeze({
   }),
   syncLogs: Object.freeze({
     list: (query: SyncLogQuery = {}) => invoke<SyncLog[]>('sync-logs:list', query),
-  }),
-  session: Object.freeze({
-    recent: () => invoke<RecentSession>('session:recent'),
   }),
   system: Object.freeze({
     listBackups: () => invoke<DatabaseBackupList>('system:list-backups'),
@@ -138,8 +122,24 @@ const api: FluentAIApi = Object.freeze({
     delete: (id: number) => invoke<void>('meshing-automations:delete', id),
     validate: (id: number) =>
       invoke<MeshingPresetValidationReport>('meshing-automations:validate', id),
-    apply: (id: number, payload: ApplyMeshingAutomationRequest) =>
-      invoke<MeshingWorkflowReport>('meshing-automations:apply', id, payload),
+  }),
+  meshingLive: Object.freeze({
+    start: (payload: MeshingLiveSessionStart) =>
+      invoke<MeshingLiveSessionSnapshot>('meshing-live:start', payload),
+    get: (sessionId: string) => invoke<MeshingLiveSessionSnapshot>('meshing-live:get', sessionId),
+    enterStep: (sessionId: string, payload: MeshingLiveStepRequest) =>
+      invoke<MeshingLiveStepReport>('meshing-live:enter-step', sessionId, payload),
+    readStep: (sessionId: string, stepIndex: number) =>
+      invoke<MeshingLiveStepReport>('meshing-live:read-step', sessionId, stepIndex),
+    writeStep: (sessionId: string, payload: MeshingLiveWriteRequest) =>
+      invoke<MeshingLiveStepReport>('meshing-live:write-step', sessionId, payload),
+    executeStep: (sessionId: string, payload: MeshingLiveStepRequest) =>
+      invoke<MeshingLiveStepReport>('meshing-live:execute-step', sessionId, payload),
+    nextModel: (sessionId: string) =>
+      invoke<MeshingLiveSessionSnapshot>('meshing-live:next-model', sessionId),
+    retryModel: (sessionId: string) =>
+      invoke<MeshingLiveSessionSnapshot>('meshing-live:retry-model', sessionId),
+    stop: (sessionId: string) => invoke<MeshingLiveSessionSnapshot>('meshing-live:stop', sessionId),
   }),
   fluent: Object.freeze({
     status: () => invoke<FluentStatus>('fluent:status'),
@@ -154,10 +154,6 @@ const api: FluentAIApi = Object.freeze({
       invoke<PresetValidationReport>('fluent:validate-preset', preset),
     applyPreset: (preset: PresetDocument) =>
       invoke<FluentOperationReport>('fluent:apply-preset', preset),
-  }),
-  workflows: Object.freeze({
-    applyAutomation: (automationId: number, payload: ApplyAutomationRequest) =>
-      invoke<WorkflowReport>('workflows:apply-automation', automationId, payload),
   }),
 })
 

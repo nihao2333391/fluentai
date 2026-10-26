@@ -1,10 +1,6 @@
 import { BrowserWindow, ipcMain } from 'electron'
 
 import type {
-  Automation,
-  AutomationInput,
-  ApplyAutomationRequest,
-  ApplyMeshingAutomationRequest,
   CredentialStatus,
   DatabaseBackupInfo,
   DatabaseBackupList,
@@ -14,6 +10,11 @@ import type {
   Job,
   MeshingAutomation,
   MeshingAutomationInput,
+  MeshingLiveSessionSnapshot,
+  MeshingLiveSessionStart,
+  MeshingLiveStepReport,
+  MeshingLiveStepRequest,
+  MeshingLiveWriteRequest,
   MeshingPresetDocument,
   MeshingPresetValidationReport,
   MeshingReadReport,
@@ -22,11 +23,9 @@ import type {
   MeshingWorkflowSchema,
   MeshingWorkflowContract,
   MeshingWorkflowType,
-  MeshingWorkflowReport,
   MeshingWriteReport,
   MeshingWriteRequest,
   Model,
-  ModelAssociationRequest,
   ModelCreateRequest,
   ModelOpenReport,
   ModelUpdateRequest,
@@ -35,13 +34,11 @@ import type {
   PresetItem,
   PresetValidationReport,
   PresetValue,
-  RecentSession,
   RestoreDatabaseReport,
   SettingCatalogEntry,
   SettingsPayload,
   SyncLog,
   SyncLogQuery,
-  WorkflowReport,
 } from '../shared/contracts'
 import type { CredentialStore } from './credential-store'
 import type { ElectronModelFilePicker } from './electron-model-files'
@@ -56,29 +53,11 @@ interface BusinessIpcOptions {
 }
 
 const jsonBody = (value: unknown): string => JSON.stringify(value)
+const FLUENT_OPERATION_TIMEOUT_MS = 360_000
+const MESHING_PARAMETER_TIMEOUT_MS = 120_000
 
 export function registerBusinessIpc(options: BusinessIpcOptions): void {
   const { sidecar, modelFiles, modelFilePicker, credentials } = options
-
-  ipcMain.handle('automations:list', () => sidecar.request<Automation[]>('/api/automations'))
-  ipcMain.handle('automations:create', (_event, payload: AutomationInput) =>
-    sidecar.request<Automation>('/api/automations', {
-      method: 'POST',
-      body: jsonBody(payload),
-    }),
-  )
-  ipcMain.handle('automations:get', (_event, id: number) =>
-    sidecar.request<Automation>(`/api/automations/${id}`),
-  )
-  ipcMain.handle('automations:update', (_event, id: number, payload: AutomationInput) =>
-    sidecar.request<Automation>(`/api/automations/${id}`, {
-      method: 'PUT',
-      body: jsonBody(payload),
-    }),
-  )
-  ipcMain.handle('automations:delete', (_event, id: number) =>
-    sidecar.request<void>(`/api/automations/${id}`, { method: 'DELETE' }),
-  )
 
   ipcMain.handle('models:list', () => sidecar.request<Model[]>('/api/models'))
   ipcMain.handle('models:get', (_event, id: number) => sidecar.request<Model>(`/api/models/${id}`))
@@ -112,19 +91,11 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
       }),
     })
   })
-  ipcMain.handle('models:associate', (_event, id: number, payload: ModelAssociationRequest) =>
-    sidecar.request<Model>(`/api/models/${id}/associate`, {
-      method: 'POST',
-      body: jsonBody({
-        automation_id: payload.automationId,
-        is_default: payload.isDefault,
-      }),
-    }),
-  )
   ipcMain.handle('models:open', (_event, id: number, payload: OpenModelRequest) =>
     sidecar.request<ModelOpenReport>(`/api/models/${id}/open`, {
       method: 'POST',
       body: jsonBody(payload),
+      timeoutMs: FLUENT_OPERATION_TIMEOUT_MS,
     }),
   )
   ipcMain.handle('models:refresh', (_event, id: number) =>
@@ -165,8 +136,6 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
     return sidecar.request<SyncLog[]>(`/api/sync-logs?${params.toString()}`)
   })
 
-  ipcMain.handle('session:recent', () => sidecar.request<RecentSession>('/api/session/recent'))
-
   ipcMain.handle('system:list-backups', () =>
     sidecar.request<DatabaseBackupList>('/api/system/backups'),
   )
@@ -185,6 +154,7 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
     sidecar.request<FluentStatus>('/api/meshing/connect', {
       method: 'POST',
       body: jsonBody(payload),
+      timeoutMs: FLUENT_OPERATION_TIMEOUT_MS,
     }),
   )
   ipcMain.handle('meshing:disconnect', () =>
@@ -200,6 +170,7 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
     sidecar.request<MeshingWriteReport>('/api/meshing/write', {
       method: 'POST',
       body: jsonBody(payload),
+      timeoutMs: MESHING_PARAMETER_TIMEOUT_MS,
     }),
   )
   ipcMain.handle('meshing:schemas', () =>
@@ -245,13 +216,66 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
       method: 'POST',
     }),
   )
+
+  ipcMain.handle('meshing-live:start', (_event, payload: MeshingLiveSessionStart) =>
+    sidecar.request<MeshingLiveSessionSnapshot>('/api/meshing/live-sessions', {
+      method: 'POST',
+      body: jsonBody(payload),
+      timeoutMs: FLUENT_OPERATION_TIMEOUT_MS,
+    }),
+  )
+  ipcMain.handle('meshing-live:get', (_event, sessionId: string) =>
+    sidecar.request<MeshingLiveSessionSnapshot>(`/api/meshing/live-sessions/${sessionId}`),
+  )
   ipcMain.handle(
-    'meshing-automations:apply',
-    (_event, id: number, payload: ApplyMeshingAutomationRequest) =>
-      sidecar.request<MeshingWorkflowReport>(`/api/meshing-automations/${id}/apply`, {
+    'meshing-live:enter-step',
+    (_event, sessionId: string, payload: MeshingLiveStepRequest) =>
+      sidecar.request<MeshingLiveStepReport>(`/api/meshing/live-sessions/${sessionId}/enter`, {
         method: 'POST',
         body: jsonBody(payload),
+        timeoutMs: MESHING_PARAMETER_TIMEOUT_MS,
       }),
+  )
+  ipcMain.handle('meshing-live:read-step', (_event, sessionId: string, stepIndex: number) =>
+    sidecar.request<MeshingLiveStepReport>(
+      `/api/meshing/live-sessions/${sessionId}/steps/${stepIndex}`,
+    ),
+  )
+  ipcMain.handle(
+    'meshing-live:write-step',
+    (_event, sessionId: string, payload: MeshingLiveWriteRequest) =>
+      sidecar.request<MeshingLiveStepReport>(`/api/meshing/live-sessions/${sessionId}/write`, {
+        method: 'POST',
+        body: jsonBody(payload),
+        timeoutMs: MESHING_PARAMETER_TIMEOUT_MS,
+      }),
+  )
+  ipcMain.handle(
+    'meshing-live:execute-step',
+    (_event, sessionId: string, payload: MeshingLiveStepRequest) =>
+      sidecar.request<MeshingLiveStepReport>(`/api/meshing/live-sessions/${sessionId}/execute`, {
+        method: 'POST',
+        body: jsonBody(payload),
+        timeoutMs: FLUENT_OPERATION_TIMEOUT_MS,
+      }),
+  )
+  ipcMain.handle('meshing-live:next-model', (_event, sessionId: string) =>
+    sidecar.request<MeshingLiveSessionSnapshot>(
+      `/api/meshing/live-sessions/${sessionId}/next-model`,
+      { method: 'POST', timeoutMs: FLUENT_OPERATION_TIMEOUT_MS },
+    ),
+  )
+  ipcMain.handle('meshing-live:retry-model', (_event, sessionId: string) =>
+    sidecar.request<MeshingLiveSessionSnapshot>(
+      `/api/meshing/live-sessions/${sessionId}/retry-model`,
+      { method: 'POST', timeoutMs: FLUENT_OPERATION_TIMEOUT_MS },
+    ),
+  )
+  ipcMain.handle('meshing-live:stop', (_event, sessionId: string) =>
+    sidecar.request<MeshingLiveSessionSnapshot>(`/api/meshing/live-sessions/${sessionId}/stop`, {
+      method: 'POST',
+      timeoutMs: 30_000,
+    }),
   )
 
   ipcMain.handle('fluent:status', () => sidecar.request<FluentStatus>('/api/fluent/status'))
@@ -259,6 +283,7 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
     sidecar.request<FluentStatus>('/api/fluent/connect', {
       method: 'POST',
       body: jsonBody(payload),
+      timeoutMs: FLUENT_OPERATION_TIMEOUT_MS,
     }),
   )
   ipcMain.handle('fluent:disconnect', () =>
@@ -289,15 +314,8 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
     sidecar.request<FluentOperationReport>('/api/fluent/presets/apply', {
       method: 'POST',
       body: jsonBody(preset),
+      timeoutMs: FLUENT_OPERATION_TIMEOUT_MS,
     }),
-  )
-  ipcMain.handle(
-    'workflows:apply-automation',
-    (_event, automationId: number, payload: ApplyAutomationRequest) =>
-      sidecar.request<WorkflowReport>(`/api/automations/${automationId}/apply`, {
-        method: 'POST',
-        body: jsonBody(payload),
-      }),
   )
 
   ipcMain.handle('credentials:status', (): Promise<CredentialStatus> => credentials.getStatus())

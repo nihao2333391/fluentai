@@ -41,6 +41,17 @@ describe('ModelFileRegistry', () => {
     expect(registry.resolve(selected.fileToken).filePath).toBe(selected.filePath)
   })
 
+  it('accepts SpaceClaim exchange and additional CAD reader formats', () => {
+    const directory = makeTemporaryDirectory()
+    const registry = new ModelFileRegistry()
+
+    for (const fileName of ['middle.scdocx', 'long-flow.stpz', 'part.jt', 'body.x_t']) {
+      const filePath = join(directory, fileName)
+      writeFileSync(filePath, 'geometry content')
+      expect(registry.register(filePath).fileName).toBe(fileName)
+    }
+  })
+
   it('rejects unsupported, empty, missing, and directory paths', () => {
     const directory = makeTemporaryDirectory()
     const registry = new ModelFileRegistry()

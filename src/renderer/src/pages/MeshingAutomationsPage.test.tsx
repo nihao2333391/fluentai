@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { FluentAIApi } from '../../../shared/contracts'
@@ -38,30 +38,29 @@ const model = {
   updated_at: 'now',
 }
 
+const LocationProbe = () => {
+  const location = useLocation()
+  return <div data-testid="location">{location.pathname}</div>
+}
+
 describe('MeshingAutomationsPage', () => {
   beforeEach(() => {
     useSidecarStore.setState({
       status: { state: 'ready', message: 'ready', version: '0.1.0', pid: 1, port: 5000 },
     })
-    const apply = vi.fn().mockResolvedValue({
-      status: 'success',
+    const start = vi.fn().mockResolvedValue({
+      session_id: 'session-1',
       automation_id: 11,
-      model_id: 21,
-      job_id: 'job-1',
-      message: 'Meshing preset applied and verified before mesh generation.',
+      automation_name: automation.name,
+      workflow_type: 'watertight',
+      status: 'waiting',
       connection: null,
-      sync_log_id: 1,
-      apply_report: {
-        workflow_type: 'watertight',
-        status: 'success',
-        results: [{ success: true }],
-        name_checks: [],
-        created_children: [],
-        stopped_before: ['Generate the Surface Mesh', 'Generate the Volume Mesh'],
-        imported_model: model.file_path,
-        missing_names: [],
-        error: null,
-      },
+      models: [],
+      current_model_index: 0,
+      current_step_index: 1,
+      steps: [],
+      logs: [],
+      message: '',
     })
     const api = {
       sidecar: {
@@ -72,14 +71,14 @@ describe('MeshingAutomationsPage', () => {
       models: { list: vi.fn().mockResolvedValue([model]) },
       meshingAutomations: {
         list: vi.fn().mockResolvedValue([automation]),
-        apply,
         delete: vi.fn(),
       },
+      meshingLive: { start },
     } as unknown as FluentAIApi
     Object.defineProperty(window, 'fluentAI', { configurable: true, value: api })
   })
 
-  it('applies a Meshing preset with the selected geometry model', async () => {
+  it('starts a live Meshing session with the selected geometry model', async () => {
     render(
       <AppProviders>
         <MemoryRouter>
@@ -94,12 +93,26 @@ describe('MeshingAutomationsPage', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: /应\s*用/ }))
 
     await waitFor(() => {
-      expect((window.fluentAI as FluentAIApi).meshingAutomations.apply).toHaveBeenCalledWith(11, {
-        model_id: 21,
+      expect((window.fluentAI as FluentAIApi).meshingLive.start).toHaveBeenCalledWith({
+        automation_id: 11,
+        model_ids: [21],
         connection: null,
-        import_geometry: true,
       })
     })
-    expect(await screen.findByText('已写入并回读 1 项设置，未生成网格。')).toBeInTheDocument()
+  })
+
+  it('opens the existing Meshing preset in the editor', async () => {
+    render(
+      <AppProviders>
+        <MemoryRouter initialEntries={['/meshing']}>
+          <MeshingAutomationsPage />
+          <LocationProbe />
+        </MemoryRouter>
+      </AppProviders>,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: '编辑' }))
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/meshing/11/edit')
   })
 })

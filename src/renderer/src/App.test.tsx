@@ -1,8 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { FluentAIApi } from '../../shared/contracts'
 import App from './App'
+import { appRoutes } from './router'
 import { useAppStore } from './store/appStore'
 
 const createMockApi = (): FluentAIApi => ({
@@ -24,20 +25,12 @@ const createMockApi = (): FluentAIApi => ({
     }),
     onStatusChanged: vi.fn(() => () => undefined),
   },
-  automations: {
-    list: vi.fn().mockResolvedValue([]),
-    create: vi.fn(),
-    get: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
   models: {
     list: vi.fn().mockResolvedValue([]),
     get: vi.fn(),
     pickFile: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
-    associate: vi.fn(),
     open: vi.fn(),
     refresh: vi.fn(),
     delete: vi.fn(),
@@ -53,14 +46,6 @@ const createMockApi = (): FluentAIApi => ({
   },
   syncLogs: {
     list: vi.fn().mockResolvedValue([]),
-  },
-  session: {
-    recent: vi.fn().mockResolvedValue({
-      model: null,
-      automation: null,
-      meshing_automation: null,
-      updated_at: null,
-    }),
   },
   system: {
     listBackups: vi.fn().mockResolvedValue({ backups: [] }),
@@ -100,9 +85,6 @@ const createMockApi = (): FluentAIApi => ({
     validatePreset: vi.fn().mockResolvedValue({ valid: true, errors: [], normalized_items: [] }),
     applyPreset: vi.fn(),
   },
-  workflows: {
-    applyAutomation: vi.fn(),
-  },
   meshing: {
     status: vi.fn().mockResolvedValue({
       connected: false,
@@ -140,14 +122,24 @@ const createMockApi = (): FluentAIApi => ({
     update: vi.fn(),
     delete: vi.fn(),
     validate: vi.fn(),
-    apply: vi.fn(),
+  },
+  meshingLive: {
+    start: vi.fn(),
+    get: vi.fn(),
+    enterStep: vi.fn(),
+    readStep: vi.fn(),
+    writeStep: vi.fn(),
+    executeStep: vi.fn(),
+    nextModel: vi.fn(),
+    retryModel: vi.fn(),
+    stop: vi.fn(),
   },
 })
 
 describe('App', () => {
   beforeEach(() => {
     localStorage.clear()
-    useAppStore.setState({ themeMode: 'system' })
+    useAppStore.setState({ themeMode: 'system', language: 'zh' })
     window.location.hash = '#/'
     Object.defineProperty(window, 'fluentAI', {
       configurable: true,
@@ -158,12 +150,13 @@ describe('App', () => {
   it('opens Meshing automations first and navigates between routes', async () => {
     render(<App />)
 
-    expect(await screen.findByRole('heading', { name: 'Meshing 自动化' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '网格划分自动化' })).toBeInTheDocument()
     expect(screen.queryByText('自动化创建')).not.toBeInTheDocument()
-    const meshingMenu = screen.getByRole('menuitem', { name: /Meshing 自动化/ })
-    const automationsMenu = screen.getByRole('menuitem', { name: /我的自动化/ })
+    const meshingMenu = screen.getByRole('menuitem', { name: /网格划分自动化/ })
+    expect(screen.queryByRole('menuitem', { name: /我的自动化/ })).not.toBeInTheDocument()
+    const modelsMenu = screen.getByRole('menuitem', { name: /我的模型/ })
     expect(
-      meshingMenu.compareDocumentPosition(automationsMenu) & Node.DOCUMENT_POSITION_FOLLOWING,
+      meshingMenu.compareDocumentPosition(modelsMenu) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
     expect(screen.getByText('我的模型')).toBeInTheDocument()
     expect(screen.getByText('设置')).toBeInTheDocument()
@@ -175,13 +168,26 @@ describe('App', () => {
     expect(await screen.findByText('界面外观')).toBeInTheDocument()
   })
 
-  it('switches theme without exposing a manual language switch', async () => {
+  it('switches theme and language immediately', async () => {
     render(<App />)
 
     fireEvent.click(await screen.findByText('设置'))
     fireEvent.click(await screen.findByText('深色'))
     expect(document.documentElement.dataset.theme).toBe('dark')
     expect(await screen.findByText('界面外观')).toBeInTheDocument()
-    expect(screen.queryByText('界面语言')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('英文'))
+    await waitFor(() => expect(useAppStore.getState().language).toBe('en'))
+    expect(await screen.findByText('Appearance')).toBeInTheDocument()
+    expect(screen.getByText('Language')).toBeInTheDocument()
+  })
+
+  it('does not expose the removed My Automations route', () => {
+    const childPaths = appRoutes[0].children.map((route) => route.path)
+
+    expect(childPaths).not.toContain('automations')
+    expect(childPaths).not.toContain('automations/:id/edit')
+    expect(childPaths).not.toContain('automations/:id/duplicate')
+    expect(childPaths).toContain('meshing')
+    expect(childPaths).toContain('*')
   })
 })

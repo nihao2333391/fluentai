@@ -16,6 +16,11 @@ from app.domain import (
     FluentUiMode,
     JobCreate,
     MeshingApplyReport,
+    MeshingLiveSessionSnapshot,
+    MeshingLiveSessionStart,
+    MeshingLiveStepReport,
+    MeshingLiveStepRequest,
+    MeshingLiveWriteRequest,
     MeshingReadReport,
     MeshingReadRequest,
     MeshingWorkflowReport,
@@ -32,14 +37,29 @@ from app.repositories.models import ModelRepository
 from app.repositories.settings import SettingsRepository
 from app.repositories.sync_logs import SyncLogRepository
 from app.services.job_control import JobCancelledError, ensure_job_active
+from app.services.meshing_live import MeshingLiveManager
 
 MESHING_GEOMETRY_EXTENSIONS = {
     ".dsco",
     ".scdoc",
+    ".scdocx",
     ".step",
     ".stp",
+    ".stpz",
     ".iges",
     ".igs",
+    ".jt",
+    ".3dxml",
+    ".catpart",
+    ".catproduct",
+    ".sldprt",
+    ".sldasm",
+    ".ipt",
+    ".iam",
+    ".prt",
+    ".asm",
+    ".par",
+    ".stl",
     ".pmdb",
     ".fmd",
     ".tgf",
@@ -57,6 +77,8 @@ class MeshingService:
         self.database = database
         self.adapter = adapter
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="meshing-adapter")
+        self.live = MeshingLiveManager(database, adapter)
+        self._last_connection_config: FluentConnectionConfig | None = None
 
     def _run[T](self, operation: Callable[[], T]) -> T:
         return self._executor.submit(operation).result()
@@ -65,13 +87,73 @@ class MeshingService:
         return self._run(self.adapter.status)
 
     def connect(self, config: FluentConnectionConfig) -> FluentStatus:
-        return self._run(lambda: self.adapter.connect(config))
+        status = self._run(lambda: self.adapter.connect(config))
+        if status.connected:
+            self._last_connection_config = config
+        return status
 
     def disconnect(self) -> FluentStatus:
         return self._run(self._disconnect_impl)
 
+    def start_live_session(self, payload: MeshingLiveSessionStart) -> MeshingLiveSessionSnapshot:
+        config = payload.connection or self.default_connection_config()
+        if payload.connection is None and config.mode == "launch":
+            config = config.model_copy(update={"ui_mode": "gui"})
+        current_status = self._run(self.adapter.status)
+        reuse_connection = bool(
+            payload.connection is None
+            and current_status.connected
+            and self._last_connection_config is not None
+            and self._last_connection_config.mode == config.mode
+            and self._last_connection_config.ui_mode == "gui"
+        )
+        snapshot = self._run(
+            lambda: self.live.start(
+                payload.automation_id,
+                payload.model_ids,
+                config,
+                reuse_connection,
+            )
+        )
+        self._last_connection_config = config
+        self._executor.submit(self.live.begin, snapshot.session_id)
+        return snapshot
+
+    def get_live_session(self, session_id: str) -> MeshingLiveSessionSnapshot:
+        return self.live.get(session_id)
+
+    def enter_live_step(
+        self, session_id: str, payload: MeshingLiveStepRequest
+    ) -> MeshingLiveStepReport:
+        return self._run(lambda: self.live.enter_step(session_id, payload.step_index))
+
+    def read_live_step(self, session_id: str, step_index: int) -> MeshingLiveStepReport:
+        return self._run(lambda: self.live.read_step(session_id, step_index))
+
+    def write_live_step(
+        self, session_id: str, payload: MeshingLiveWriteRequest
+    ) -> MeshingLiveStepReport:
+        return self._run(
+            lambda: self.live.write_step(session_id, payload.step_index, payload.items)
+        )
+
+    def execute_live_step(
+        self, session_id: str, payload: MeshingLiveStepRequest
+    ) -> MeshingLiveStepReport:
+        return self._run(lambda: self.live.execute_step(session_id, payload.step_index))
+
+    def next_live_model(self, session_id: str) -> MeshingLiveSessionSnapshot:
+        return self._run(lambda: self.live.next_model(session_id))
+
+    def retry_live_model(self, session_id: str) -> MeshingLiveSessionSnapshot:
+        return self._run(lambda: self.live.retry_model(session_id))
+
+    def stop_live_session(self, session_id: str) -> MeshingLiveSessionSnapshot:
+        return self._run(lambda: self.live.stop(session_id))
+
     def _disconnect_impl(self) -> FluentStatus:
         self.adapter.disconnect()
+        self._last_connection_config = None
         return self.adapter.status()
 
     def read_arguments(self, request: MeshingReadRequest) -> MeshingReadReport:

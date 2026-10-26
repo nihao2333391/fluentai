@@ -28,10 +28,12 @@ import {
 } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useMatch, useNavigate } from 'react-router-dom'
 
 import type {
+  MeshingAutomation,
   MeshingPresetDocument,
+  MeshingPresetItem,
   MeshingPresetValue,
   MeshingSchemaArgument,
   MeshingSchemaTask,
@@ -41,6 +43,7 @@ import type {
   Model,
 } from '../../../shared/contracts'
 import { ErrorState, LoadingState, PageContent } from '../components/PageState'
+import { localizedAnsysTerm, localizedAnsysValue } from '../i18n/ansysLabels'
 import { fluentAiService } from '../services/fluentAi'
 import { useSidecarStore } from '../store/sidecarStore'
 import {
@@ -140,6 +143,68 @@ const nextChildInstanceId = (task: MeshingSchemaTask): string => {
   return `${task.python_name}-${childInstanceCounter}`
 }
 
+const indexTasksByPath = (
+  tasks: MeshingSchemaTask[],
+  parentPath: string[] = [],
+  result: Map<string, MeshingSchemaTask> = new Map(),
+): Map<string, MeshingSchemaTask> => {
+  for (const task of tasks) {
+    const taskPath = [...parentPath, task.python_name]
+    result.set(taskPathKey(taskPath), task)
+    indexTasksByPath(task.children, taskPath, result)
+  }
+  return result
+}
+
+const restoreEditorState = (
+  tasks: MeshingSchemaTask[],
+  contract: MeshingWorkflowContract | null,
+  presetItems: MeshingPresetItem[],
+): {
+  childInstances: MeshingChildInstanceMap
+  included: MeshingIncludedMap
+  values: MeshingValueMap
+} => {
+  const tasksByPath = indexTasksByPath(tasks)
+  const childInstances: MeshingChildInstanceMap = {}
+
+  for (const item of presetItems) {
+    if (!item.compound_child_name) continue
+    const task = tasksByPath.get(taskPathKey(item.task_path))
+    if (!task) continue
+    const key = taskPathKey(item.task_path)
+    const instances = childInstances[key] ?? []
+    if (!instances.some((instance) => instance.name === item.compound_child_name)) {
+      instances.push({
+        id: nextChildInstanceId(task),
+        name: item.compound_child_name,
+      })
+      childInstances[key] = instances
+    }
+  }
+
+  const values = buildInitialValues(tasks, childInstances, contract)
+  const included: MeshingIncludedMap = {}
+  for (const item of presetItems) {
+    const task = tasksByPath.get(taskPathKey(item.task_path))
+    if (!task) continue
+    let childInstanceId: string | null = null
+    if (item.compound_child_name) {
+      const instance = (childInstances[taskPathKey(item.task_path)] ?? []).find(
+        (candidate) => candidate.name === item.compound_child_name,
+      )
+      if (!instance) continue
+      if (childNameArgument(task)?.name === item.argument_path[0]) continue
+      childInstanceId = instance.id
+    }
+    const key = selectionKey(item.task_path, childInstanceId, item.argument_path)
+    included[key] = true
+    values[key] = item.value
+  }
+
+  return { childInstances, included, values }
+}
+
 function LabelSelectionControl({
   argument,
   value,
@@ -201,7 +266,7 @@ function LabelSelectionControl({
   )
 }
 
-function ArgumentControl({
+export function ArgumentControl({
   argument,
   value,
   disabled,
@@ -212,20 +277,8 @@ function ArgumentControl({
   disabled: boolean
   onChange: (value: MeshingPresetValue) => void
 }) {
-  const { t } = useTranslation()
   const localizedOption = (option: string): string => {
-    if (option === 'The geometry consists of only solid regions') {
-      return t('meshing.geometryOnlySolid')
-    }
-    if (option === 'The geometry consists of only fluid regions with no voids') {
-      return t('meshing.geometryOnlyFluid')
-    }
-    if (option === 'The geometry consists of both fluid and solid regions and/or voids') {
-      return t('meshing.geometryFluidAndSolid')
-    }
-    if (option === 'Yes') return t('common.yes')
-    if (option === 'No') return t('common.no')
-    return option
+    return localizedAnsysValue(option)
   }
 
   if (
@@ -265,7 +318,7 @@ function ArgumentControl({
   if (argument.allowed_values?.length) {
     const options = argument.allowed_values.map((item) => ({
       value: String(item),
-      label: String(item),
+      label: localizedAnsysValue(String(item)),
     }))
     if (argument.value_type === 'list' || argument.value_type === 'RepeatedScalarContainer') {
       const selected = Array.isArray(value) ? value.map(String) : []
@@ -367,7 +420,7 @@ function ArgumentSections({
   taskPath: string[]
   childInstanceId: string | null
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const sourceArguments =
     childInstanceId === null ? task.arguments : (task.child_template?.arguments ?? [])
   const leaves = flattenArgumentLeaves(sourceArguments).filter(
@@ -389,7 +442,7 @@ function ArgumentSections({
     const editable = leaf.argument.editable !== false && leaf.argument.read_only !== true
     const current = values[key] ?? defaultArgumentValue(leaf.argument)
     const technicalPath = leaf.argumentPath.join(' > ')
-    const displayPath = leaf.displayPath.join(' > ')
+    const displayPath = leaf.displayPath.map((part) => localizedAnsysTerm(part)).join(' > ')
     const unitSuffix = leaf.argument.display_unit?.includes('LengthUnit') ? ` [${lengthUnit}]` : ''
     return (
       <div key={key} className={`meshing-argument-row ${included[key] ? 'is-included' : ''}`}>
@@ -403,12 +456,14 @@ function ArgumentSections({
               {displayPath}
               {unitSuffix}
             </Typography.Text>
-            <Typography.Text type="secondary" className="meshing-argument-path">
-              {displayPath === technicalPath ? leaf.argument.edit_path : technicalPath}
-              {leaf.argument.display_condition
-                ? ` · ${t('meshing.conditionLabel')}：${leaf.argument.display_condition}`
-                : ''}
-            </Typography.Text>
+            {i18n.language.startsWith('en') || showDeveloper ? (
+              <Typography.Text type="secondary" className="meshing-argument-path">
+                {displayPath === technicalPath ? leaf.argument.edit_path : technicalPath}
+                {showDeveloper && leaf.argument.display_condition
+                  ? ` · ${t('meshing.conditionLabel')}：${leaf.argument.display_condition}`
+                  : ''}
+              </Typography.Text>
+            ) : null}
           </Space>
         </Checkbox>
         <div className="meshing-argument-control">
@@ -496,7 +551,11 @@ function WorkflowStepper({
   const { t } = useTranslation()
 
   return (
-    <div className="meshing-stepper-scroll" role="navigation" aria-label="Meshing workflow steps">
+    <div
+      className="meshing-stepper-scroll"
+      role="navigation"
+      aria-label={t('meshing.workflowSteps')}
+    >
       <div className="meshing-stepper">
         {steps.map((task) => {
           const isActive = task.python_name === activeStepKey
@@ -517,10 +576,12 @@ function WorkflowStepper({
                 </span>
                 <span className="meshing-step-copy">
                   <strong>{localizedMeshingTaskName(t, task)}</strong>
-                  <span className="text-small text-muted">{task.display_name}</span>
                 </span>
                 {isComplete ? (
-                  <CheckOutlined className="meshing-step-check" aria-label="completed" />
+                  <CheckOutlined
+                    className="meshing-step-check"
+                    aria-label={t('meshing.completed')}
+                  />
                 ) : null}
               </button>
             </div>
@@ -590,16 +651,16 @@ function RegionTableEditor({
           value={filterType}
           onChange={setFilterType}
           options={[
-            { value: 'all', label: 'All' },
-            { value: 'fluid', label: 'fluid' },
-            { value: 'solid', label: 'solid' },
+            { value: 'all', label: localizedAnsysValue('All') },
+            { value: 'fluid', label: localizedAnsysValue('fluid') },
+            { value: 'solid', label: localizedAnsysValue('solid') },
           ]}
         />
         <Input.Search
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           allowClear
-          placeholder="Filter text"
+          placeholder={t('meshing.filterText')}
           className="log-search"
         />
         <Button onClick={() => setSelectedIds(new Set(rows.map((row) => row.id)))}>
@@ -626,13 +687,13 @@ function RegionTableEditor({
         }}
         columns={[
           {
-            title: 'Region Name',
+            title: localizedAnsysTerm('Region Name'),
             dataIndex: 'name',
             key: 'name',
             render: (_value, row) => (
               <Input
                 value={row.name}
-                placeholder="Region Name"
+                placeholder={localizedAnsysTerm('Region Name')}
                 onChange={(event) =>
                   commit(
                     rows.map((item) =>
@@ -644,16 +705,16 @@ function RegionTableEditor({
             ),
           },
           {
-            title: 'Region Type',
+            title: localizedAnsysTerm('Region Type'),
             dataIndex: 'type',
             key: 'type',
             render: (_value, row) => (
               <Select
                 value={row.type}
-                aria-label="Region Type"
+                aria-label={localizedAnsysTerm('Region Type')}
                 options={[
-                  { value: 'fluid', label: 'fluid' },
-                  { value: 'solid', label: 'solid' },
+                  { value: 'fluid', label: localizedAnsysValue('fluid') },
+                  { value: 'solid', label: localizedAnsysValue('solid') },
                 ]}
                 onChange={(value) =>
                   commit(rows.map((item) => (item.id === row.id ? { ...item, type: value } : item)))
@@ -744,16 +805,22 @@ function WorkflowStepPanel({
       {toggleArgument ? (
         <div className="meshing-argument-row is-included">
           <Typography.Text strong>
-            {toggleArgument.display_name ?? toggleArgument.name}
+            {localizedAnsysTerm(
+              toggleArgument.display_name ?? toggleArgument.name,
+              toggleArgument.name,
+            )}
           </Typography.Text>
           <div className="meshing-argument-control">
             <Select
               value={toggleValue}
-              aria-label={toggleArgument.display_name ?? toggleArgument.name}
+              aria-label={localizedAnsysTerm(
+                toggleArgument.display_name ?? toggleArgument.name,
+                toggleArgument.name,
+              )}
               className="full-width"
               options={(toggleArgument.allowed_values ?? ['yes', 'no']).map((value) => ({
                 value: String(value),
-                label: String(value),
+                label: localizedAnsysValue(String(value)),
               }))}
               onChange={(next) => {
                 editorProps.onValueChange(toggleKey, next)
@@ -831,10 +898,16 @@ export function MeshingAutomationCreatePage() {
   const { t } = useTranslation()
   const { message } = App.useApp()
   const navigate = useNavigate()
+  const editMatch = useMatch('/meshing/:id/edit')
+  const sourceAutomationId = Number(editMatch?.params.id ?? 0)
+  const isEditing = sourceAutomationId > 0
+  const pageTitle = isEditing ? t('meshing.editTitle') : t('meshing.createTitle')
+  const pageDescription = isEditing ? t('meshing.editDescription') : t('meshing.createDescription')
   const [form] = Form.useForm<MeshingFormValues>()
   const sidecarState = useSidecarStore((state) => state.status.state)
   const [workflowType, setWorkflowType] = useState<MeshingWorkflowType>('watertight')
   const [reloadVersion, setReloadVersion] = useState(0)
+  const [sourceAutomation, setSourceAutomation] = useState<MeshingAutomation | null>(null)
   const [schema, setSchema] = useState<MeshingWorkflowSchema | null>(null)
   const [workflowContract, setWorkflowContract] = useState<MeshingWorkflowContract | null>(null)
   const [models, setModels] = useState<Model[]>([])
@@ -851,6 +924,31 @@ export function MeshingAutomationCreatePage() {
 
   useEffect(() => {
     if (sidecarState !== 'ready') return
+    if (!isEditing) {
+      return
+    }
+
+    let active = true
+    void fluentAiService.meshingAutomations
+      .get(sourceAutomationId)
+      .then((automation) => {
+        if (!active) return
+        setSourceAutomation(automation)
+        setWorkflowType(automation.preset.workflow_type)
+      })
+      .catch((loadError: unknown) => {
+        if (!active) return
+        setError(loadError instanceof Error ? loadError.message : String(loadError))
+        setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [isEditing, reloadVersion, sidecarState, sourceAutomationId])
+
+  useEffect(() => {
+    if (sidecarState !== 'ready') return
+    if (isEditing && sourceAutomation === null) return
     let active = true
     void Promise.all([
       fluentAiService.meshing.schema(workflowType),
@@ -864,11 +962,22 @@ export function MeshingAutomationCreatePage() {
         setSchema(nextSchema)
         setWorkflowContract(nextContract)
         setModels(nextModels)
-        const initialChildren =
-          workflowType === 'watertight' ? buildInitialChildInstances(nextSchema.tasks) : {}
-        setChildInstances(initialChildren)
-        setValues(buildInitialValues(nextSchema.tasks, initialChildren, nextContract))
-        setIncluded({})
+        if (isEditing && sourceAutomation) {
+          const restored = restoreEditorState(
+            nextSchema.tasks,
+            nextContract,
+            sourceAutomation.preset.items,
+          )
+          setChildInstances(restored.childInstances)
+          setValues(restored.values)
+          setIncluded(restored.included)
+        } else {
+          const initialChildren =
+            workflowType === 'watertight' ? buildInitialChildInstances(nextSchema.tasks) : {}
+          setChildInstances(initialChildren)
+          setValues(buildInitialValues(nextSchema.tasks, initialChildren, nextContract))
+          setIncluded({})
+        }
         setCompletedSteps(new Set())
         setActiveStepKey(
           workflowType === 'watertight'
@@ -885,7 +994,17 @@ export function MeshingAutomationCreatePage() {
     return () => {
       active = false
     }
-  }, [sidecarState, workflowType, reloadVersion])
+  }, [isEditing, sidecarState, sourceAutomation, workflowType, reloadVersion])
+
+  useEffect(() => {
+    if (!isEditing || !sourceAutomation || loading || schema === null) return
+    form.setFieldsValue({
+      name: sourceAutomation.name,
+      description: sourceAutomation.description,
+      model_family: sourceAutomation.model_family,
+      reference_model_id: sourceAutomation.reference_model_id,
+    })
+  }, [form, isEditing, loading, schema, sourceAutomation])
 
   const lengthUnit = String(
     values[selectionKey(['import_geometry'], null, ['length_unit'])] ?? 'mm',
@@ -1000,6 +1119,9 @@ export function MeshingAutomationCreatePage() {
     setLoading(true)
     setError(null)
     setSchema(null)
+    if (isEditing) {
+      setSourceAutomation(null)
+    }
     setReloadVersion((version) => version + 1)
   }
 
@@ -1113,15 +1235,21 @@ export function MeshingAutomationCreatePage() {
         message.error(validation.errors.join('; '))
         return
       }
-      await fluentAiService.meshingAutomations.create({
+      const payload = {
         name: formValues.name,
         description: formValues.description ?? '',
         model_family: formValues.model_family ?? '',
         reference_model_id: formValues.reference_model_id ?? null,
         preset,
-        status: 'draft',
-      })
-      message.success(t('meshing.created'))
+        status: sourceAutomation?.status ?? 'draft',
+      } as const
+      if (isEditing) {
+        await fluentAiService.meshingAutomations.update(sourceAutomationId, payload)
+        message.success(t('meshing.updated'))
+      } else {
+        await fluentAiService.meshingAutomations.create(payload)
+        message.success(t('meshing.created'))
+      }
       navigate('/meshing')
     } catch (saveError) {
       message.error(saveError instanceof Error ? saveError.message : String(saveError))
@@ -1132,7 +1260,7 @@ export function MeshingAutomationCreatePage() {
 
   if (sidecarState === 'error') {
     return (
-      <PageContent title={t('meshing.createTitle')} description={t('meshing.createDescription')}>
+      <PageContent title={pageTitle} description={pageDescription}>
         <ErrorState
           title={t('errors.sidecarErrorTitle')}
           description={t('errors.sidecarErrorDescription')}
@@ -1144,13 +1272,14 @@ export function MeshingAutomationCreatePage() {
 
   return (
     <PageContent
-      title={t('meshing.createTitle')}
-      description={t('meshing.createDescription')}
+      title={pageTitle}
+      description={pageDescription}
       actions={
         <Space wrap>
           <Tag color="blue">{t('meshing.selectedOptions', { count: selectedCount })}</Tag>
           <Segmented
             value={workflowType}
+            disabled={isEditing}
             onChange={(value) => {
               setLoading(true)
               setError(null)
@@ -1295,8 +1424,18 @@ export function MeshingAutomationCreatePage() {
               </Card>
             ) : null}
             <Form.Item className="form-actions">
-              <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving}>
-                {saving ? t('pages.automationCreate.saving') : t('meshing.save')}
+              <Button
+                type="primary"
+                htmlType="submit"
+                icon={<SaveOutlined />}
+                loading={saving}
+                aria-label={isEditing ? t('meshing.updateAutomation') : t('meshing.save')}
+              >
+                {saving
+                  ? t('pages.automationCreate.saving')
+                  : isEditing
+                    ? t('meshing.updateAutomation')
+                    : t('meshing.save')}
               </Button>
               <Button icon={<ReloadOutlined />} onClick={reload} className="reload-meshing">
                 {t('common.reload')}

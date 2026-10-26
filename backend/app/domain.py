@@ -411,6 +411,84 @@ class MeshingWorkflowReport(BaseModel):
     sync_log_id: int | None = None
 
 
+class MeshingTaskExecutionReport(BaseModel):
+    """Result of executing one Fluent Meshing workflow task."""
+
+    status: Literal["success", "failed"]
+    task_path: list[str]
+    message: str = ""
+    output: list[str] = Field(default_factory=list)
+
+
+class MeshingLiveSessionStart(BaseModel):
+    """Start a live Meshing workflow for one automation and one or more models."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    automation_id: int = Field(gt=0)
+    model_ids: list[int] = Field(min_length=1, max_length=50)
+    connection: FluentConnectionConfig | None = None
+
+
+class MeshingLiveStepRequest(BaseModel):
+    """Select or execute one of the seven Watertight workflow steps."""
+
+    step_index: int = Field(ge=0, le=6)
+
+
+class MeshingLiveWriteRequest(MeshingLiveStepRequest):
+    """Write user-edited values for the selected live workflow step."""
+
+    items: list[MeshingPresetItem] = Field(min_length=1, max_length=100)
+
+
+class MeshingLiveLogEntry(BaseModel):
+    sequence: int
+    timestamp: str
+    level: Literal["info", "success", "warning", "error"]
+    message: str
+    model_id: int | None = None
+
+
+class MeshingLiveStepState(BaseModel):
+    task_path: list[str]
+    status: Literal["pending", "active", "running", "completed", "failed"] = "pending"
+    message: str = ""
+
+
+class MeshingLiveModelState(BaseModel):
+    model_id: int
+    name: str
+    file_path: str
+    status: Literal["pending", "importing", "ready", "completed", "failed"] = "pending"
+    error: str | None = None
+
+
+class MeshingLiveSessionSnapshot(BaseModel):
+    session_id: str
+    automation_id: int
+    automation_name: str
+    workflow_type: MeshingWorkflowType
+    status: Literal["starting", "connected", "running", "waiting", "completed", "failed", "stopped"]
+    connection: FluentStatus | None = None
+    models: list[MeshingLiveModelState] = Field(default_factory=list)
+    current_model_index: int = 0
+    current_step_index: int = 0
+    steps: list[MeshingLiveStepState] = Field(default_factory=list)
+    logs: list[MeshingLiveLogEntry] = Field(default_factory=list)
+    message: str = ""
+
+
+class MeshingLiveStepReport(BaseModel):
+    status: Literal["success", "failed"]
+    message: str = ""
+    snapshot: MeshingLiveSessionSnapshot
+    step_index: int
+    task_path: list[str]
+    write_report: MeshingWriteReport | None = None
+    read_report: MeshingReadReport | None = None
+
+
 class RecentSessionRead(BaseModel):
     model: ModelRead | None = None
     automation: AutomationRead | None = None
