@@ -111,6 +111,8 @@ const api: FluentAIApi = Object.freeze({
       invoke<MeshingWorkflowSchema>('meshing:schema', workflowType),
     validatePreset: (preset: MeshingPresetDocument) =>
       invoke<MeshingPresetValidationReport>('meshing:validate-preset', preset),
+    inspectReferenceModel: (modelId: number) =>
+      invoke<import('../shared/contracts').MeshingReferenceInspection>('meshing:inspect-reference', modelId),
   }),
   meshingAutomations: Object.freeze({
     list: () => invoke<MeshingAutomation[]>('meshing-automations:list'),
@@ -135,11 +137,18 @@ const api: FluentAIApi = Object.freeze({
       invoke<MeshingLiveStepReport>('meshing-live:write-step', sessionId, payload),
     executeStep: (sessionId: string, payload: MeshingLiveStepRequest) =>
       invoke<MeshingLiveStepReport>('meshing-live:execute-step', sessionId, payload),
+    retryPrepare: (sessionId: string) =>
+      invoke<MeshingLiveSessionSnapshot>('meshing-live:retry-prepare', sessionId),
     nextModel: (sessionId: string) =>
       invoke<MeshingLiveSessionSnapshot>('meshing-live:next-model', sessionId),
     retryModel: (sessionId: string) =>
       invoke<MeshingLiveSessionSnapshot>('meshing-live:retry-model', sessionId),
     stop: (sessionId: string) => invoke<MeshingLiveSessionSnapshot>('meshing-live:stop', sessionId),
+    pickMeshFile: () => invoke<string | null>('meshing-live:pick-mesh'),
+    archive: (sessionId: string, payload: import('../shared/contracts').MeshingArchiveCreate) =>
+      invoke<import('../shared/contracts').MeshingArchiveRecord>('meshing-live:archive', sessionId, payload),
+    archives: (sessionId: string) =>
+      invoke<import('../shared/contracts').MeshingArchiveRecord[]>('meshing-live:archives', sessionId),
   }),
   fluent: Object.freeze({
     status: () => invoke<FluentStatus>('fluent:status'),

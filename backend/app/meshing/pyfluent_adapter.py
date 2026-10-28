@@ -6,6 +6,7 @@ import ast
 import math
 import os
 import re
+import traceback
 import sys
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -39,6 +40,10 @@ SELECTOR_ARGUMENT_PATTERN = re.compile(
     r"_object_list|_dead_regions_list|_region_scope)$"
 )
 STOP_TASKS = ["Generate the Surface Mesh", "Generate the Volume Mesh"]
+LOCAL_FLUENT_STARTUP_ARGUMENTS = (
+    '-setenv="FLUENT_HOST_IP=-127.0.0.1" '
+    '-setenv="REMOTING_SERVER_ADDRESS=127.0.0.1"'
+)
 
 
 def _debug(message: str) -> None:
@@ -257,6 +262,22 @@ def _collect_name_catalog(workflow: Any) -> set[str]:
     return catalog
 
 
+def _has_name_selectors(items: list[MeshingPresetItem]) -> bool:
+    return any(
+        item.value_mode == "fixed" and _selector_kind(item.argument_path[-1]) is not None
+        for item in items
+    )
+
+
+def _validate_preset_names(
+    workflow: Any, preset: MeshingPresetDocument
+) -> tuple[list[MeshingNameCheck], list[str]]:
+    # Reading every task state is a costly sequence of Fluent RPCs. Imports and
+    # mesh-control writes without selectors have no geometry names to validate.
+    catalog = _collect_name_catalog(workflow) if _has_name_selectors(preset.items) else set()
+    return _validate_names(preset, catalog)
+
+
 def _validate_names(
     preset: MeshingPresetDocument, catalog: set[str]
 ) -> tuple[list[MeshingNameCheck], list[str]]:
@@ -337,6 +358,7 @@ class PyFluentMeshingAdapter:
         self._workflow: Any | None = None
         self._workflow_type: str | None = None
         self._transcript_callback_id: str | None = None
+        self._current_task_subscription: Any | None = None
 
     def connect(self, config: FluentConnectionConfig) -> FluentStatus:
         if self._session is not None and self._is_active():
@@ -344,6 +366,15 @@ class PyFluentMeshingAdapter:
 
         pyfluent = self._pyfluent_module or self._load_pyfluent()
         if config.mode == "launch":
+            # Fluent 2025 R2 may bind its gRPC server to a LAN interface even when
+            # REMOTING_SERVER_ADDRESS is inherited by the launcher process. Set both
+            # variables through Fluent's own startup parser so its server-info file
+            # advertises a local-only address that PyFluent accepts safely.
+            _debug(
+                "launching local Fluent with loopback startup settings, "
+                f"path={config.fluent_path!r}, version={config.product_version}, "
+                f"ui_mode={config.ui_mode}"
+            )
             launch_kwargs: dict[str, Any] = {
                 "product_version": config.product_version,
                 "dimension": 3,
@@ -356,10 +387,18 @@ class PyFluentMeshingAdapter:
                 "cleanup_on_exit": config.cleanup_on_exit,
                 "start_watchdog": False,
                 "start_transcript": True,
+                "additional_arguments": LOCAL_FLUENT_STARTUP_ARGUMENTS,
             }
             if config.fluent_path:
                 launch_kwargs["fluent_path"] = config.fluent_path
-            self._session = pyfluent.launch_fluent(**launch_kwargs)
+            try:
+                self._session = pyfluent.launch_fluent(**launch_kwargs)
+            except Exception as exc:
+                _debug(
+                    "local Fluent launch or session handshake failed: "
+                    f"{type(exc).__name__}: {exc}"
+                )
+                raise
         else:
             if config.server_info_file:
                 self._session = pyfluent.connect_to_fluent(
@@ -382,6 +421,7 @@ class PyFluentMeshingAdapter:
         return self.status()
 
     def disconnect(self) -> None:
+        self.unregister_current_task_callback()
         session = self._session
         mode = self._connection_mode
         self._session = None
@@ -434,21 +474,29 @@ class PyFluentMeshingAdapter:
                 MeshingArgumentReference(task_path=task_path, argument_path=argument_path)
                 for task_path, argument_path in _schema_argument_references(request.workflow_type)
             ]
-            for reference in references:
+            grouped: dict[
+                tuple[tuple[str, ...], str | None], list[tuple[int, MeshingArgumentReference]]
+            ] = {}
+            for index, reference in enumerate(references):
+                key = (tuple(reference.task_path), reference.compound_child_name)
+                grouped.setdefault(key, []).append((index, reference))
+
+            results: list[MeshingReadItemResult | None] = [None] * len(references)
+            for (task_path, child_name), group in grouped.items():
                 try:
-                    task = _find_task(workflow, reference.task_path)
+                    task = _find_task(workflow, list(task_path))
                     target = task
-                    if reference.compound_child_name:
-                        child = _find_compound_child(task, reference.compound_child_name)
+                    if child_name:
+                        child = _find_compound_child(task, child_name)
                         if child is None:
                             raise LookupError(
-                                f"Compound child was not found: {reference.compound_child_name}"
+                                f"Compound child was not found: {child_name}"
                             )
                         target = child
                     state = _normalize_state(target.arguments.get_state())
-                    found = _state_path_exists(state, reference.argument_path)
-                    report.items.append(
-                        MeshingReadItemResult(
+                    for index, reference in group:
+                        found = _state_path_exists(state, reference.argument_path)
+                        results[index] = MeshingReadItemResult(
                             task_path=reference.task_path,
                             argument_path=reference.argument_path,
                             compound_child_name=reference.compound_child_name,
@@ -459,17 +507,16 @@ class PyFluentMeshingAdapter:
                             ),
                             error=None if found else "Argument path was not found.",
                         )
-                    )
                 except Exception as exc:
-                    report.items.append(
-                        MeshingReadItemResult(
+                    for index, reference in group:
+                        results[index] = MeshingReadItemResult(
                             task_path=reference.task_path,
                             argument_path=reference.argument_path,
                             compound_child_name=reference.compound_child_name,
                             found=False,
                             error=f"{type(exc).__name__}: {exc}",
                         )
-                    )
+            report.items = [result for result in results if result is not None]
             report.status = (
                 "success"
                 if report.items and all(item.found and item.error is None for item in report.items)
@@ -480,6 +527,9 @@ class PyFluentMeshingAdapter:
             return report
         except Exception as exc:
             report.error = f"{type(exc).__name__}: {exc}"
+            if repr(exc) != str(exc):
+                report.error += f" (diagnostic: {repr(exc)})"
+            report.error += "\n" + "\n".join(traceback.format_exc().strip().splitlines()[-12:])
             return report
 
     def write_arguments(self, request: MeshingWriteRequest) -> MeshingWriteReport:
@@ -490,8 +540,13 @@ class PyFluentMeshingAdapter:
         )
         try:
             workflow = self._get_workflow(request.workflow_type)
+            # The write result is verified against Fluent's actual readback below.
+            # Scanning every task to pre-validate a selected label adds many RPCs
+            # before the step can start, so live writes use the direct readback.
             grouped: dict[tuple[tuple[str, ...], str | None], list[MeshingPresetItem]] = {}
             for item in request.items:
+                if item.value_mode == "at_use":
+                    continue
                 key = (tuple(item.task_path), item.compound_child_name)
                 grouped.setdefault(key, []).append(item)
 
@@ -584,6 +639,17 @@ class PyFluentMeshingAdapter:
                     raise FileNotFoundError(f"Meshing geometry file does not exist: {path}")
                 if preset.workflow_type == "watertight":
                     import_task = _find_task(workflow, ["import_geometry"])
+                    import_options: dict[str, Any] = {}
+                    for item in preset.items:
+                        if (
+                            item.task_path == ["import_geometry"]
+                            and item.value_mode == "fixed"
+                            and item.argument_path[-1]
+                            not in {"file_name", "file_names", "mesh_file_name"}
+                        ):
+                            _merge_state(import_options, item.argument_path, item.value)
+                    if import_options:
+                        _write_argument_state(import_task, import_options)
                     _write_argument_state(import_task, {"file_name": str(path)})
                     import_state = _normalize_state(import_task.arguments.get_state())
                     _debug(f"import file_name={import_state.get('file_name')}")
@@ -601,10 +667,8 @@ class PyFluentMeshingAdapter:
                 _debug("geometry import complete")
                 report.imported_model = str(path)
 
-            _debug("collecting name catalog")
-            catalog = _collect_name_catalog(workflow)
-            _debug(f"name catalog ready size={len(catalog)}")
-            name_checks, missing_names = _validate_names(preset, catalog)
+            _debug("validating geometry names")
+            name_checks, missing_names = _validate_preset_names(workflow, preset)
             report.name_checks = name_checks
             report.missing_names = missing_names
             if missing_names:
@@ -613,6 +677,14 @@ class PyFluentMeshingAdapter:
 
             grouped: dict[tuple[tuple[str, ...], str | None], list[MeshingPresetItem]] = {}
             for item in preset.items:
+                if item.value_mode == "at_use" or (
+                    item.task_path == ["import_geometry"]
+                    and (
+                        import_geometry
+                        or item.argument_path[-1] in {"file_name", "file_names", "mesh_file_name"}
+                    )
+                ):
+                    continue
                 key = (tuple(item.task_path), item.compound_child_name)
                 grouped.setdefault(key, []).append(item)
 
@@ -663,6 +735,9 @@ class PyFluentMeshingAdapter:
             return report
         except Exception as exc:
             report.error = f"{type(exc).__name__}: {exc}"
+            if repr(exc) != str(exc):
+                report.error += f" (diagnostic: {repr(exc)})"
+            report.error += "\n" + "\n".join(traceback.format_exc().strip().splitlines()[-12:])
             return report
 
     def execute_task(
@@ -685,7 +760,11 @@ class PyFluentMeshingAdapter:
             report.message = f"{'/'.join(task_path)} completed."
         except Exception as exc:
             report.message = f"{type(exc).__name__}: {exc}"
+            diagnostic = repr(exc)
+            if diagnostic != str(exc):
+                report.message += f" (diagnostic: {diagnostic})"
             report.output.append(report.message)
+            report.output.extend(traceback.format_exc().strip().splitlines()[-12:])
         return report
 
     def reset_workflow(self, workflow_type: str) -> None:
@@ -693,6 +772,42 @@ class PyFluentMeshingAdapter:
         self._workflow = None
         self._workflow_type = None
         self._get_workflow(workflow_type)
+
+    def available_task_names(self, workflow_type: str) -> list[str]:
+        workflow = self._get_workflow(workflow_type)
+        return [
+            str(_safe_call(getattr(task, "python_name", None), ""))
+            for task in workflow.tasks()
+        ]
+
+    def inspect_reference_labels(self, model_path: str) -> list[str]:
+        """Import reference geometry and read label selectors from the live workflow."""
+        report = self.apply_preset(
+            MeshingPresetDocument(
+                schema_version=2, fluent_version="25.2.0", workflow_type="watertight", items=[]
+            ),
+            model_path,
+        )
+        if report.status != "success":
+            raise RuntimeError(report.error or "Reference geometry import failed.")
+        labels: set[str] = set()
+        workflow = self._get_workflow("watertight")
+        for task in _walk_live_tasks(list(workflow.tasks())):
+            python_name = str(_safe_call(getattr(task, "python_name", None), ""))
+            try:
+                arguments = describe_task_arguments(task, python_name)
+            except Exception:
+                continue
+            stack = list(arguments)
+            while stack:
+                argument = stack.pop()
+                name = str(argument.get("name") or "")
+                if _selector_kind(name) == "label":
+                    for value in argument.get("allowed_values") or []:
+                        labels.update(_name_values(value))
+                    labels.update(_name_values(argument.get("current_value")))
+                stack.extend(argument.get("children") or [])
+        return sorted(labels)
 
     def register_transcript_callback(self, callback: Callable[[str], None]) -> str | None:
         session = self._ensure_session()
@@ -709,6 +824,32 @@ class PyFluentMeshingAdapter:
         if transcript is not None:
             transcript.unregister_callback(self._transcript_callback_id)
         self._transcript_callback_id = None
+
+    def read_current_task(self) -> str | None:
+        parameter = self._ensure_session().workflow.Workflow.CurrentTask
+        value = parameter.get_state()
+        return str(value).strip() if value is not None else None
+
+    def register_current_task_callback(self, callback: Callable[[str], None]) -> bool:
+        self.unregister_current_task_callback()
+        try:
+            parameter = self._ensure_session().workflow.Workflow.CurrentTask
+            self._current_task_subscription = parameter.add_on_changed(
+                lambda changed: callback(str(changed.get_state()).strip())
+            )
+            return True
+        except Exception:
+            self._current_task_subscription = None
+            return False
+
+    def unregister_current_task_callback(self) -> None:
+        subscription = self._current_task_subscription
+        self._current_task_subscription = None
+        if subscription is not None:
+            try:
+                subscription.unsubscribe()
+            except Exception:
+                pass
 
     def _ensure_session(self) -> Any:
         if self._session is None or not self._is_active():

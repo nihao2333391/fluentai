@@ -4,6 +4,7 @@
 
 - `PROGRESS.md` - implemented milestones and current status
 - `KNOWN_ISSUES.md` - known boundaries and unresolved risks
+- `ISSUES_AND_CHANGES.md` - chronological user-reported issues, diagnoses, code changes, and verification status
 
 ## Architecture
 

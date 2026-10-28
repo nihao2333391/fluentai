@@ -69,6 +69,7 @@ export function MeshingConnectionCard() {
   const { t } = useTranslation()
   const { message } = App.useApp()
   const [form] = Form.useForm<MeshingConnectionFormValues>()
+  const connectionMode = Form.useWatch('meshing_connect_mode', form) ?? 'launch'
   const sidecarState = useSidecarStore((state) => state.status.state)
   const [status, setStatus] = useState<FluentStatus | null>(null)
   const [workflowType, setWorkflowType] = useState<MeshingWorkflowType>('watertight')
@@ -119,17 +120,18 @@ export function MeshingConnectionCard() {
     setWriteReport(null)
     try {
       const values = await saveConnection()
-      const port = values.meshing_port.trim()
+      const port = (values.meshing_port ?? '').trim()
       const config: FluentConnectionConfig = {
         mode: values.meshing_connect_mode,
-        fluent_path: values.meshing_fluent_path.trim() || null,
+        fluent_path: (values.meshing_fluent_path ?? '').trim() || null,
         product_version: '25.2.0',
         processor_count: 1,
         ui_mode: values.meshing_ui_mode,
         start_timeout: 300,
         cleanup_on_exit: true,
-        host: values.meshing_host.trim() || '127.0.0.1',
-        port: port ? Number.parseInt(port, 10) : null,
+        host: (values.meshing_host ?? '').trim() || '127.0.0.1',
+        port:
+          values.meshing_connect_mode === 'attach' && port ? Number.parseInt(port, 10) : null,
       }
       setStatus(await fluentAiService.meshing.connect(config))
     } catch (error) {
@@ -240,19 +242,37 @@ export function MeshingConnectionCard() {
             />
           </Form.Item>
         </Space>
-        <Form.Item name="meshing_fluent_path" label={t('settings.fluentPath')}>
-          <Input
-            placeholder={'D:\\Ansys2025R2\\ANSYS Inc\\v252\\fluent\\ntbin\\win64\\fluent.exe'}
-          />
-        </Form.Item>
-        <Space align="start" wrap>
-          <Form.Item name="meshing_host" label={t('settings.host')}>
-            <Input className="connection-host-input" />
+        {connectionMode === 'launch' ? (
+          <Form.Item
+            name="meshing_fluent_path"
+            label={t('settings.fluentPath')}
+            extra={t('settings.fluentPathHelp')}
+          >
+            <Input
+              placeholder={'D:\\Ansys2025R2\\ANSYS Inc\\v252\\fluent\\ntbin\\win64\\fluent.exe'}
+            />
           </Form.Item>
-          <Form.Item name="meshing_port" label={t('settings.port')}>
-            <Input className="connection-port-input" inputMode="numeric" />
-          </Form.Item>
-        </Space>
+        ) : (
+          <Space align="start" wrap>
+            <Form.Item
+              name="meshing_host"
+              label={t('settings.host')}
+              extra={t('settings.hostHelp')}
+            >
+              <Input className="connection-host-input" />
+            </Form.Item>
+            <Form.Item
+              name="meshing_port"
+              label={t('settings.port')}
+              extra={t('settings.portHelp')}
+            >
+              <Input className="connection-port-input" inputMode="numeric" />
+            </Form.Item>
+          </Space>
+        )}
+        <Typography.Paragraph type="secondary">
+          {connectionMode === 'launch' ? t('settings.meshingLaunchHelp') : t('settings.attachHelp')}
+        </Typography.Paragraph>
       </Form>
       {status?.version ? (
         <Typography.Paragraph type="secondary">

@@ -14,10 +14,29 @@ interface ConnectionFormValues {
   fluent_port: string
 }
 
+export function buildFluentConnectionConfig(
+  values: Partial<ConnectionFormValues>,
+): FluentConnectionConfig {
+  const mode = values.fluent_connect_mode ?? 'launch'
+  const port = (values.fluent_port ?? '').trim()
+  return {
+    mode,
+    fluent_path: (values.fluent_path ?? '').trim() || null,
+    product_version: '25.2.0',
+    processor_count: 1,
+    ui_mode: 'gui',
+    start_timeout: 300,
+    cleanup_on_exit: true,
+    host: (values.fluent_host ?? '').trim() || '127.0.0.1',
+    port: mode === 'attach' && port ? Number.parseInt(port, 10) : null,
+  }
+}
+
 export function FluentConnectionCard() {
   const { t } = useTranslation()
   const { message } = App.useApp()
   const [form] = Form.useForm<ConnectionFormValues>()
+  const connectionMode = Form.useWatch('fluent_connect_mode', form) ?? 'launch'
   const sidecarState = useSidecarStore((state) => state.status.state)
   const [status, setStatus] = useState<FluentStatus | null>(null)
   const [busy, setBusy] = useState(false)
@@ -76,19 +95,7 @@ export function FluentConnectionCard() {
     setBusy(true)
     try {
       const values = await saveConnection()
-      const port = values.fluent_port.trim()
-      const config: FluentConnectionConfig = {
-        mode: values.fluent_connect_mode,
-        fluent_path: values.fluent_path.trim() || null,
-        product_version: '25.2.0',
-        processor_count: 1,
-        ui_mode: 'gui',
-        start_timeout: 300,
-        cleanup_on_exit: true,
-        host: values.fluent_host.trim() || '127.0.0.1',
-        port: port ? Number.parseInt(port, 10) : null,
-      }
-      setStatus(await fluentAiService.fluent.connect(config))
+      setStatus(await fluentAiService.fluent.connect(buildFluentConnectionConfig(values)))
     } catch (error) {
       message.error(error instanceof Error ? error.message : String(error))
     } finally {
@@ -136,19 +143,29 @@ export function FluentConnectionCard() {
             ]}
           />
         </Form.Item>
-        <Form.Item name="fluent_path" label={t('settings.fluentPath')}>
-          <Input
-            placeholder={'D:\\Ansys2025R2\\ANSYS Inc\\v252\\fluent\\ntbin\\win64\\fluent.exe'}
-          />
-        </Form.Item>
-        <Space align="start" wrap>
-          <Form.Item name="fluent_host" label={t('settings.host')}>
-            <Input className="connection-host-input" />
+        {connectionMode === 'launch' ? (
+          <Form.Item
+            name="fluent_path"
+            label={t('settings.fluentPath')}
+            extra={t('settings.fluentPathHelp')}
+          >
+            <Input
+              placeholder={'D:\\Ansys2025R2\\ANSYS Inc\\v252\\fluent\\ntbin\\win64\\fluent.exe'}
+            />
           </Form.Item>
-          <Form.Item name="fluent_port" label={t('settings.port')}>
-            <Input className="connection-port-input" inputMode="numeric" />
-          </Form.Item>
-        </Space>
+        ) : (
+          <Space align="start" wrap>
+            <Form.Item name="fluent_host" label={t('settings.host')} extra={t('settings.hostHelp')}>
+              <Input className="connection-host-input" />
+            </Form.Item>
+            <Form.Item name="fluent_port" label={t('settings.port')} extra={t('settings.portHelp')}>
+              <Input className="connection-port-input" inputMode="numeric" />
+            </Form.Item>
+          </Space>
+        )}
+        <Typography.Paragraph type="secondary">
+          {connectionMode === 'launch' ? t('settings.launchHelp') : t('settings.attachHelp')}
+        </Typography.Paragraph>
       </Form>
       {status?.version ? (
         <Typography.Paragraph type="secondary">

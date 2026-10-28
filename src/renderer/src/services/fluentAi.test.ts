@@ -73,6 +73,7 @@ describe('fluentAiService', () => {
           schema_id: 'fluent-meshing-25.2-watertight',
           item_count: 0,
         }),
+        inspectReferenceModel: vi.fn(),
       },
       meshingAutomations: {
         list: vi.fn().mockResolvedValue([]),
@@ -89,9 +90,13 @@ describe('fluentAiService', () => {
         readStep: vi.fn(),
         writeStep: vi.fn(),
         executeStep: vi.fn(),
+        retryPrepare: vi.fn(),
         nextModel: vi.fn(),
         retryModel: vi.fn(),
         stop: vi.fn(),
+        pickMeshFile: vi.fn(),
+        archive: vi.fn(),
+        archives: vi.fn().mockResolvedValue([]),
       },
     } satisfies FluentAIApi
 

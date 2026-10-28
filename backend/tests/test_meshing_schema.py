@@ -68,6 +68,16 @@ def test_compound_child_and_nested_meshing_arguments_validate() -> None:
     )
     assert nested.valid is True
 
+    manual_label = MESHING_SCHEMA_INDEX.validate(
+        _preset(
+            ["add_local_sizing"],
+            ["boi_face_label_list"],
+            ["manual-wall-label"],
+            compound_child_name="wall-by-label",
+        )
+    )
+    assert manual_label.valid is True
+
 
 def test_compound_child_name_is_rejected_for_simple_tasks() -> None:
     report = MESHING_SCHEMA_INDEX.validate(

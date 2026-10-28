@@ -119,6 +119,50 @@ class MeshingSchemaIndex:
                 self._validate_item(item, task_index, seen)
             except ValueError as exc:
                 errors.append(str(exc))
+        boundary_items = {
+            tuple(item.argument_path): item.value
+            for item in preset.items
+            if item.task_path == ["update_boundaries"]
+        }
+        selection_type = str(boundary_items.get(("selection_type",), "zone"))
+        is_label_selection = selection_type == "label"
+        names_argument = "boundary_label_list" if is_label_selection else "boundary_zone_list"
+        types_argument = (
+            "boundary_label_type_list" if is_label_selection else "boundary_zone_type_list"
+        )
+        boundary_names = boundary_items.get((names_argument,))
+        boundary_types = boundary_items.get((types_argument,))
+        if boundary_names is not None or boundary_types is not None:
+            names = boundary_names if isinstance(boundary_names, list) else []
+            types = boundary_types if isinstance(boundary_types, list) else []
+            if len(names) != len(types):
+                errors.append(
+                    "Update Boundaries requires the same number of names and boundary types."
+                )
+            if any(not isinstance(name, str) or not name.strip() for name in names):
+                kind = "labels" if is_label_selection else "geometry zone names"
+                errors.append(f"Update Boundaries {kind} cannot be empty.")
+            normalized_names = [str(name).strip().casefold() for name in names]
+            if len(normalized_names) != len(set(normalized_names)):
+                kind = "labels" if is_label_selection else "geometry zone names"
+                errors.append(f"Update Boundaries {kind} must be unique.")
+            task = task_index.get(("update_boundaries",), {})
+            allowed_argument = next(
+                (
+                    argument
+                    for argument in task.get("arguments", [])
+                    if argument.get("name") == "boundary_allowed_type_list"
+                ),
+                {},
+            )
+            allowed_types = allowed_argument.get("default_value")
+            if isinstance(allowed_types, list) and isinstance(boundary_types, list):
+                invalid_types = [value for value in boundary_types if value not in allowed_types]
+                if invalid_types:
+                    errors.append(
+                        "Update Boundaries contains unsupported boundary types: "
+                        + ", ".join(map(str, invalid_types))
+                    )
         return MeshingPresetValidationReport(
             valid=not errors,
             errors=errors,
@@ -183,8 +227,23 @@ class MeshingSchemaIndex:
             )
             raise ValueError(f"Meshing argument is read-only: {owner}.{'.'.join(argument_path)}")
 
+        if item.value_mode == "at_use":
+            if item.value is not None:
+                raise ValueError("At-use Meshing rules must leave the value empty.")
+            return
+
+        is_name_selector = item.argument_path[-1] in {
+            "boi_face_label_list",
+            "bl_label_list",
+            "zone_selection_list",
+            "boundary_label_list",
+        }
         allowed = argument.get("allowed_values")
-        if allowed is not None and item.value not in allowed:
+        if task_path == ("update_boundaries",) and argument_path == ("selection_type",):
+            # Fluent exposes label selection through a dynamic allowed-values function.
+            # A schema snapshot may capture only its current "zone" value.
+            allowed = ["zone", "label"]
+        if not is_name_selector and allowed is not None and item.value not in allowed:
             raise ValueError(
                 f"Value for {'.'.join(argument_path)} must be one of {allowed!r}; "
                 f"got {item.value!r}"

@@ -114,6 +114,7 @@ const createMockApi = (): FluentAIApi => ({
       schema_id: 'fluent-meshing-25.2-watertight',
       item_count: 0,
     }),
+    inspectReferenceModel: vi.fn(),
   },
   meshingAutomations: {
     list: vi.fn().mockResolvedValue([]),
@@ -130,9 +131,13 @@ const createMockApi = (): FluentAIApi => ({
     readStep: vi.fn(),
     writeStep: vi.fn(),
     executeStep: vi.fn(),
+    retryPrepare: vi.fn(),
     nextModel: vi.fn(),
     retryModel: vi.fn(),
     stop: vi.fn(),
+    pickMeshFile: vi.fn(),
+    archive: vi.fn(),
+    archives: vi.fn().mockResolvedValue([]),
   },
 })
 

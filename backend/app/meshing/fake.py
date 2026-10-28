@@ -30,6 +30,8 @@ class FakeMeshingAdapter:
         self.executed_tasks: list[tuple[str, tuple[str, ...]]] = []
         self.workflow_resets = 0
         self.transcript_callback: Callable[[str], None] | None = None
+        self.current_task_callback: Callable[[str], None] | None = None
+        self.current_task: str | None = None
         self.last_config: FluentConnectionConfig | None = None
         self.connect_calls = 0
         self.values: dict[
@@ -104,6 +106,24 @@ class FakeMeshingAdapter:
                 verified=request.verify,
                 error="Fake Fluent Meshing is not connected.",
             )
+        selector_names = {"boi_face_label_list", "bl_label_list", "zone_selection_list"}
+        missing_names = sorted(
+            {
+                str(name)
+                for item in request.items
+                if item.argument_path[-1] in selector_names and isinstance(item.value, list)
+                for name in item.value
+                if isinstance(name, str) and name not in self.known_names
+            }
+        )
+        if missing_names:
+            return MeshingWriteReport(
+                workflow_type=request.workflow_type,
+                status="failed",
+                missing_names=missing_names,
+                verified=request.verify,
+                error="目标几何中找不到这些面/区域名称: " + ", ".join(missing_names),
+            )
         results = []
         for item in request.items:
             key = (tuple(item.task_path), tuple(item.argument_path), item.compound_child_name)
@@ -140,6 +160,11 @@ class FakeMeshingAdapter:
         missing: list[str] = []
         results: list[MeshingArgumentWriteResult] = []
         for item in preset.items:
+            if item.value_mode == "at_use" or (
+                item.task_path == ["import_geometry"]
+                and item.argument_path[-1] in {"file_name", "file_names", "mesh_file_name"}
+            ):
+                continue
             self.values[
                 (tuple(item.task_path), tuple(item.argument_path), item.compound_child_name)
             ] = item.value
@@ -200,9 +225,35 @@ class FakeMeshingAdapter:
     def reset_workflow(self, workflow_type: str) -> None:
         self.workflow_resets += 1
 
+    def available_task_names(self, workflow_type: str) -> list[str]:
+        from app.meshing.workflow_plan import CONTRACT
+
+        return list(CONTRACT["step_order"])
+
     def register_transcript_callback(self, callback: Callable[[str], None]) -> str | None:
         self.transcript_callback = callback
         return "fake-transcript"
 
     def unregister_transcript_callback(self) -> None:
         self.transcript_callback = None
+
+    def read_current_task(self) -> str | None:
+        return self.current_task
+
+    def register_current_task_callback(self, callback: Callable[[str], None]) -> bool:
+        self.current_task_callback = callback
+        return True
+
+    def unregister_current_task_callback(self) -> None:
+        self.current_task_callback = None
+
+    def inspect_reference_labels(self, model_path: str) -> list[str]:
+        if not self.connected:
+            raise RuntimeError("Fake Fluent Meshing is not connected.")
+        self.apply_preset(
+            MeshingPresetDocument(
+                schema_version=2, fluent_version="25.2.0", workflow_type="watertight", items=[]
+            ),
+            model_path,
+        )
+        return sorted(self.known_names)

@@ -44,6 +44,7 @@ def main() -> int:
     parser.add_argument("--report", default=str(DEFAULT_REPORT))
     parser.add_argument("--ui-mode", default="no_gui")
     parser.add_argument("--start-only", action="store_true")
+    parser.add_argument("--start-timeout", type=int, default=120)
     args = parser.parse_args()
     report_path = Path(args.report)
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -102,14 +103,14 @@ def main() -> int:
                         product_version="25.2.0",
                         processor_count=1,
                         ui_mode=args.ui_mode,
-                        start_timeout=300,
+                        start_timeout=args.start_timeout,
                         cleanup_on_exit=True,
                     ),
                 )
             )
             summary["started_session"] = snapshot.model_dump(mode="json")
             if snapshot.status == "starting":
-                for _ in range(240):
+                for _ in range((args.start_timeout + 30) * 4):
                     time.sleep(0.25)
                     snapshot = service.get_live_session(snapshot.session_id)
                     if snapshot.status in {"waiting", "failed", "completed", "stopped"}:
@@ -119,16 +120,7 @@ def main() -> int:
                 raise AssertionError(
                     snapshot.message or "Live session did not connect."
                 )
-            service.enter_live_step(
-                snapshot.session_id, MeshingLiveStepRequest(step_index=0)
-            )
-            imported = service.execute_live_step(
-                snapshot.session_id, MeshingLiveStepRequest(step_index=0)
-            )
-            summary["imported_geometry"] = imported.model_dump(mode="json")
-            if imported.status != "success":
-                raise AssertionError(imported.message or "Geometry import failed.")
-            snapshot = imported.snapshot
+            summary["imported_geometry"] = snapshot.model_dump(mode="json")
             summary["started_session"] = snapshot.model_dump(mode="json")
             if args.start_only:
                 summary["status"] = "passed"

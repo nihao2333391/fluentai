@@ -115,17 +115,7 @@ export function MeshingAutomationsPage() {
 
   const openApply = (automation: MeshingAutomation): void => {
     setApplyAutomation(automation)
-    const geometryModels = models.filter(isMeshingGeometry)
-    const referenceAvailable = geometryModels.some(
-      (model) => model.id === automation.reference_model_id,
-    )
-    setSelectedModelIds(
-      referenceAvailable && automation.reference_model_id
-        ? [automation.reference_model_id]
-        : geometryModels[0]
-          ? [geometryModels[0].id]
-          : [],
-    )
+    setSelectedModelIds([])
   }
 
   const closeApply = (): void => {

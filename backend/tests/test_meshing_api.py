@@ -17,6 +17,12 @@ def _payload(name: str) -> dict[str, Any]:
             "workflow_type": "watertight",
             "items": [
                 {
+                    "task_path": ["describe_geometry"],
+                    "argument_path": ["setup_type"],
+                    "value": "The geometry consists of only fluid regions with no voids",
+                    "required": True,
+                },
+                {
                     "task_path": ["import_geometry"],
                     "argument_path": ["length_unit"],
                     "value": "m",
@@ -44,6 +50,10 @@ def test_meshing_schema_and_automation_api(
         "add_local_sizing",
         "create_surface_mesh",
         "describe_geometry",
+        "apply_share_topology",
+        "enclose_fluid_regions",
+        "update_boundaries",
+        "create_regions",
         "update_regions",
         "add_boundary_layer",
         "create_volume_mesh",
@@ -125,6 +135,33 @@ def test_meshing_connection_and_direct_read_write_api(
     disconnected = app_client.post("/api/meshing/disconnect", headers=auth_headers)
     assert disconnected.status_code == 200
     assert disconnected.json()["connected"] is False
+
+
+def test_meshing_connection_failure_returns_readable_redacted_detail(
+    app_client: TestClient,
+    auth_headers: dict[str, str],
+    fake_meshing_adapter: Any,
+    monkeypatch: Any,
+    caplog: Any,
+) -> None:
+    secret = "test-session-password"
+
+    def fail_connect(_config: Any) -> None:
+        raise RuntimeError(f"gRPC authentication failed for {secret}")
+
+    monkeypatch.setattr(fake_meshing_adapter, "connect", fail_connect)
+    response = app_client.post(
+        "/api/meshing/connect",
+        headers=auth_headers,
+        json={"mode": "attach", "ui_mode": "gui", "port": 61485, "password": secret},
+    )
+
+    assert response.status_code == 502
+    detail = response.json()["detail"]
+    assert "RuntimeError" in detail
+    assert "gRPC authentication failed" in detail
+    assert secret not in detail
+    assert secret not in caplog.text
 
 
 def test_apply_meshing_automation(
@@ -217,7 +254,7 @@ def test_live_meshing_session_advances_steps_and_models(
     )
     assert started.status_code == 200
     snapshot = started.json()
-    assert snapshot["status"] in {"starting", "waiting"}
+    assert snapshot["status"] in {"starting", "waiting", "failed"}
     session_id = snapshot["session_id"]
     for _ in range(100):
         current = app_client.get(
@@ -228,35 +265,13 @@ def test_live_meshing_session_advances_steps_and_models(
             break
         time.sleep(0.05)
     assert snapshot["status"] == "waiting"
-    assert snapshot["current_step_index"] == 0
-    assert snapshot["steps"][0]["status"] == "active"
+    assert snapshot["phase"] == "surface_ready"
+    assert snapshot["current_step_index"] == 2
+    assert snapshot["steps"][0]["status"] == "completed"
+    assert snapshot["steps"][0]["duration_ms"] is not None
     assert fake_meshing_adapter.last_config is not None
     assert fake_meshing_adapter.last_config.ui_mode == "gui"
     assert fake_meshing_adapter.connect_calls == 1
-
-    entered_import = app_client.post(
-        f"/api/meshing/live-sessions/{session_id}/enter",
-        headers=auth_headers,
-        json={"step_index": 0},
-    )
-    assert entered_import.status_code == 200
-    executed_import = app_client.post(
-        f"/api/meshing/live-sessions/{session_id}/execute",
-        headers=auth_headers,
-        json={"step_index": 0},
-    )
-    assert executed_import.status_code == 200
-    assert executed_import.json()["snapshot"]["steps"][0]["status"] == "completed"
-    assert executed_import.json()["snapshot"]["current_step_index"] == 1
-
-    entered = app_client.post(
-        f"/api/meshing/live-sessions/{session_id}/enter",
-        headers=auth_headers,
-        json={"step_index": 2},
-    )
-    assert entered.status_code == 200
-    assert entered.json()["snapshot"]["steps"][2]["status"] == "active"
-    assert entered.json()["read_report"]["status"] == "success"
 
     executed = app_client.post(
         f"/api/meshing/live-sessions/{session_id}/execute",
@@ -265,7 +280,15 @@ def test_live_meshing_session_advances_steps_and_models(
     )
     assert executed.status_code == 200
     assert executed.json()["snapshot"]["steps"][2]["status"] == "completed"
-    assert executed.json()["snapshot"]["current_step_index"] == 3
+    assert executed.json()["snapshot"]["phase"] == "volume_ready"
+    assert executed.json()["snapshot"]["current_step_index"] == 7
+    executed_volume = app_client.post(
+        f"/api/meshing/live-sessions/{session_id}/execute",
+        headers=auth_headers,
+        json={"step_index": 10},
+    )
+    assert executed_volume.status_code == 200
+    assert executed_volume.json()["snapshot"]["phase"] == "completed"
 
     next_model = app_client.post(
         f"/api/meshing/live-sessions/{session_id}/next-model",
@@ -273,6 +296,69 @@ def test_live_meshing_session_advances_steps_and_models(
     )
     assert next_model.status_code == 200
     assert next_model.json()["current_model_index"] == 1
-    assert next_model.json()["current_step_index"] == 0
-    assert next_model.json()["steps"][0]["status"] == "active"
+    assert next_model.json()["phase"] == "surface_ready"
+    assert next_model.json()["current_step_index"] == 2
+    assert next_model.json()["steps"][0]["status"] == "completed"
     assert fake_meshing_adapter.workflow_resets == 2
+
+
+def test_live_step_rejects_labels_missing_from_the_imported_geometry(
+    app_client: TestClient,
+    auth_headers: dict[str, str],
+    tmp_path: Path,
+    fake_meshing_adapter: Any,
+) -> None:
+    geometry = tmp_path / "labels.dsco"
+    geometry.write_bytes(b"fake geometry")
+    model = app_client.post(
+        "/api/models",
+        headers=auth_headers,
+        json={"name": "Labels", "file_path": str(geometry), "description": "", "tags": []},
+    )
+    assert model.status_code == 201
+
+    payload = _payload("Label check")
+    payload["preset"]["items"].append(
+        {
+            "task_path": ["add_local_sizing"],
+            "argument_path": ["boi_face_label_list"],
+            "value": ["wall-missing"],
+            "required": True,
+            "compound_child_name": "missing-wall-size",
+        }
+    )
+    automation = app_client.post(
+        "/api/meshing-automations", headers=auth_headers, json=payload
+    )
+    assert automation.status_code == 201
+    connected = app_client.post(
+        "/api/meshing/connect",
+        headers=auth_headers,
+        json={"mode": "launch", "ui_mode": "gui", "processor_count": 1},
+    )
+    assert connected.status_code == 200
+    started = app_client.post(
+        "/api/meshing/live-sessions",
+        headers=auth_headers,
+        json={"automation_id": automation.json()["id"], "model_ids": [model.json()["id"]]},
+    )
+    session_id = started.json()["session_id"]
+    for _ in range(100):
+        snapshot = app_client.get(
+            f"/api/meshing/live-sessions/{session_id}", headers=auth_headers
+        ).json()
+        if snapshot["status"] in {"waiting", "failed"}:
+            break
+        time.sleep(0.05)
+    assert snapshot["status"] == "waiting"
+
+    entered = app_client.post(
+        f"/api/meshing/live-sessions/{session_id}/enter",
+        headers=auth_headers,
+        json={"step_index": 1},
+    )
+    assert entered.status_code == 200
+    body = entered.json()
+    assert body["status"] == "failed"
+    assert body["write_report"]["missing_names"] == ["wall-missing"]
+    assert "wall-missing" in body["message"]

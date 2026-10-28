@@ -1,5 +1,7 @@
 """Authenticated Fluent Meshing automation and schema endpoints."""
 
+import logging
+import traceback
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Response, status
@@ -7,6 +9,8 @@ from fastapi import APIRouter, HTTPException, Response, status
 from app.api.deps import DatabaseDependency, MeshingServiceDependency
 from app.domain import (
     ApplyMeshingAutomationRequest,
+    MeshingArchiveCreate,
+    MeshingArchiveRecord,
     FluentConnectionConfig,
     FluentStatus,
     MeshingAutomationCreate,
@@ -19,6 +23,7 @@ from app.domain import (
     MeshingLiveWriteRequest,
     MeshingPresetDocument,
     MeshingPresetValidationReport,
+    MeshingReferenceInspection,
     MeshingReadReport,
     MeshingReadRequest,
     MeshingSchemaSummary,
@@ -29,8 +34,10 @@ from app.domain import (
 from app.meshing.schema_index import MESHING_SCHEMA_INDEX
 from app.meshing.workflow_contract import get_watertight_workflow_contract
 from app.repositories.meshing_automations import MeshingAutomationRepository
+from app.services.meshing_service import MeshingAdapterBusyError
 
 router = APIRouter(tags=["meshing"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/meshing/status", response_model=FluentStatus)
@@ -43,7 +50,22 @@ def connect_meshing(
     payload: FluentConnectionConfig,
     meshing: MeshingServiceDependency,
 ) -> FluentStatus:
-    return meshing.connect(payload)
+    try:
+        return meshing.connect(payload)
+    except (FileNotFoundError, MeshingAdapterBusyError):
+        raise
+    except Exception as exc:
+        reason = str(exc)
+        if payload.password:
+            reason = reason.replace(payload.password, "[已隐藏]")
+        diagnostic = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+        if payload.password:
+            diagnostic = diagnostic.replace(payload.password, "[已隐藏]")
+        logger.error("Fluent Meshing connection failed:\n%s", diagnostic)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Fluent Meshing 连接失败（{type(exc).__name__}）：{reason}",
+        ) from exc
 
 
 @router.post("/meshing/disconnect", response_model=FluentStatus)
@@ -108,6 +130,21 @@ def validate_meshing_preset(preset: MeshingPresetDocument) -> MeshingPresetValid
 @router.get("/meshing-automations", response_model=list[MeshingAutomationRead])
 def list_meshing_automations(database: DatabaseDependency) -> list[MeshingAutomationRead]:
     return MeshingAutomationRepository(database).list()
+
+
+@router.post(
+    "/meshing/reference-models/{model_id}/inspect",
+    response_model=MeshingReferenceInspection,
+)
+def inspect_meshing_reference_model(
+    model_id: int, meshing: MeshingServiceDependency
+) -> MeshingReferenceInspection:
+    try:
+        return meshing.inspect_reference_model(model_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post(
@@ -197,6 +234,33 @@ def get_live_meshing_session(
 
 
 @router.post(
+    "/meshing/live-sessions/{session_id}/archive",
+    response_model=MeshingArchiveRecord,
+)
+def archive_live_meshing_result(
+    session_id: str,
+    payload: MeshingArchiveCreate,
+    meshing: MeshingServiceDependency,
+) -> MeshingArchiveRecord:
+    try:
+        return meshing.archive_live_result(session_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get(
+    "/meshing/live-sessions/{session_id}/archives",
+    response_model=list[MeshingArchiveRecord],
+)
+def list_live_meshing_archives(
+    session_id: str, meshing: MeshingServiceDependency
+) -> list[MeshingArchiveRecord]:
+    return meshing.list_live_archives(session_id)
+
+
+@router.post(
     "/meshing/live-sessions/{session_id}/enter",
     response_model=MeshingLiveStepReport,
 )
@@ -252,6 +316,21 @@ def execute_live_meshing_step(
 ) -> MeshingLiveStepReport:
     try:
         return meshing.execute_live_step(session_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post(
+    "/meshing/live-sessions/{session_id}/retry-prepare",
+    response_model=MeshingLiveSessionSnapshot,
+)
+def retry_live_meshing_preparation(
+    session_id: str, meshing: MeshingServiceDependency
+) -> MeshingLiveSessionSnapshot:
+    try:
+        return meshing.retry_live_preparation(session_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

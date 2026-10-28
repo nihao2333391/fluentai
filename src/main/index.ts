@@ -8,7 +8,7 @@ import { createElectronCredentialStore } from './electron-credentials'
 import { ElectronModelFilePicker } from './electron-model-files'
 import { registerSidecarIpc, SIDECAR_STATUS_CHANGED_CHANNEL } from './ipc'
 import { ModelFileRegistry } from './model-file-registry'
-import { SidecarManager } from './sidecar'
+import { resolveSidecarDataDirectory, SidecarManager } from './sidecar'
 
 let mainWindow: BrowserWindow | null = null
 let quitAfterSidecarStop = false
@@ -65,7 +65,7 @@ const sidecar = new SidecarManager({
   pythonExecutable: app.isPackaged
     ? join(sidecarRoot, 'python', 'python.exe')
     : process.env.FLUENT_AI_PYTHON,
-  dataDirectory: join(app.getPath('userData'), 'data'),
+  dataDirectory: resolveSidecarDataDirectory(app.getPath('userData')),
 })
 
 const broadcastSidecarStatus = (status: SidecarStatus): void => {

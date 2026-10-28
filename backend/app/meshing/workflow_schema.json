@@ -8,10 +8,21 @@
     "add_local_sizing",
     "create_surface_mesh",
     "describe_geometry",
+    "apply_share_topology",
+    "enclose_fluid_regions",
+    "update_boundaries",
+    "create_regions",
     "update_regions",
     "add_boundary_layer",
     "create_volume_mesh"
   ],
+  "conditional_tasks": {
+    "apply_share_topology": {"argument": "invoke_share_topology", "equals": "Yes"},
+    "enclose_fluid_regions": {"geometry": ["The geometry consists of only solid regions", "The geometry consists of both fluid and solid regions and/or voids"], "argument": "capping_required", "equals": "Yes", "default": "Yes"},
+    "update_boundaries": {"geometry": ["The geometry consists of only fluid regions with no voids", "The geometry consists of both fluid and solid regions and/or voids"]},
+    "create_regions": {"geometry": ["The geometry consists of only solid regions", "The geometry consists of both fluid and solid regions and/or voids"], "argument": "capping_required", "equals": "Yes", "default": "Yes"},
+    "update_regions": {"geometry": ["The geometry consists of only solid regions", "The geometry consists of both fluid and solid regions and/or voids"]}
+  },
   "steps": [
     {
       "sequence": 1,
@@ -2331,6 +2342,77 @@
     },
     {
       "sequence": 5,
+      "task_path": ["update_boundaries"],
+      "english_name": "Update Boundaries",
+      "label": "更新边界",
+      "task_type": "Simple",
+      "fields": [
+        {
+          "path": ["selection_type"],
+          "label": "Selection Type",
+          "type": "string",
+          "control": "select",
+          "enum": ["zone", "label"],
+          "default": "zone",
+          "advanced": false,
+          "developer": false,
+          "display_condition": null
+        },
+        {
+          "path": ["boundary_label_list"],
+          "label": "Boundary Labels",
+          "type": "list",
+          "control": "tag_select",
+          "enum": null,
+          "default": [],
+          "advanced": false,
+          "developer": false,
+          "display_condition": "$../SelectionType == \"label\""
+        },
+        {
+          "path": ["boundary_label_type_list"],
+          "label": "Boundary Types",
+          "type": "list",
+          "control": "tag_select",
+          "enum": null,
+          "default": [],
+          "advanced": false,
+          "developer": false,
+          "display_condition": "$../SelectionType == \"label\""
+        },
+        {
+          "path": ["boundary_zone_list"],
+          "label": "Geometry Zones",
+          "type": "list",
+          "control": "tag_select",
+          "enum": null,
+          "default": [],
+          "advanced": false,
+          "developer": false,
+          "display_condition": "$../SelectionType == \"zone\""
+        },
+        {
+          "path": ["boundary_zone_type_list"],
+          "label": "Boundary Types",
+          "type": "list",
+          "control": "tag_select",
+          "enum": null,
+          "default": [],
+          "advanced": false,
+          "developer": false,
+          "display_condition": "$../SelectionType == \"zone\""
+        }
+      ],
+      "primary_field": [
+        "selection_type",
+        "boundary_label_list",
+        "boundary_label_type_list",
+        "boundary_zone_list",
+        "boundary_zone_type_list"
+      ]
+    },
+    {
+      "sequence": 6,
       "task_path": ["update_regions"],
       "english_name": "Update Regions",
       "label": "更新区域类型设定",
@@ -2453,7 +2535,7 @@
       "region_type_enum": ["fluid", "solid"]
     },
     {
-      "sequence": 6,
+      "sequence": 7,
       "task_path": ["add_boundary_layer"],
       "english_name": "Add Boundary Layers",
       "label": "添加边界层",
@@ -3390,7 +3472,7 @@
       }
     },
     {
-      "sequence": 7,
+      "sequence": 8,
       "task_path": ["create_volume_mesh"],
       "english_name": "Generate the Volume Mesh",
       "label": "生成体网格",

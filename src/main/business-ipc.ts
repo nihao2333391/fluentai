@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain } from 'electron'
 
 import type {
   CredentialStatus,
@@ -188,6 +188,12 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
       body: jsonBody(preset),
     }),
   )
+  ipcMain.handle('meshing:inspect-reference', (_event, modelId: number) =>
+    sidecar.request(`/api/meshing/reference-models/${modelId}/inspect`, {
+      method: 'POST',
+      timeoutMs: FLUENT_OPERATION_TIMEOUT_MS,
+    }),
+  )
   ipcMain.handle('meshing-automations:list', () =>
     sidecar.request<MeshingAutomation[]>('/api/meshing-automations'),
   )
@@ -259,6 +265,12 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
         timeoutMs: FLUENT_OPERATION_TIMEOUT_MS,
       }),
   )
+  ipcMain.handle('meshing-live:retry-prepare', (_event, sessionId: string) =>
+    sidecar.request<MeshingLiveSessionSnapshot>(
+      `/api/meshing/live-sessions/${sessionId}/retry-prepare`,
+      { method: 'POST', timeoutMs: FLUENT_OPERATION_TIMEOUT_MS },
+    ),
+  )
   ipcMain.handle('meshing-live:next-model', (_event, sessionId: string) =>
     sidecar.request<MeshingLiveSessionSnapshot>(
       `/api/meshing/live-sessions/${sessionId}/next-model`,
@@ -276,6 +288,29 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
       method: 'POST',
       timeoutMs: 30_000,
     }),
+  )
+  ipcMain.handle('meshing-live:pick-mesh', async () => {
+    const options: Electron.OpenDialogOptions = {
+      title: '选择 Fluent 已保存的网格文件',
+      properties: ['openFile'],
+      filters: [{ name: 'Fluent mesh', extensions: ['msh', 'msh.h5'] }],
+    }
+    const parent = BrowserWindow.getFocusedWindow()
+    const result = parent
+      ? await dialog.showOpenDialog(parent, options)
+      : await dialog.showOpenDialog(options)
+    return result.canceled ? null : (result.filePaths[0] ?? null)
+  })
+  ipcMain.handle('meshing-live:archive', (_event, sessionId: string, payload: import('../shared/contracts').MeshingArchiveCreate) =>
+    sidecar.request<import('../shared/contracts').MeshingArchiveRecord>(
+      `/api/meshing/live-sessions/${sessionId}/archive`,
+      { method: 'POST', body: jsonBody(payload), timeoutMs: FLUENT_OPERATION_TIMEOUT_MS },
+    ),
+  )
+  ipcMain.handle('meshing-live:archives', (_event, sessionId: string) =>
+    sidecar.request<import('../shared/contracts').MeshingArchiveRecord[]>(
+      `/api/meshing/live-sessions/${sessionId}/archives`,
+    ),
   )
 
   ipcMain.handle('fluent:status', () => sidecar.request<FluentStatus>('/api/fluent/status'))

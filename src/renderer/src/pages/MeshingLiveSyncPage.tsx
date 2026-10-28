@@ -16,6 +16,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import type {
   MeshingAutomation,
+  MeshingArchiveRecord,
   MeshingLiveSessionSnapshot,
   MeshingLiveStepReport,
   MeshingPresetItem,
@@ -93,8 +94,14 @@ export function MeshingLiveSyncPage() {
   const [values, setValues] = useState<Record<string, MeshingPresetValue>>({})
   const [externalKeys, setExternalKeys] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
+  const [manualTakeover, setManualTakeover] = useState(false)
+  const [meshPath, setMeshPath] = useState('')
+  const [modelingNotes, setModelingNotes] = useState('')
+  const [archives, setArchives] = useState<MeshingArchiveRecord[]>([])
+  const [archiving, setArchiving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [pollError, setPollError] = useState<string | null>(null)
   const [newChildName, setNewChildName] = useState('')
   const lastValuesRef = useRef<Record<string, string>>({})
   const pendingKeysRef = useRef<Set<string>>(new Set())
@@ -102,6 +109,7 @@ export function MeshingLiveSyncPage() {
   const writeTimersRef = useRef<Map<string, number>>(new Map())
   const sessionRef = useRef<MeshingLiveSessionSnapshot | null>(null)
   const enteredStepRef = useRef(-1)
+  const pollInFlightRef = useRef(false)
 
   useEffect(() => {
     sessionRef.current = session
@@ -179,10 +187,8 @@ export function MeshingLiveSyncPage() {
         setSession(snapshot)
         setAutomation(nextAutomation)
         setSchema(nextSchema)
+        setArchives(await fluentAiService.meshingLive.archives(sessionId))
         setLoading(false)
-        if (snapshot.connection?.connected && snapshot.status !== 'failed') {
-          await enterStep(snapshot.current_step_index)
-        }
       } catch (loadError) {
         if (!active) return
         setError(loadError instanceof Error ? loadError.message : String(loadError))
@@ -192,38 +198,59 @@ export function MeshingLiveSyncPage() {
     return () => {
       active = false
     }
-  }, [enterStep, sessionId])
+  }, [sessionId])
 
   useEffect(() => {
     if (!sessionId) return
+    let active = true
     const timer = window.setInterval(() => {
+      if (pollInFlightRef.current) return
+      pollInFlightRef.current = true
       void (async () => {
         try {
           const snapshot = await fluentAiService.meshingLive.get(sessionId)
+          if (!active) return
           setSession(snapshot)
-          if (snapshot.status === 'starting' || snapshot.status === 'running') return
-          if (busy) return
+          setPollError(null)
           if (
-            snapshot.status === 'waiting' &&
-            snapshot.connection?.connected &&
-            snapshot.current_step_index !== enteredStepRef.current
+            snapshot.status === 'starting' ||
+            snapshot.status === 'running' ||
+            snapshot.status === 'failed' ||
+            snapshot.status === 'stopped'
           ) {
-            await enterStep(snapshot.current_step_index)
             return
           }
+          if (busy) return
           if (!snapshot.connection?.connected) return
           const report = await fluentAiService.meshingLive.readStep(
             sessionId,
             snapshot.current_step_index,
           )
+          if (!active) return
           applyReport(report, 'poll')
-        } catch {
-          // Poll errors are surfaced by the next explicit action; avoid noisy toasts.
+          if (report.status === 'failed') {
+            setPollError(
+              report.read_report?.error ||
+                report.message ||
+                'Fluent 当前步骤读取失败。平台会自动重试。',
+            )
+          }
+        } catch (pollingError) {
+          if (active) {
+            setPollError(
+              `自动状态刷新失败：${pollingError instanceof Error ? pollingError.message : String(pollingError)}。平台会自动重试。`,
+            )
+          }
+        } finally {
+          pollInFlightRef.current = false
         }
       })()
     }, 2000)
-    return () => window.clearInterval(timer)
-  }, [applyReport, busy, enterStep, sessionId])
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [applyReport, busy, sessionId])
 
   const currentModel = session?.models[session.current_model_index] ?? null
   const currentTask = useMemo(
@@ -233,6 +260,31 @@ export function MeshingLiveSyncPage() {
         : null,
     [schema, session],
   )
+  const phaseLabel = session
+    ? session.phase === 'connecting' ? '正在连接 Fluent' :
+      session.phase === 'importing' ? '正在导入几何' :
+      session.phase === 'preparing_local_sizing' ? '正在写入并回读局部尺寸' :
+      session.phase === 'executing_local_sizing' ? '正在 Fluent 中执行局部尺寸' :
+      session.phase === 'preparing_surface_mesh' ? '正在写入并回读面网格参数' :
+      session.phase === 'surface_ready' ? '面网格设置已就绪，等待检查' :
+      session.phase === 'volume_ready' ? '体网格设置已就绪，等待检查' :
+      session.phase === 'preparing_surface' ? '正在准备面网格前设置' :
+      session.phase === 'preparing_volume' ? '正在准备体网格前设置' :
+      session.phase === 'generating_surface' ? '正在生成面网格' :
+      session.phase === 'generating_volume' ? '正在生成体网格' :
+      session.phase === 'failed' ? '当前阶段准备失败' :
+      session.phase === 'completed' ? '工作流已完成' : '平台正在处理水密工作流'
+    : '平台正在处理水密工作流'
+  const phaseElapsedSeconds = session?.phase_elapsed_ms == null
+    ? null
+    : (session.phase_elapsed_ms / 1000).toFixed(1)
+  const prolongedPhase =
+    session?.status === 'running' &&
+    session.phase_elapsed_ms != null &&
+    session.phase_elapsed_ms >= 180_000
+  const fluentCallTimedOut =
+    session?.status === 'failed' &&
+    session.message.includes('没有返回')
 
   const writeItems = useCallback(
     async (items: MeshingPresetItem[], mode: ApplyMode = 'write') => {
@@ -314,9 +366,6 @@ export function MeshingLiveSyncPage() {
         message.error(report.message || t('meshing.liveStepFailed'))
       } else {
         message.success(t('meshing.liveStepCompleted'))
-        if (report.snapshot.current_step_index !== session.current_step_index) {
-          await enterStep(report.snapshot.current_step_index)
-        }
       }
     } catch (executeError) {
       message.error(executeError instanceof Error ? executeError.message : String(executeError))
@@ -378,7 +427,7 @@ export function MeshingLiveSyncPage() {
       const snapshot = await fluentAiService.meshingLive.nextModel(sessionId)
       setSession(snapshot)
       enteredStepRef.current = -1
-      if (snapshot.connection?.connected) await enterStep(snapshot.current_step_index)
+      setManualTakeover(false)
     } finally {
       setBusy(false)
     }
@@ -391,7 +440,19 @@ export function MeshingLiveSyncPage() {
       const snapshot = await fluentAiService.meshingLive.retryModel(sessionId)
       setSession(snapshot)
       enteredStepRef.current = -1
-      if (snapshot.connection?.connected) await enterStep(snapshot.current_step_index)
+      setManualTakeover(false)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const retryPreparation = async (): Promise<void> => {
+    if (!sessionId) return
+    setBusy(true)
+    try {
+      setSession(await fluentAiService.meshingLive.retryPrepare(sessionId))
+    } catch (retryError) {
+      message.error(retryError instanceof Error ? retryError.message : String(retryError))
     } finally {
       setBusy(false)
     }
@@ -407,6 +468,31 @@ export function MeshingLiveSyncPage() {
         navigate('/meshing')
       },
     })
+  }
+
+  const pickMesh = async (): Promise<void> => {
+    const path = await fluentAiService.meshingLive.pickMeshFile()
+    if (path) setMeshPath(path)
+  }
+
+  const archiveMesh = async (): Promise<void> => {
+    if (!meshPath.trim()) {
+      message.warning('请先选择 Fluent 保存的网格文件。')
+      return
+    }
+    setArchiving(true)
+    try {
+      const record = await fluentAiService.meshingLive.archive(sessionId, {
+        mesh_path: meshPath.trim(),
+        modeling_notes: modelingNotes,
+      })
+      setArchives((current) => [record, ...current])
+      message.success('网格和配置差异已归档。')
+    } catch (archiveError) {
+      message.error(archiveError instanceof Error ? archiveError.message : String(archiveError))
+    } finally {
+      setArchiving(false)
+    }
   }
 
   if (loading) return <LoadingState />
@@ -434,6 +520,9 @@ export function MeshingLiveSyncPage() {
     if (!currentTask) return null
     const argument = findArgument(currentTask, item)
     if (!argument) return null
+    const boundaryTypeOptions = currentTask.arguments.find(
+      (candidate) => candidate.name === 'boundary_allowed_type_list',
+    )?.default_value
     const key = valueKey(item)
     const external = externalKeys.has(key)
     return (
@@ -450,8 +539,18 @@ export function MeshingLiveSyncPage() {
         <div className="live-parameter-control">
           <ArgumentControl
             argument={argument}
+            allowedValuesOverride={
+              argument.name === 'boundary_zone_type_list' && Array.isArray(boundaryTypeOptions)
+                ? (boundaryTypeOptions as MeshingPresetValue[])
+                : undefined
+            }
             value={values[key] ?? null}
-            disabled={busy || session.status === 'running' || session.status === 'stopped'}
+            disabled={
+              !manualTakeover ||
+              busy ||
+              session.status === 'running' ||
+              session.status === 'stopped'
+            }
             onChange={(value) => updateValue(item, currentTask, value)}
           />
         </div>
@@ -467,18 +566,28 @@ export function MeshingLiveSyncPage() {
         <Space wrap>
           <Tag
             color={
-              session.status === 'starting'
+              session.status === 'failed'
+                ? 'red'
+                : session.status === 'starting'
                 ? 'gold'
-                : session.connection?.connected
-                  ? 'green'
-                  : 'red'
+                : session.status === 'running'
+                  ? 'processing'
+                  : session.connection?.connected
+                    ? 'green'
+                    : 'red'
             }
           >
             {session.status === 'starting'
               ? t('meshing.liveStarting')
-              : session.connection?.connected
-                ? t('meshing.liveConnected')
-                : t('meshing.liveDisconnected')}
+              : session.status === 'failed'
+                ? '准备失败'
+              : session.status === 'running'
+                ? currentModel?.status === 'importing'
+                  ? t('meshing.liveImporting')
+                  : t('meshing.liveProcessing')
+                : session.connection?.connected
+                  ? t('meshing.liveConnected')
+                  : t('meshing.liveDisconnected')}
           </Tag>
           <Tag color="blue">
             {t('meshing.liveModelProgress', {
@@ -502,6 +611,22 @@ export function MeshingLiveSyncPage() {
             description={error}
           />
         ) : null}
+        {pollError ? (
+          <Alert
+            type="warning"
+            showIcon
+            message="实时状态刷新受阻"
+            description={pollError}
+          />
+        ) : null}
+        {session.native_task_poll_error ? (
+          <Alert
+            type="warning"
+            showIcon
+            message="Fluent 当前步骤自动检测受阻"
+            description={session.native_task_poll_error}
+          />
+        ) : null}
         {session.message ? (
           <Alert
             type={session.status === 'failed' ? 'error' : 'info'}
@@ -509,6 +634,44 @@ export function MeshingLiveSyncPage() {
             message={session.message}
           />
         ) : null}
+        {currentModel?.status === 'importing' ? (
+          <Alert
+            type="info"
+            showIcon
+            message={`正在导入目标几何：${currentModel.name}`}
+            description="Fluent 已启动，平台正在导入并检查几何文件。导入完成后会自动进入工作流。"
+          />
+        ) : null}
+        <Alert
+          type={session.phase === 'failed' ? 'error' : prolongedPhase ? 'warning' : 'info'}
+          showIcon
+          message={phaseLabel}
+          description={
+            fluentCallTimedOut
+              ? 'Fluent 当前请求仍未返回。平台已停止后续自动步骤；请先检查 Fluent 控制台，确认请求结束后再重新连接。'
+              : session.status === 'running'
+              ? prolongedPhase
+                ? `本阶段已运行 ${phaseElapsedSeconds} 秒。平台正在等待当前 Fluent 请求；请求返回后会自动继续后续准备，且不会重复提交。请查看 Fluent 控制台是否有错误。`
+                : phaseElapsedSeconds == null
+                  ? '当前后端没有提供阶段计时。自动准备仍在继续，网格只会在面网格设置就绪后由你点击生成。'
+                  : `本阶段已运行 ${phaseElapsedSeconds} 秒。Fluent 返回后，平台会自动继续准备；网格只会在面网格设置就绪后由你点击生成。`
+              : '平台按任务顺序写入并回读参数。网格只在你点击对应生成按钮后开始生成。'
+          }
+          action={
+            session.phase === 'failed' ? (
+              fluentCallTimedOut ? null : (
+                <Button size="small" onClick={() => void retryPreparation()} loading={busy}>重试准备</Button>
+              )
+            ) : session.phase === 'surface_ready' || session.phase === 'volume_ready' ? (
+              <Button type="primary" size="small" onClick={() => void executeCurrentStep()} loading={busy}>
+                {session.phase === 'surface_ready' ? '生成面网格' : '生成体网格'}
+              </Button>
+            ) : undefined
+          }
+        />
+        <Button onClick={() => setManualTakeover((current) => !current)}>
+          {manualTakeover ? '结束人工接管' : '人工接管平台操作'}
+        </Button>
         {externalKeys.size > 0 ? (
           <Alert
             type="warning"
@@ -562,6 +725,41 @@ export function MeshingLiveSyncPage() {
           </Space>
         </Card>
 
+        <Card size="small" title="归档网格结果">
+          <Space direction="vertical" size={10} className="full-width">
+            <Typography.Text type="secondary">
+              在 Fluent 中保存 .msh 或
+              .msh.h5，然后在这里关联文件。平台会复制网格，并生成参数差异记录。
+            </Typography.Text>
+            <Space.Compact className="full-width">
+              <Input
+                value={meshPath}
+                onChange={(event) => setMeshPath(event.target.value)}
+                placeholder="Fluent 保存的网格文件路径"
+              />
+              <Button onClick={() => void pickMesh()}>浏览</Button>
+            </Space.Compact>
+            <Input.TextArea
+              value={modelingNotes}
+              onChange={(event) => setModelingNotes(event.target.value)}
+              rows={3}
+              placeholder="建模笔记（可选）"
+            />
+            <Button type="primary" loading={archiving} onClick={() => void archiveMesh()}>
+              关联网格并生成记录
+            </Button>
+            {archives.map((record) => (
+              <Alert
+                key={record.id}
+                type="success"
+                showIcon
+                message={`已归档 ${record.mesh_path}`}
+                description={`差异 ${record.difference_count} 项；无法比较 ${record.unavailable_count} 项。可读记录：${record.record_markdown_path}；结构化记录：${record.record_json_path}`}
+              />
+            ))}
+          </Space>
+        </Card>
+
         <div className="meshing-stepper-scroll">
           <div className="meshing-stepper live-meshing-stepper">
             {session.steps.map((step, index) => {
@@ -571,8 +769,9 @@ export function MeshingLiveSyncPage() {
                   key={step.task_path.join('/')}
                   type="button"
                   className={`meshing-step ${index === session.current_step_index ? 'is-active' : ''} ${step.status === 'completed' ? 'is-complete' : ''} live-step-${step.status}`}
-                  onClick={() => void enterStep(index)}
+                  onClick={manualTakeover ? () => void enterStep(index) : undefined}
                   disabled={
+                    !manualTakeover ||
                     busy ||
                     session.status === 'starting' ||
                     session.status === 'running' ||
@@ -604,15 +803,34 @@ export function MeshingLiveSyncPage() {
             }
           >
             <Space direction="vertical" size={14} className="full-width">
+              {currentTask.python_name === 'update_boundaries' ? (
+                <Typography.Text type="secondary">
+                  “几何区域名称”和“边界类型”按相同顺序逐项对应。模板中的成对设置会在进入此步骤时写入
+                  Fluent。
+                </Typography.Text>
+              ) : null}
+              {currentStep.duration_ms != null ? (
+                <Typography.Text type="secondary">
+                  {t('meshing.liveDuration', {
+                    seconds: (currentStep.duration_ms / 1000).toFixed(1),
+                  })}
+                </Typography.Text>
+              ) : null}
               {currentTask.child_template ? (
                 <Space wrap className="meshing-live-add-child">
                   <Input
                     value={newChildName}
                     placeholder={t('meshing.liveChildNamePlaceholder')}
                     onChange={(event) => setNewChildName(event.target.value)}
+                    disabled={!manualTakeover}
                     className="meshing-live-child-input"
                   />
-                  <Button icon={<PlusOutlined />} onClick={() => void addChild()} loading={busy}>
+                  <Button
+                    icon={<PlusOutlined />}
+                    onClick={() => void addChild()}
+                    loading={busy}
+                    disabled={!manualTakeover}
+                  >
                     {t('meshing.liveAddChild')}
                   </Button>
                 </Space>
@@ -663,21 +881,10 @@ export function MeshingLiveSyncPage() {
             </Space>
             <Space wrap className="meshing-step-actions">
               <Button
-                type="primary"
-                icon={<ThunderboltOutlined />}
-                loading={busy}
-                disabled={
-                  session.status === 'starting' ||
-                  session.status === 'running' ||
-                  session.status === 'stopped'
-                }
-                onClick={() => void executeCurrentStep()}
+                icon={<SyncOutlined />}
+                onClick={() => void overrideExternal()}
+                disabled={!manualTakeover}
               >
-                {t('meshing.liveExecuteStep', {
-                  step: localizedMeshingTaskName(t, currentTask),
-                })}
-              </Button>
-              <Button icon={<SyncOutlined />} onClick={() => void overrideExternal()}>
                 {t('meshing.liveRewritePreset')}
               </Button>
             </Space>

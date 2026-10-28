@@ -311,6 +311,7 @@ export interface MeshingWriteReport {
   workflow_type: MeshingWorkflowType
   status: 'success' | 'failed'
   results: MeshingArgumentWriteResult[]
+  missing_names?: string[]
   verified: boolean
   error: string | null
 }
@@ -354,6 +355,12 @@ export interface MeshingWorkflowContract {
   workflow_type: MeshingWorkflowType
   source_schema: string
   step_order: string[]
+  conditional_tasks?: Record<string, {
+    geometry?: string[]
+    argument?: string
+    equals?: string
+    default?: string
+  }>
   steps: MeshingWorkflowStepContract[]
 }
 
@@ -429,19 +436,48 @@ export interface MeshingSchemaSummary {
   argument_count: number
 }
 
+export interface MeshingReferenceInspection {
+  model_id: number
+  model_name: string
+  fluent_version: string | null
+  labels: string[]
+  message: string
+}
+
+export interface MeshingArchiveCreate {
+  mesh_path: string
+  modeling_notes: string
+}
+
+export interface MeshingArchiveRecord {
+  id: string
+  session_id: string
+  automation_id: number
+  model_id: number
+  mesh_path: string
+  record_json_path: string
+  record_markdown_path: string
+  created_at: string
+  difference_count: number
+  unavailable_count: number
+}
+
 export interface MeshingPresetItem {
   task_path: string[]
   argument_path: string[]
   value: MeshingPresetValue
+  value_mode?: 'fixed' | 'at_use'
   required: boolean
   compound_child_name: string | null
 }
 
 export interface MeshingPresetDocument {
-  schema_version: 1
+  schema_version: 1 | 2
   fluent_version: string
   workflow_type: MeshingWorkflowType
   items: MeshingPresetItem[]
+  /** Shared face labels available to every local-sizing and boundary-layer child. */
+  face_label_catalog?: string[]
 }
 
 export interface MeshingAutomationInput {
@@ -501,6 +537,8 @@ export interface MeshingLiveLogEntry {
 export interface MeshingLiveStepState {
   task_path: string[]
   status: 'pending' | 'active' | 'running' | 'completed' | 'failed'
+  preset_status?: 'pending' | 'applied' | 'manual'
+  duration_ms?: number | null
   message: string
 }
 
@@ -518,6 +556,21 @@ export interface MeshingLiveSessionSnapshot {
   automation_name: string
   workflow_type: MeshingWorkflowType
   status: 'starting' | 'connected' | 'running' | 'waiting' | 'completed' | 'failed' | 'stopped'
+  phase?:
+    | 'connecting'
+    | 'importing'
+    | 'preparing_surface'
+    | 'preparing_local_sizing'
+    | 'executing_local_sizing'
+    | 'preparing_surface_mesh'
+    | 'surface_ready'
+    | 'generating_surface'
+    | 'preparing_volume'
+    | 'volume_ready'
+    | 'generating_volume'
+    | 'failed'
+    | 'completed'
+  phase_elapsed_ms?: number | null
   connection: FluentStatus | null
   models: MeshingLiveModelState[]
   current_model_index: number
@@ -525,6 +578,7 @@ export interface MeshingLiveSessionSnapshot {
   steps: MeshingLiveStepState[]
   logs: MeshingLiveLogEntry[]
   message: string
+  native_task_poll_error?: string | null
 }
 
 export interface MeshingLiveStepReport {
@@ -547,9 +601,13 @@ export interface MeshingLiveApi {
     sessionId: string,
     payload: MeshingLiveStepRequest,
   ) => Promise<MeshingLiveStepReport>
+  retryPrepare: (sessionId: string) => Promise<MeshingLiveSessionSnapshot>
   nextModel: (sessionId: string) => Promise<MeshingLiveSessionSnapshot>
   retryModel: (sessionId: string) => Promise<MeshingLiveSessionSnapshot>
   stop: (sessionId: string) => Promise<MeshingLiveSessionSnapshot>
+  pickMeshFile: () => Promise<string | null>
+  archive: (sessionId: string, payload: MeshingArchiveCreate) => Promise<MeshingArchiveRecord>
+  archives: (sessionId: string) => Promise<MeshingArchiveRecord[]>
 }
 
 export interface DatabaseBackupInfo {
@@ -586,6 +644,7 @@ export interface MeshingApi {
   schemas: () => Promise<MeshingSchemaSummary[]>
   schema: (workflowType: MeshingWorkflowType) => Promise<MeshingWorkflowSchema>
   validatePreset: (preset: MeshingPresetDocument) => Promise<MeshingPresetValidationReport>
+  inspectReferenceModel: (modelId: number) => Promise<MeshingReferenceInspection>
 }
 
 export interface MeshingAutomationsApi {

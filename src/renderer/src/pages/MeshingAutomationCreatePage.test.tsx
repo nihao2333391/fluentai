@@ -298,20 +298,93 @@ describe('MeshingAutomationCreatePage', () => {
         restart: vi.fn(),
         onStatusChanged: vi.fn(() => () => undefined),
       },
-      models: { list: vi.fn().mockResolvedValue([]) },
+      models: {
+        list: vi.fn().mockResolvedValue([
+          {
+            id: 7,
+            name: 'Reference geometry',
+            file_path: 'C:/models/reference.scdocx',
+            file_size: 1,
+            file_mtime: null,
+            description: '',
+            tags: [],
+            automation_ids: [],
+            default_automation_id: null,
+            created_at: '',
+            updated_at: '',
+          },
+        ]),
+      },
       meshing: {
         schema: vi.fn().mockResolvedValue(schema),
         workflowSchema: vi.fn().mockResolvedValue(contract),
+        inspectReferenceModel: vi.fn().mockResolvedValue({
+          model_id: 7,
+          model_name: 'Reference geometry',
+          fluent_version: '25.2.0',
+          labels: ['wall-small', 'inlet-hot', 'outlet', 'wall-big', 'c-long-flow'],
+          message: 'Read 5 face labels.',
+        }),
         validatePreset: vi.fn().mockResolvedValue({ valid: true, errors: [] }),
       },
       meshingAutomations: {
-        create: vi.fn(),
+        create: vi.fn().mockResolvedValue({ ...editAutomation, id: 22, status: 'draft' }),
         get: vi.fn().mockResolvedValue(editAutomation),
-        update: vi.fn(),
+        update: vi.fn().mockResolvedValue({ ...editAutomation, id: 22, status: 'draft' }),
       },
     } as unknown as FluentAIApi
     Object.defineProperty(window, 'fluentAI', { configurable: true, value: api })
   })
+
+  it('preserves the current step and face labels across draft creation and autosave', async () => {
+    render(
+      <AppProviders>
+        <MemoryRouter>
+          <MeshingAutomationCreatePage />
+        </MemoryRouter>
+      </AppProviders>,
+    )
+
+    fireEvent.change(await screen.findByRole('textbox', { name: '名称' }), {
+      target: { value: 'Reference labels preset' },
+    })
+    const referenceModel = screen.getByRole('combobox', { name: '参考模型' })
+    fireEvent.mouseDown(referenceModel)
+    fireEvent.click(
+      await screen.findByText('Reference geometry', {
+        selector: '.ant-select-item-option-content',
+      }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: '从参考模型读取标签' }))
+    await screen.findByText(/已读取 5 个标签/)
+    fireEvent.click(screen.getByRole('button', { name: /添加局部尺寸/ }))
+
+    await waitFor(() => {
+      expect((window.fluentAI as FluentAIApi).meshingAutomations.create).toHaveBeenCalledTimes(1)
+    })
+    expect(screen.getByText('wall-small', { selector: '.ant-tag' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /添加局部尺寸/ }).getAttribute('aria-current')).toBe(
+      'step',
+    )
+
+    const localSizingToggle = screen.getByRole('combobox', { name: '是否要添加局部尺寸？' })
+    fireEvent.mouseDown(localSizingToggle)
+    fireEvent.click(await screen.findByText('是', { selector: '.ant-select-item-option-content' }))
+
+    const faceLabels = await screen.findByRole('combobox', { name: /标签|Labels/ })
+    fireEvent.mouseDown(faceLabels)
+    fireEvent.click(
+      await screen.findByText('wall-small', { selector: '.ant-select-item-option-content' }),
+    )
+
+    await waitFor(() => {
+      expect((window.fluentAI as FluentAIApi).meshingAutomations.update).toHaveBeenCalled()
+    })
+    expect(screen.getByRole('button', { name: /添加局部尺寸/ }).getAttribute('aria-current')).toBe(
+      'step',
+    )
+    expect(screen.getByText('wall-small', { selector: '.ant-tag' })).toBeInTheDocument()
+  }, 30_000)
 
   it('renders seven horizontal workflow steps and switches step-specific parameters', async () => {
     render(
@@ -345,8 +418,13 @@ describe('MeshingAutomationCreatePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /生成表面网格/ }))
     expect(await screen.findByText('是否要使用自定义尺寸场/控制文件？')).toBeInTheDocument()
-    expect(screen.getByText('最小尺寸 [m]')).toBeInTheDocument()
-    expect(screen.getByText('最大尺寸 [m]')).toBeInTheDocument()
+    const customSizeToggle = screen.getByRole('combobox', {
+      name: '是否要使用自定义尺寸场/控制文件？',
+    })
+    fireEvent.mouseDown(customSizeToggle)
+    fireEvent.click(await screen.findByText('是', { selector: '.ant-select-item-option-content' }))
+    expect(screen.getByText('最小尺寸 [mm]')).toBeInTheDocument()
+    expect(screen.getByText('最大尺寸 [mm]')).toBeInTheDocument()
     expect(screen.getByText('增长率')).toBeInTheDocument()
     expect(screen.getByText('尺寸函数')).toBeInTheDocument()
 
@@ -357,7 +435,7 @@ describe('MeshingAutomationCreatePage', () => {
     fireEvent.mouseDown(localSizingToggle)
     fireEvent.click(await screen.findByText('是', { selector: '.ant-select-item-option-content' }))
     expect(await screen.findByDisplayValue('facesize_1')).toBeInTheDocument()
-    expect(await screen.findByText('目标网格尺寸 [m]')).toBeInTheDocument()
+    expect(await screen.findByText('目标网格尺寸 [mm]')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /添加复合子任务预设/ }))
     expect(await screen.findByDisplayValue('facesize_2')).toBeInTheDocument()
 
@@ -385,7 +463,7 @@ describe('MeshingAutomationCreatePage', () => {
     await waitFor(() => expect(screen.getByText('Geometry Type')).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /Generate the Surface Mesh/ }))
     expect(await screen.findByText('Use Custom Size Field/Control Files?')).toBeInTheDocument()
-    expect(screen.getByText('Minimum Size [m]')).toBeInTheDocument()
+    expect(screen.getByText('Minimum Size [mm]')).toBeInTheDocument()
   }, 60_000)
 
   it('loads an existing preset and updates it in place', async () => {
@@ -434,4 +512,5 @@ describe('MeshingAutomationCreatePage', () => {
       )
     })
   }, 60_000)
+
 })

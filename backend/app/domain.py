@@ -261,6 +261,7 @@ class MeshingPresetItem(BaseModel):
     task_path: list[str] = Field(min_length=1, max_length=8)
     argument_path: list[str] = Field(min_length=1, max_length=16)
     value: MeshingPresetValue
+    value_mode: Literal["fixed", "at_use"] = "fixed"
     required: bool = True
     compound_child_name: str | None = Field(default=None, max_length=120)
 
@@ -270,10 +271,23 @@ class MeshingPresetDocument(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    schema_version: Literal[1] = 1
+    schema_version: Literal[1, 2] = 1
     fluent_version: str = "25.2.0"
     workflow_type: MeshingWorkflowType
     items: list[MeshingPresetItem] = Field(default_factory=list)
+    face_label_catalog: list[str] = Field(default_factory=list, max_length=1000)
+
+    @model_validator(mode="after")
+    def validate_reusable_rules(self) -> MeshingPresetDocument:
+        if self.schema_version == 1:
+            return self
+        file_arguments = {"file_name", "file_names", "mesh_file_name"}
+        for item in self.items:
+            if item.task_path == ["import_geometry"] and item.argument_path[-1] in file_arguments:
+                raise ValueError("Geometry file paths belong to the application task, not the template.")
+            if item.value_mode == "at_use" and item.value is not None:
+                raise ValueError("An at-use Meshing rule cannot store a model-specific value.")
+        return self
 
 
 class MeshingAutomationCreate(BaseModel):
@@ -396,6 +410,7 @@ class MeshingWriteReport(BaseModel):
     workflow_type: MeshingWorkflowType
     status: Literal["success", "failed"]
     results: list[MeshingArgumentWriteResult] = Field(default_factory=list)
+    missing_names: list[str] = Field(default_factory=list)
     verified: bool = True
     error: str | None = None
 
@@ -430,10 +445,36 @@ class MeshingLiveSessionStart(BaseModel):
     connection: FluentConnectionConfig | None = None
 
 
-class MeshingLiveStepRequest(BaseModel):
-    """Select or execute one of the seven Watertight workflow steps."""
+class MeshingReferenceInspection(BaseModel):
+    model_id: int
+    model_name: str
+    fluent_version: str | None = None
+    labels: list[str] = Field(default_factory=list)
+    message: str = ""
 
-    step_index: int = Field(ge=0, le=6)
+
+class MeshingArchiveCreate(BaseModel):
+    mesh_path: str = Field(min_length=1)
+    modeling_notes: str = Field(default="", max_length=20000)
+
+
+class MeshingArchiveRecord(BaseModel):
+    id: str
+    session_id: str
+    automation_id: int
+    model_id: int
+    mesh_path: str
+    record_json_path: str
+    record_markdown_path: str
+    created_at: str
+    difference_count: int
+    unavailable_count: int
+
+
+class MeshingLiveStepRequest(BaseModel):
+    """Select or execute a Watertight workflow step."""
+
+    step_index: int = Field(ge=0, le=7)
 
 
 class MeshingLiveWriteRequest(MeshingLiveStepRequest):
@@ -453,6 +494,8 @@ class MeshingLiveLogEntry(BaseModel):
 class MeshingLiveStepState(BaseModel):
     task_path: list[str]
     status: Literal["pending", "active", "running", "completed", "failed"] = "pending"
+    preset_status: Literal["pending", "applied", "manual"] = "pending"
+    duration_ms: int | None = Field(default=None, ge=0)
     message: str = ""
 
 
@@ -470,6 +513,22 @@ class MeshingLiveSessionSnapshot(BaseModel):
     automation_name: str
     workflow_type: MeshingWorkflowType
     status: Literal["starting", "connected", "running", "waiting", "completed", "failed", "stopped"]
+    phase: Literal[
+        "connecting",
+        "importing",
+        "preparing_surface",
+        "preparing_local_sizing",
+        "executing_local_sizing",
+        "preparing_surface_mesh",
+        "surface_ready",
+        "generating_surface",
+        "preparing_volume",
+        "volume_ready",
+        "generating_volume",
+        "failed",
+        "completed",
+    ] = "importing"
+    phase_elapsed_ms: int | None = Field(default=None, ge=0)
     connection: FluentStatus | None = None
     models: list[MeshingLiveModelState] = Field(default_factory=list)
     current_model_index: int = 0
@@ -477,6 +536,7 @@ class MeshingLiveSessionSnapshot(BaseModel):
     steps: list[MeshingLiveStepState] = Field(default_factory=list)
     logs: list[MeshingLiveLogEntry] = Field(default_factory=list)
     message: str = ""
+    native_task_poll_error: str | None = None
 
 
 class MeshingLiveStepReport(BaseModel):

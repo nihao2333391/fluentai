@@ -73,6 +73,15 @@ export const fluentAiService = {
     schema: (workflowType: MeshingWorkflowType) => getFluentAIApi().meshing.schema(workflowType),
     validatePreset: (preset: MeshingPresetDocument) =>
       getFluentAIApi().meshing.validatePreset(preset),
+    inspectReferenceModel: (modelId: number) => {
+      const inspect = getFluentAIApi().meshing?.inspectReferenceModel
+      if (typeof inspect !== 'function') {
+        throw new Error(
+          '当前桌面程序的 Fluent 接口版本不匹配。请关闭并重新启动应用；若仍失败，请重新安装最新构建。',
+        )
+      }
+      return inspect(modelId)
+    },
   },
   meshingAutomations: {
     list: () => getFluentAIApi().meshingAutomations.list(),
@@ -95,9 +104,16 @@ export const fluentAiService = {
       getFluentAIApi().meshingLive.writeStep(sessionId, payload),
     executeStep: (sessionId: string, payload: MeshingLiveStepRequest) =>
       getFluentAIApi().meshingLive.executeStep(sessionId, payload),
+    retryPrepare: (sessionId: string) => getFluentAIApi().meshingLive.retryPrepare(sessionId),
     nextModel: (sessionId: string) => getFluentAIApi().meshingLive.nextModel(sessionId),
     retryModel: (sessionId: string) => getFluentAIApi().meshingLive.retryModel(sessionId),
     stop: (sessionId: string) => getFluentAIApi().meshingLive.stop(sessionId),
+    pickMeshFile: () => getFluentAIApi().meshingLive.pickMeshFile(),
+    archive: (
+      sessionId: string,
+      payload: import('../../../shared/contracts').MeshingArchiveCreate,
+    ) => getFluentAIApi().meshingLive.archive(sessionId, payload),
+    archives: (sessionId: string) => getFluentAIApi().meshingLive.archives(sessionId),
   },
   fluent: {
     status: () => getFluentAIApi().fluent.status(),

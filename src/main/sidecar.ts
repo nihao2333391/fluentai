@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { spawn, type ChildProcessByStdio } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { existsSync } from 'node:fs'
-import { delimiter, join } from 'node:path'
+import { delimiter, join, resolve } from 'node:path'
 import type { Readable, Writable } from 'node:stream'
 
 import type { SidecarHandshake, SidecarReadyResponse, SidecarStatus } from '../shared/contracts'
@@ -22,6 +22,14 @@ const DEFAULT_START_TIMEOUT_MS = 60_000
 const DEFAULT_STOP_TIMEOUT_MS = 5_000
 const DEFAULT_MAX_AUTO_RESTARTS = 2
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000
+
+export const resolveSidecarDataDirectory = (
+  userDataDirectory: string,
+  configuredDataDirectory = process.env.FLUENT_AI_DATA_DIR,
+): string =>
+  configuredDataDirectory?.trim()
+    ? resolve(configuredDataDirectory)
+    : join(userDataDirectory, 'data')
 
 interface SidecarRequestInit extends RequestInit {
   timeoutMs?: number

@@ -19,7 +19,7 @@ def test_migrations_create_schema_and_are_idempotent(tmp_path: Path) -> None:
         }
         settings = connection.execute("SELECT key, value FROM app_settings ORDER BY key").fetchall()
 
-    assert migration_count == 3
+    assert migration_count == 4
     assert {
         "schema_migrations",
         "automations",
@@ -54,7 +54,7 @@ def test_migration_upgrade_from_v1_adds_meshing_table(tmp_path: Path) -> None:
         table = connection.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='meshing_automations'"
         ).fetchone()
-    assert latest == 3
+    assert latest == 4
     assert table is not None
 
 

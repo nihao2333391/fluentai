@@ -2,7 +2,6 @@ import {
   CheckOutlined,
   DeleteOutlined,
   PlusOutlined,
-  ReloadOutlined,
   SaveOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
@@ -11,7 +10,6 @@ import {
   App,
   Button,
   Card,
-  Checkbox,
   Collapse,
   Empty,
   Form,
@@ -26,14 +24,13 @@ import {
   Tag,
   Typography,
 } from 'antd'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMatch, useNavigate } from 'react-router-dom'
 
 import type {
   MeshingAutomation,
   MeshingPresetDocument,
-  MeshingPresetItem,
   MeshingPresetValue,
   MeshingSchemaArgument,
   MeshingSchemaTask,
@@ -47,15 +44,19 @@ import { localizedAnsysTerm, localizedAnsysValue } from '../i18n/ansysLabels'
 import { fluentAiService } from '../services/fluentAi'
 import { useSidecarStore } from '../store/sidecarStore'
 import {
+  buildInitialValues,
   buildMeshingPresetItems,
   childNameArgument,
-  collectTaskLeaves,
+  collectFaceLabels,
   defaultArgumentValue,
   defaultChildName,
   flattenArgumentLeaves,
   isAdvancedArgument,
+  isArgumentConditionVisible,
   isDeveloperArgument,
   isManagedChildArgument,
+  nextChildInstanceId,
+  restoreEditorState,
   selectionKey,
   taskPathKey,
   type MeshingArgumentLeaf,
@@ -78,50 +79,31 @@ const WATERTIGHT_STEP_TASKS = [
   'add_local_sizing',
   'create_surface_mesh',
   'describe_geometry',
+  'apply_share_topology',
+  'enclose_fluid_regions',
+  'update_boundaries',
+  'create_regions',
   'update_regions',
   'add_boundary_layer',
   'create_volume_mesh',
 ] as const
 
+const LOCAL_SIZING_MAIN_CONTROLS = new Set([
+  'edge_label_list',
+  'edge_zone_list',
+  'reverse_edge_zone_orientation',
+  'reverse_edge_zone_list',
+  'boi_patchingtoggle',
+  'draw_size_control',
+])
+
 const buildInitialChildInstances = (tasks: MeshingSchemaTask[]): MeshingChildInstanceMap => {
   const result: MeshingChildInstanceMap = {}
-  const boundaryLayer = tasks.find((task) => task.python_name === 'add_boundary_layer')
-  if (boundaryLayer?.child_template) {
-    const name = defaultChildName(boundaryLayer, 1)
-    result[taskPathKey(['add_boundary_layer'])] = [{ id: name, name }]
-  }
-  return result
-}
-
-const buildInitialValues = (
-  tasks: MeshingSchemaTask[],
-  childInstances: MeshingChildInstanceMap,
-  contract: MeshingWorkflowContract | null,
-): MeshingValueMap => {
-  const result: MeshingValueMap = {}
-  for (const entry of collectTaskLeaves(tasks)) {
-    result[selectionKey(entry.taskPath, null, entry.argumentPath)] = defaultArgumentValue(
-      entry.argument,
-    )
-  }
-  for (const task of tasks) {
-    if (!task.child_template) continue
-    const instances = childInstances[taskPathKey([task.python_name])] ?? []
-    for (const instance of instances) {
-      for (const leaf of flattenArgumentLeaves(task.child_template.arguments)) {
-        if (isManagedChildArgument(task, leaf.argument)) continue
-        result[selectionKey([task.python_name], instance.id, leaf.argumentPath)] =
-          defaultArgumentValue(leaf.argument)
-      }
-    }
-  }
-  for (const step of contract?.steps ?? []) {
-    for (const field of step.fields) {
-      if (field.ui_default_override !== undefined) {
-        result[selectionKey(step.task_path, null, field.path)] =
-          field.ui_default_override as MeshingPresetValue
-      }
-    }
+  for (const name of ['add_boundary_layer', 'enclose_fluid_regions']) {
+    const task = tasks.find((candidate) => candidate.python_name === name)
+    if (!task?.child_template) continue
+    const childName = defaultChildName(task, 1)
+    result[taskPathKey([name])] = [{ id: childName, name: childName, optional: true }]
   }
   return result
 }
@@ -131,87 +113,20 @@ interface EditorStateProps {
   values: MeshingValueMap
   showDeveloper: boolean
   lengthUnit: string
-  onPickFile?: () => Promise<void>
+  faceLabelCatalog: string[]
   onToggle: (key: string, checked: boolean) => void
   onValueChange: (key: string, value: MeshingPresetValue) => void
 }
 
-let childInstanceCounter = 0
-
-const nextChildInstanceId = (task: MeshingSchemaTask): string => {
-  childInstanceCounter += 1
-  return `${task.python_name}-${childInstanceCounter}`
-}
-
-const indexTasksByPath = (
-  tasks: MeshingSchemaTask[],
-  parentPath: string[] = [],
-  result: Map<string, MeshingSchemaTask> = new Map(),
-): Map<string, MeshingSchemaTask> => {
-  for (const task of tasks) {
-    const taskPath = [...parentPath, task.python_name]
-    result.set(taskPathKey(taskPath), task)
-    indexTasksByPath(task.children, taskPath, result)
-  }
-  return result
-}
-
-const restoreEditorState = (
-  tasks: MeshingSchemaTask[],
-  contract: MeshingWorkflowContract | null,
-  presetItems: MeshingPresetItem[],
-): {
-  childInstances: MeshingChildInstanceMap
-  included: MeshingIncludedMap
-  values: MeshingValueMap
-} => {
-  const tasksByPath = indexTasksByPath(tasks)
-  const childInstances: MeshingChildInstanceMap = {}
-
-  for (const item of presetItems) {
-    if (!item.compound_child_name) continue
-    const task = tasksByPath.get(taskPathKey(item.task_path))
-    if (!task) continue
-    const key = taskPathKey(item.task_path)
-    const instances = childInstances[key] ?? []
-    if (!instances.some((instance) => instance.name === item.compound_child_name)) {
-      instances.push({
-        id: nextChildInstanceId(task),
-        name: item.compound_child_name,
-      })
-      childInstances[key] = instances
-    }
-  }
-
-  const values = buildInitialValues(tasks, childInstances, contract)
-  const included: MeshingIncludedMap = {}
-  for (const item of presetItems) {
-    const task = tasksByPath.get(taskPathKey(item.task_path))
-    if (!task) continue
-    let childInstanceId: string | null = null
-    if (item.compound_child_name) {
-      const instance = (childInstances[taskPathKey(item.task_path)] ?? []).find(
-        (candidate) => candidate.name === item.compound_child_name,
-      )
-      if (!instance) continue
-      if (childNameArgument(task)?.name === item.argument_path[0]) continue
-      childInstanceId = instance.id
-    }
-    const key = selectionKey(item.task_path, childInstanceId, item.argument_path)
-    included[key] = true
-    values[key] = item.value
-  }
-
-  return { childInstances, included, values }
-}
-
 function LabelSelectionControl({
   argument,
+  faceLabelCatalog = [],
   value,
   disabled,
   onChange,
 }: {
   argument: MeshingSchemaArgument
+  faceLabelCatalog?: string[]
   value: MeshingPresetValue
   disabled: boolean
   onChange: (value: MeshingPresetValue) => void
@@ -220,7 +135,7 @@ function LabelSelectionControl({
   const [filterText, setFilterText] = useState('')
   const selected = Array.isArray(value) ? value.map(String) : []
   const available = Array.from(
-    new Set([...(argument.allowed_values ?? []).map(String), ...selected]),
+    new Set([...(argument.allowed_values ?? []).map(String), ...faceLabelCatalog, ...selected]),
   )
   const filtered = available.filter((item) =>
     item.toLowerCase().includes(filterText.trim().toLowerCase()),
@@ -254,9 +169,10 @@ function LabelSelectionControl({
         </Button>
       </Space>
       <Select
-        mode="tags"
+        mode="multiple"
         value={selected}
         disabled={disabled}
+        aria-label={localizedAnsysTerm(argument.display_name || argument.name, argument.name)}
         options={available.map((item) => ({ value: item, label: item }))}
         onChange={(next) => onChange(next)}
         tokenSeparators={[',']}
@@ -268,15 +184,20 @@ function LabelSelectionControl({
 
 export function ArgumentControl({
   argument,
+  faceLabelCatalog = [],
+  allowedValuesOverride,
   value,
   disabled,
   onChange,
 }: {
   argument: MeshingSchemaArgument
+  faceLabelCatalog?: string[]
+  allowedValuesOverride?: MeshingPresetValue[] | null
   value: MeshingPresetValue
   disabled: boolean
   onChange: (value: MeshingPresetValue) => void
 }) {
+  const allowedValues = allowedValuesOverride ?? argument.allowed_values
   const localizedOption = (option: string): string => {
     return localizedAnsysValue(option)
   }
@@ -304,6 +225,7 @@ export function ArgumentControl({
     return (
       <LabelSelectionControl
         argument={argument}
+        faceLabelCatalog={faceLabelCatalog}
         value={value}
         disabled={disabled}
         onChange={onChange}
@@ -315,8 +237,8 @@ export function ArgumentControl({
     return <Switch checked={Boolean(value)} disabled={disabled} onChange={onChange} />
   }
 
-  if (argument.allowed_values?.length) {
-    const options = argument.allowed_values.map((item) => ({
+  if (allowedValues?.length) {
+    const options = allowedValues.map((item) => ({
       value: String(item),
       label: localizedAnsysValue(String(item)),
     }))
@@ -330,9 +252,7 @@ export function ArgumentControl({
           options={options}
           onChange={(next) =>
             onChange(
-              next.map(
-                (entry) => argument.allowed_values?.find((item) => String(item) === entry) ?? entry,
-              ),
+              next.map((entry) => allowedValues.find((item) => String(item) === entry) ?? entry),
             )
           }
           className="full-width"
@@ -343,10 +263,9 @@ export function ArgumentControl({
       <Select
         value={String(value)}
         disabled={disabled}
+        aria-label={localizedAnsysTerm(argument.display_name || argument.name, argument.name)}
         options={options}
-        onChange={(next) =>
-          onChange(argument.allowed_values?.find((item) => String(item) === next) ?? next)
-        }
+        onChange={(next) => onChange(allowedValues.find((item) => String(item) === next) ?? next)}
         className="full-width"
       />
     )
@@ -412,8 +331,7 @@ function ArgumentSections({
   values,
   showDeveloper,
   lengthUnit,
-  onPickFile,
-  onToggle,
+  faceLabelCatalog,
   onValueChange,
 }: EditorStateProps & {
   task: MeshingSchemaTask
@@ -427,14 +345,28 @@ function ArgumentSections({
     (leaf) => childInstanceId === null || !isManagedChildArgument(task, leaf.argument),
   )
   const visibleLeaves = leaves.filter(
-    (leaf) => showDeveloper || !isDeveloperArgument(leaf.argument),
+    (leaf) =>
+      (showDeveloper || !isDeveloperArgument(leaf.argument)) &&
+      isArgumentConditionVisible(leaf.argument, task, taskPath, childInstanceId, values, leaf.argumentPath, leaf.parentConditions) &&
+      !(
+        taskPath[0] === 'import_geometry' &&
+        ['file_name', 'file_names', 'mesh_file_name'].includes(leaf.argument.name)
+      ),
   )
   const primaryLeaves = visibleLeaves.filter(
-    (leaf) => !isAdvancedArgument(leaf.argument) && !isDeveloperArgument(leaf.argument),
+    (leaf) =>
+      !isDeveloperArgument(leaf.argument) &&
+      ((task.python_name === 'add_local_sizing' && LOCAL_SIZING_MAIN_CONTROLS.has(leaf.argument.name)) ||
+        !isAdvancedArgument(leaf.argument)),
   )
-  const advancedLeaves = visibleLeaves.filter((leaf) => isAdvancedArgument(leaf.argument))
+  const advancedLeaves = visibleLeaves.filter(
+    (leaf) =>
+      !isDeveloperArgument(leaf.argument) &&
+      isAdvancedArgument(leaf.argument) &&
+      !(task.python_name === 'add_local_sizing' && LOCAL_SIZING_MAIN_CONTROLS.has(leaf.argument.name)),
+  )
   const developerLeaves = showDeveloper
-    ? leaves.filter((leaf) => isDeveloperArgument(leaf.argument))
+    ? visibleLeaves.filter((leaf) => isDeveloperArgument(leaf.argument))
     : []
 
   const renderLeaf = (leaf: MeshingArgumentLeaf) => {
@@ -446,11 +378,7 @@ function ArgumentSections({
     const unitSuffix = leaf.argument.display_unit?.includes('LengthUnit') ? ` [${lengthUnit}]` : ''
     return (
       <div key={key} className={`meshing-argument-row ${included[key] ? 'is-included' : ''}`}>
-        <Checkbox
-          checked={Boolean(included[key])}
-          disabled={!editable}
-          onChange={(event) => onToggle(key, event.target.checked)}
-        >
+        <div className="meshing-argument-label">
           <Space direction="vertical" size={2}>
             <Typography.Text strong>
               {displayPath}
@@ -465,25 +393,15 @@ function ArgumentSections({
               </Typography.Text>
             ) : null}
           </Space>
-        </Checkbox>
+        </div>
         <div className="meshing-argument-control">
-          {leaf.argument.name === 'file_name' && onPickFile ? (
-            <Space.Compact className="full-width">
-              <Input
-                value={typeof current === 'string' ? current : ''}
-                disabled={!editable || !included[key]}
-                onChange={(event) => onValueChange(key, event.target.value)}
-              />
-              <Button onClick={() => void onPickFile()}>{t('meshing.browse')}</Button>
-            </Space.Compact>
-          ) : (
-            <ArgumentControl
-              argument={leaf.argument}
-              value={current}
-              disabled={!editable || !included[key]}
-              onChange={(value) => onValueChange(key, value)}
-            />
-          )}
+          <ArgumentControl
+            argument={leaf.argument}
+            faceLabelCatalog={faceLabelCatalog}
+            value={current}
+            disabled={!editable}
+            onChange={(value) => onValueChange(key, value)}
+          />
         </div>
       </div>
     )
@@ -741,6 +659,269 @@ function RegionTableEditor({
   )
 }
 
+interface BoundaryMappingRow {
+  id: string
+  name: string
+  type: string
+}
+
+function BoundaryMappingsEditor({
+  task,
+  values,
+  onToggle,
+  onValueChange,
+  faceLabelCatalog,
+}: Pick<EditorStateProps, 'values' | 'onToggle' | 'onValueChange' | 'faceLabelCatalog'> & {
+  task: MeshingSchemaTask
+}) {
+  const taskPath = [task.python_name]
+  const selectionTypeKey = selectionKey(taskPath, null, ['selection_type'])
+  const selectionType = String(values[selectionTypeKey] ?? 'zone')
+  const labelMode = selectionType === 'label'
+  const nameKey = selectionKey(taskPath, null, [labelMode ? 'boundary_label_list' : 'boundary_zone_list'])
+  const typeKey = selectionKey(
+    taskPath,
+    null,
+    [labelMode ? 'boundary_label_type_list' : 'boundary_zone_type_list'],
+  )
+  const names = Array.isArray(values[nameKey]) ? values[nameKey].map(String) : []
+  const types = Array.isArray(values[typeKey]) ? values[typeKey].map(String) : []
+  const allowedArgument = task.arguments.find(
+    (argument) => argument.name === 'boundary_allowed_type_list',
+  )
+  const allowedTypes = allowedArgument
+    ? (defaultArgumentValue(allowedArgument) as string[])
+    : ['wall', 'velocity-inlet', 'pressure-outlet', 'symmetry', 'internal']
+  const rows: BoundaryMappingRow[] = names.map((name, index) => ({
+    id: `${index}:${name}`,
+    name,
+    type: types[index] ?? 'wall',
+  }))
+  const [draftNames, setDraftNames] = useState<Record<string, string>>({})
+  const [newZoneName, setNewZoneName] = useState('')
+  const [newZoneType, setNewZoneType] = useState('wall')
+
+  const commit = (next: BoundaryMappingRow[]): void => {
+    onValueChange(selectionTypeKey, selectionType)
+    onToggle(selectionTypeKey, true)
+    onValueChange(
+      nameKey,
+      next.map((row) => row.name),
+    )
+    onValueChange(
+      typeKey,
+      next.map((row) => row.type),
+    )
+    onToggle(nameKey, next.length > 0)
+    onToggle(typeKey, next.length > 0)
+  }
+
+  const addBoundary = (): void => {
+    const name = newZoneName.trim()
+    if (!name) return
+    commit([...rows, { id: `${rows.length}:${name}`, name, type: newZoneType }])
+    setNewZoneName('')
+  }
+
+  return (
+    <Space direction="vertical" size={12} className="full-width">
+      <Typography.Text type="secondary">
+        选择按几何区域或共享面标签设置边界，并为每项指定边界类型。
+      </Typography.Text>
+      <Space wrap>
+        <Typography.Text strong>选择方式</Typography.Text>
+        <Select
+          aria-label="更新边界选择方式"
+          value={selectionType}
+          options={[
+            { value: 'zone', label: '几何区域' },
+            { value: 'label', label: '共享面标签' },
+          ]}
+          onChange={(next) => {
+            onValueChange(selectionTypeKey, next)
+            onToggle(selectionTypeKey, true)
+            setNewZoneName('')
+          }}
+          style={{ minWidth: 180 }}
+        />
+      </Space>
+      {labelMode && faceLabelCatalog.length === 0 ? (
+        <Typography.Text type="secondary">
+          共享面标签目录为空。请先从参考模型读取标签，或在页面上方添加标签。
+        </Typography.Text>
+      ) : null}
+      <Table<BoundaryMappingRow>
+        size="small"
+        rowKey="id"
+        pagination={false}
+        tableLayout="auto"
+        dataSource={rows}
+        locale={{ emptyText: '尚未添加边界设置' }}
+        columns={[
+          {
+            title: labelMode ? '共享面标签' : '几何区域名称',
+            dataIndex: 'name',
+            key: 'name',
+            width: '52%',
+            render: (_value, row) =>
+              labelMode ? (
+                <Select
+                  value={row.name || undefined}
+                  aria-label={`共享面标签 ${row.name || '待选择'}`}
+                  options={faceLabelCatalog.map((label) => ({ value: label, label }))}
+                  popupMatchSelectWidth={260}
+                  className="full-width"
+                  onChange={(name) =>
+                    commit(rows.map((item) => (item.id === row.id ? { ...item, name } : item)))
+                  }
+                />
+              ) : (
+                <Input
+                  value={draftNames[row.id] ?? row.name}
+                  aria-label={`几何区域名称 ${row.name || '待填写'}`}
+                  onChange={(event) =>
+                    setDraftNames((current) => ({ ...current, [row.id]: event.target.value }))
+                  }
+                  onBlur={() => {
+                    const name = (draftNames[row.id] ?? row.name).trim()
+                    if (!name) return
+                    commit(rows.map((item) => (item.id === row.id ? { ...item, name } : item)))
+                    setDraftNames((current) => {
+                      const next = { ...current }
+                      delete next[row.id]
+                      return next
+                    })
+                  }}
+                />
+              ),
+          },
+          {
+            title: '边界类型',
+            dataIndex: 'type',
+            key: 'type',
+            width: 280,
+            render: (_value, row) => (
+              <Select
+                value={row.type}
+                aria-label={`边界类型 ${row.name}`}
+                popupMatchSelectWidth={260}
+                className="full-width"
+                options={allowedTypes.map((type) => ({
+                  value: type,
+                  label: localizedAnsysValue(type),
+                }))}
+                onChange={(type) =>
+                  commit(rows.map((item) => (item.id === row.id ? { ...item, type } : item)))
+                }
+              />
+            ),
+          },
+          {
+            title: '',
+            key: 'actions',
+            width: 60,
+            render: (_value, row) => (
+              <Button
+                danger
+                type="text"
+                icon={<DeleteOutlined />}
+                onClick={() => commit(rows.filter((item) => item.id !== row.id))}
+              />
+            ),
+          },
+        ]}
+      />
+      <Space.Compact className="full-width">
+        {labelMode ? (
+          <Select
+            value={newZoneName || undefined}
+            placeholder="选择共享面标签"
+            options={faceLabelCatalog.map((label) => ({ value: label, label }))}
+            popupMatchSelectWidth={260}
+            className="full-width"
+            onChange={setNewZoneName}
+          />
+        ) : (
+          <Input
+            value={newZoneName}
+            maxLength={200}
+            placeholder="输入 Fluent 区域名称"
+            onChange={(event) => setNewZoneName(event.target.value)}
+            onPressEnter={(event) => {
+              event.preventDefault()
+              addBoundary()
+            }}
+          />
+        )}
+        <Select
+          value={newZoneType}
+          popupMatchSelectWidth={260}
+          options={allowedTypes.map((type) => ({ value: type, label: localizedAnsysValue(type) }))}
+          onChange={setNewZoneType}
+        />
+        <Button icon={<PlusOutlined />} disabled={!newZoneName.trim()} onClick={addBoundary}>
+          添加边界
+        </Button>
+      </Space.Compact>
+    </Space>
+  )
+}
+
+function FaceLabelCatalogEditor({
+  labels,
+  onAdd,
+  onRemove,
+}: {
+  labels: string[]
+  onAdd: (label: string) => void
+  onRemove: (label: string) => void
+}) {
+  const [draft, setDraft] = useState('')
+  const add = (): void => {
+    const label = draft.trim()
+    if (!label) return
+    onAdd(label)
+    setDraft('')
+  }
+  return (
+    <Card size="small" title="共享面标签目录" className="meshing-face-label-catalog">
+      <Space direction="vertical" size={10} className="full-width">
+        <Typography.Text type="secondary">
+          目录中的标签可供局部尺寸、边界层和更新边界选择。没有参考模型时，可以在这里手动添加。
+        </Typography.Text>
+        <Space.Compact className="full-width">
+          <Input
+            value={draft}
+            maxLength={200}
+            placeholder="输入面标签名称，按回车或点击添加"
+            onChange={(event) => setDraft(event.target.value)}
+            onPressEnter={(event) => {
+              event.preventDefault()
+              add()
+            }}
+          />
+          <Button icon={<PlusOutlined />} onClick={add} disabled={!draft.trim()}>
+            添加标签
+          </Button>
+        </Space.Compact>
+        {labels.length > 0 ? (
+          <Space wrap>
+            {labels.map((label) => (
+              <Tag key={label} closable onClose={() => onRemove(label)}>
+                {label}
+              </Tag>
+            ))}
+          </Space>
+        ) : (
+          <Typography.Text type="secondary">
+            还没有标签。可以读取参考模型，或手动添加。
+          </Typography.Text>
+        )}
+      </Space>
+    </Card>
+  )
+}
+
 function WorkflowStepPanel({
   task,
   childInstances,
@@ -786,6 +967,18 @@ function WorkflowStepPanel({
           />
         ) : null}
       </Space>
+    )
+  }
+
+  if (task.python_name === 'update_boundaries') {
+    return (
+      <BoundaryMappingsEditor
+        task={task}
+        values={editorProps.values}
+        faceLabelCatalog={editorProps.faceLabelCatalog}
+        onToggle={editorProps.onToggle}
+        onValueChange={editorProps.onValueChange}
+      />
     )
   }
 
@@ -849,45 +1042,57 @@ function WorkflowStepPanel({
       ) : null}
       {showChildren
         ? instances.map((instance) => (
-            <Card
+            <Collapse
               key={instance.id}
-              size="small"
-              title={instance.name}
-              extra={
-                <Button
-                  danger
-                  type="text"
-                  icon={<DeleteOutlined />}
-                  aria-label={t('meshing.removeChildInstance')}
-                  onClick={() => onRemoveChild(taskPath, instance.id)}
-                />
-              }
-            >
-              <Space direction="vertical" size={14} className="full-width">
-                <Form.Item
-                  label={t('meshing.childInstanceName')}
-                  required
-                  className="meshing-child-name-field"
-                >
-                  <Input
-                    value={instance.name}
-                    placeholder={t('meshing.childInstanceNamePlaceholder')}
-                    onChange={(event) => onRenameChild(taskPath, instance.id, event.target.value)}
-                  />
-                </Form.Item>
-                {managedNameArgument ? (
-                  <Typography.Text type="secondary">
-                    {t('meshing.managedChildName', { argument: managedNameArgument.name })}
-                  </Typography.Text>
-                ) : null}
-                <ArgumentSections
-                  task={task}
-                  taskPath={taskPath}
-                  childInstanceId={instance.id}
-                  {...editorProps}
-                />
-              </Space>
-            </Card>
+              className="meshing-child-collapse"
+              defaultActiveKey={[instance.id]}
+              items={[
+                {
+                  key: instance.id,
+                  label: instance.name,
+                  extra: (
+                    <Button
+                      danger
+                      type="text"
+                      icon={<DeleteOutlined />}
+                      aria-label={t('meshing.removeChildInstance')}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onRemoveChild(taskPath, instance.id)
+                      }}
+                    />
+                  ),
+                  children: (
+                    <Space direction="vertical" size={14} className="full-width">
+                      <Form.Item
+                        label={t('meshing.childInstanceName')}
+                        required
+                        className="meshing-child-name-field"
+                      >
+                        <Input
+                          value={instance.name}
+                          placeholder={t('meshing.childInstanceNamePlaceholder')}
+                          onChange={(event) =>
+                            onRenameChild(taskPath, instance.id, event.target.value)
+                          }
+                        />
+                      </Form.Item>
+                      {managedNameArgument ? (
+                        <Typography.Text type="secondary">
+                          {t('meshing.managedChildName', { argument: managedNameArgument.name })}
+                        </Typography.Text>
+                      ) : null}
+                      <ArgumentSections
+                        task={task}
+                        taskPath={taskPath}
+                        childInstanceId={instance.id}
+                        {...editorProps}
+                      />
+                    </Space>
+                  ),
+                },
+              ]}
+            />
           ))
         : null}
     </Space>
@@ -906,20 +1111,34 @@ export function MeshingAutomationCreatePage() {
   const [form] = Form.useForm<MeshingFormValues>()
   const sidecarState = useSidecarStore((state) => state.status.state)
   const [workflowType, setWorkflowType] = useState<MeshingWorkflowType>('watertight')
-  const [reloadVersion, setReloadVersion] = useState(0)
   const [sourceAutomation, setSourceAutomation] = useState<MeshingAutomation | null>(null)
   const [schema, setSchema] = useState<MeshingWorkflowSchema | null>(null)
   const [workflowContract, setWorkflowContract] = useState<MeshingWorkflowContract | null>(null)
   const [models, setModels] = useState<Model[]>([])
+  const [referenceLabels, setReferenceLabels] = useState<string[]>([])
+  const [faceLabelCatalog, setFaceLabelCatalog] = useState<string[]>([])
+  const [readingReference, setReadingReference] = useState(false)
+  const [referenceReadError, setReferenceReadError] = useState<string | null>(null)
   const [included, setIncluded] = useState<MeshingIncludedMap>({})
   const [values, setValues] = useState<MeshingValueMap>({})
+  const [defaultValues, setDefaultValues] = useState<MeshingValueMap>({})
   const [childInstances, setChildInstances] = useState<MeshingChildInstanceMap>({})
   const [activeStepKey, setActiveStepKey] = useState<string>('import_geometry')
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set())
   const [showDeveloper, setShowDeveloper] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [reloadRevision, setReloadRevision] = useState(0)
   const [saving, setSaving] = useState(false)
-  const [stepRunning, setStepRunning] = useState(false)
+  const [editorRevision, setEditorRevision] = useState(0)
+  const [autoSaveState, setAutoSaveState] = useState<'saved' | 'saving' | 'pending' | 'error'>(
+    'saved',
+  )
+  const [autoSaveRetry, setAutoSaveRetry] = useState(0)
+  const [hasTemplateEdit, setHasTemplateEdit] = useState(false)
+  const autoSavedRevisionRef = useRef(0)
+  const autoSaveInFlightRef = useRef(false)
+  const latestEditorRevisionRef = useRef(0)
+  const initializedEditorKeyRef = useRef<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -944,11 +1163,18 @@ export function MeshingAutomationCreatePage() {
     return () => {
       active = false
     }
-  }, [isEditing, reloadVersion, sidecarState, sourceAutomationId])
+  }, [isEditing, reloadRevision, sidecarState, sourceAutomationId])
 
   useEffect(() => {
     if (sidecarState !== 'ready') return
     if (isEditing && sourceAutomation === null) return
+    const initializationKey = JSON.stringify([
+      isEditing ? (sourceAutomation?.id ?? null) : 'new-template',
+      workflowType,
+      reloadRevision,
+    ])
+    if (initializedEditorKeyRef.current === initializationKey) return
+
     let active = true
     void Promise.all([
       fluentAiService.meshing.schema(workflowType),
@@ -963,20 +1189,30 @@ export function MeshingAutomationCreatePage() {
         setWorkflowContract(nextContract)
         setModels(nextModels)
         if (isEditing && sourceAutomation) {
-          const restored = restoreEditorState(
-            nextSchema.tasks,
-            nextContract,
-            sourceAutomation.preset.items,
-          )
+          const restored = restoreEditorState(nextSchema.tasks, sourceAutomation.preset.items)
           setChildInstances(restored.childInstances)
           setValues(restored.values)
+          const childDefaults = buildInitialValues(nextSchema.tasks, restored.childInstances)
+          setDefaultValues(childDefaults)
           setIncluded(restored.included)
+          setFaceLabelCatalog(
+            Array.from(
+              new Set([
+                ...(sourceAutomation.preset.face_label_catalog ?? []),
+                ...collectFaceLabels(sourceAutomation.preset.items),
+              ]),
+            ).sort((left, right) => left.localeCompare(right)),
+          )
         } else {
           const initialChildren =
             workflowType === 'watertight' ? buildInitialChildInstances(nextSchema.tasks) : {}
           setChildInstances(initialChildren)
-          setValues(buildInitialValues(nextSchema.tasks, initialChildren, nextContract))
+          const initialValues = buildInitialValues(nextSchema.tasks, initialChildren)
+          setValues(initialValues)
+          setDefaultValues(initialValues)
           setIncluded({})
+          setFaceLabelCatalog([])
+          setHasTemplateEdit(false)
         }
         setCompletedSteps(new Set())
         setActiveStepKey(
@@ -984,6 +1220,7 @@ export function MeshingAutomationCreatePage() {
             ? WATERTIGHT_STEP_TASKS[0]
             : (nextSchema.tasks[0]?.python_name ?? ''),
         )
+        initializedEditorKeyRef.current = initializationKey
       })
       .catch((loadError: unknown) => {
         if (active) setError(loadError instanceof Error ? loadError.message : String(loadError))
@@ -994,7 +1231,14 @@ export function MeshingAutomationCreatePage() {
     return () => {
       active = false
     }
-  }, [isEditing, sidecarState, sourceAutomation, workflowType, reloadVersion])
+  }, [isEditing, reloadRevision, sidecarState, sourceAutomation, workflowType])
+
+  const reload = (): void => {
+    setError(null)
+    setLoading(true)
+    if (isEditing) setSourceAutomation(null)
+    setReloadRevision((revision) => revision + 1)
+  }
 
   useEffect(() => {
     if (!isEditing || !sourceAutomation || loading || schema === null) return
@@ -1006,19 +1250,77 @@ export function MeshingAutomationCreatePage() {
     })
   }, [form, isEditing, loading, schema, sourceAutomation])
 
-  const lengthUnit = String(
-    values[selectionKey(['import_geometry'], null, ['length_unit'])] ?? 'mm',
+  const importedFileFormat = String(
+    values[selectionKey(['import_geometry'], null, ['file_format'])] ?? 'CAD',
   )
+  const lengthUnit = String(
+    importedFileFormat === 'Mesh'
+      ? values[selectionKey(['import_geometry'], null, ['mesh_unit'])] ?? 'm'
+      : values[selectionKey(['import_geometry'], null, ['length_unit'])] ?? 'm',
+  )
+
+  const readReferenceLabels = async (): Promise<void> => {
+    const modelId = form.getFieldValue('reference_model_id') as number | null
+    if (!modelId) {
+      message.warning('请先选择参考模型。')
+      return
+    }
+    setReadingReference(true)
+    try {
+      const result = await fluentAiService.meshing.inspectReferenceModel(modelId)
+      setReferenceLabels(result.labels)
+      setReferenceReadError(null)
+      setFaceLabelCatalog((current) =>
+        Array.from(new Set([...current, ...result.labels])).sort((left, right) =>
+          left.localeCompare(right),
+        ),
+      )
+      setHasTemplateEdit(true)
+      markEdited()
+      message.success(result.message)
+    } catch (inspectionError) {
+      const detail =
+        inspectionError instanceof Error ? inspectionError.message : String(inspectionError)
+      setReferenceReadError(detail)
+      message.error(detail)
+    } finally {
+      setReadingReference(false)
+    }
+  }
 
   const workflowSteps = useMemo(() => {
     const tasks = schema?.tasks ?? []
     if (workflowType !== 'watertight') return tasks
     const byName = new Map(tasks.map((task) => [task.python_name, task]))
-    const stepOrder = workflowContract?.step_order ?? WATERTIGHT_STEP_TASKS
+    const stepOrder = [...(workflowContract?.step_order ?? WATERTIGHT_STEP_TASKS)]
+    const geometryTask = byName.get('describe_geometry')
+    const geometryTypeArgument = geometryTask?.arguments.find(
+      (argument) => argument.name === 'setup_type',
+    )
+    const geometryType = String(
+      values[selectionKey(['describe_geometry'], null, ['setup_type'])] ??
+        (geometryTypeArgument ? defaultArgumentValue(geometryTypeArgument) : ''),
+    )
+    const geometryValue = (name: string): string => {
+      const argument = geometryTask?.arguments.find((candidate) => candidate.name === name)
+      return String(
+        values[selectionKey(['describe_geometry'], null, [name])] ??
+          (argument ? defaultArgumentValue(argument) : 'No'),
+      )
+    }
     return stepOrder
+      .filter((name) => {
+        const rule = workflowContract?.conditional_tasks?.[name]
+        if (!rule) return true
+        if (rule.geometry && !rule.geometry.includes(geometryType)) return false
+        if (rule.argument &&
+            String(values[selectionKey(['describe_geometry'], null, [rule.argument])] ??
+              rule.default ?? geometryValue(rule.argument)) !== rule.equals) return false
+        return true
+      })
       .map((name) => byName.get(name))
       .filter((task): task is MeshingSchemaTask => task !== undefined)
-  }, [schema, workflowType, workflowContract])
+  }, [schema, workflowType, workflowContract, values])
 
   const selectedCount = useMemo(
     () =>
@@ -1041,25 +1343,232 @@ export function MeshingAutomationCreatePage() {
   const activeTask =
     workflowSteps.find((task) => task.python_name === activeStepKey) ?? workflowSteps[0] ?? null
 
+  const validateTask = useCallback(
+    (task: MeshingSchemaTask): string[] => {
+      const result = buildMeshingPresetItems([task], included, values, childInstances)
+      const errors = result.issues.map((issue) => {
+        if (issue.code === 'childNameRequired') return `${issue.taskName}：请填写子任务名称。`
+        if (issue.code === 'duplicateChildName')
+          return `${issue.taskName}：子任务名称“${issue.childName}”重复。`
+        return `${issue.taskName}：至少选择一个参数。`
+      })
+      if (task.python_name === 'update_boundaries') {
+        const selectionType = String(
+          values[selectionKey(['update_boundaries'], null, ['selection_type'])] ?? 'zone',
+        )
+        const nameArgument = selectionType === 'label' ? 'boundary_label_list' : 'boundary_zone_list'
+        const typeArgument =
+          selectionType === 'label' ? 'boundary_label_type_list' : 'boundary_zone_type_list'
+        const names = values[selectionKey(['update_boundaries'], null, [nameArgument])]
+        const types = values[selectionKey(['update_boundaries'], null, [typeArgument])]
+        const boundaryNames = Array.isArray(names) ? names.map(String) : []
+        const boundaryTypes = Array.isArray(types) ? types.map(String) : []
+        if (boundaryNames.length !== boundaryTypes.length) {
+          errors.push('边界名称和边界类型的数量需要一致。')
+        }
+        if (boundaryNames.some((name) => !name.trim())) {
+          errors.push(selectionType === 'label' ? '请选择每个边界的面标签。' : '请填写每个边界的几何区域名称。')
+        }
+        if (
+          new Set(boundaryNames.map((name) => name.trim().toLowerCase())).size !==
+          boundaryNames.length
+        ) {
+          errors.push(selectionType === 'label' ? '面标签不能重复。' : '几何区域名称不能重复。')
+        }
+      }
+      for (const item of result.items) {
+        const argumentsToValidate = item.compound_child_name
+          ? (task.child_template?.arguments ?? [])
+          : task.arguments
+        const argument = flattenArgumentLeaves(argumentsToValidate).find(
+          (leaf) => leaf.argumentPath.join('.') === item.argument_path.join('.'),
+        )?.argument
+        const labelArgument = [
+          'boi_face_label_list',
+          'bl_label_list',
+          'zone_selection_list',
+          'boundary_label_list',
+        ].includes(item.argument_path.at(-1) ?? '')
+        if (!argument || item.value_mode === 'at_use') continue
+        if (labelArgument && (!Array.isArray(item.value) || item.value.length === 0)) {
+          errors.push(`${argument.display_name || argument.name}：至少选择一个面标签。`)
+        }
+        if (
+          !labelArgument &&
+          argument.allowed_values &&
+          !(
+            task.python_name === 'update_boundaries' &&
+            item.argument_path.at(-1) === 'selection_type' &&
+            ['label', 'zone'].includes(String(item.value))
+          ) &&
+          !argument.allowed_values.some(
+            (value) => JSON.stringify(value) === JSON.stringify(item.value),
+          )
+        ) {
+          errors.push(`${argument.display_name || argument.name}：请选择 Fluent 提供的有效选项。`)
+        }
+        if (
+          argument.value_type === 'int' &&
+          (typeof item.value !== 'number' || !Number.isInteger(item.value))
+        ) {
+          errors.push(`${argument.display_name || argument.name}：请输入整数。`)
+        } else if (
+          argument.value_type === 'float' &&
+          (typeof item.value !== 'number' || !Number.isFinite(item.value))
+        ) {
+          errors.push(`${argument.display_name || argument.name}：请输入有效数字。`)
+        } else if (
+          argument.value_type === 'string' &&
+          (typeof item.value !== 'string' || !item.value.trim())
+        ) {
+          errors.push(`${argument.display_name || argument.name}：此项不能为空。`)
+        }
+      }
+      return [...new Set(errors)]
+    },
+    [childInstances, included, values],
+  )
+
   const selectStep = (task: MeshingSchemaTask): void => {
+    if (activeTask) {
+      const issues = validateTask(activeTask)
+      if (issues.length > 0) {
+        void message.error(`${localizedMeshingTaskName(t, activeTask)}：${issues.join('；')}`)
+        setCompletedSteps((current) => {
+          const next = new Set(current)
+          next.delete(activeTask.python_name)
+          return next
+        })
+      } else {
+        setCompletedSteps((current) => new Set(current).add(activeTask.python_name))
+      }
+    }
     setActiveStepKey(task.python_name)
   }
 
-  const toggle = (key: string, checked: boolean) =>
+  const markEdited = (): void => {
+    setAutoSaveState('pending')
+    setEditorRevision((revision) => {
+      const next = revision + 1
+      latestEditorRevisionRef.current = next
+      return next
+    })
+  }
+  const toggle = (key: string, checked: boolean) => {
     setIncluded((current) => ({ ...current, [key]: checked }))
-  const changeValue = (key: string, value: MeshingPresetValue) =>
+    setHasTemplateEdit(true)
+    markEdited()
+  }
+  const changeValue = (key: string, value: MeshingPresetValue) => {
+    const valueDiffersFromDefault = JSON.stringify(defaultValues[key]) !== JSON.stringify(value)
     setValues((current) => ({ ...current, [key]: value }))
-
-  const pickGeometryFile = async (): Promise<void> => {
+    setIncluded((current) => {
+      const next = { ...current }
+      if (!valueDiffersFromDefault) delete next[key]
+      else next[key] = true
+      return next
+    })
     try {
-      const picked = await fluentAiService.models.pickFile()
-      if (!picked) return
-      const key = selectionKey(['import_geometry'], null, ['file_name'])
-      changeValue(key, picked.filePath)
-      toggle(key, true)
-    } catch (pickError) {
-      message.error(pickError instanceof Error ? pickError.message : String(pickError))
+      const parsed = JSON.parse(key) as unknown[]
+      const childId = typeof parsed[1] === 'string' ? parsed[1] : null
+      if (childId) {
+        const taskPath = Array.isArray(parsed[0]) ? parsed[0].map(String) : []
+        const childHasChangedValue =
+          valueDiffersFromDefault ||
+          Object.entries(included).some(([candidateKey, isIncluded]) => {
+            if (!isIncluded || candidateKey === key) return false
+            try {
+              const candidate = JSON.parse(candidateKey) as unknown[]
+              return (
+                candidate[0] &&
+                JSON.stringify(candidate[0]) === JSON.stringify(taskPath) &&
+                candidate[1] === childId
+              )
+            } catch {
+              return false
+            }
+          })
+        setChildInstances((current) => {
+          const pathKey = taskPathKey(taskPath)
+          return {
+            ...current,
+            [pathKey]: (current[pathKey] ?? []).map((instance) =>
+              instance.id === childId ? { ...instance, optional: !childHasChangedValue } : instance,
+            ),
+          }
+        })
+      }
+    } catch {
+      // Parameter keys are generated internally; malformed keys do not affect the editor.
     }
+    const argumentName = (() => {
+      try {
+        const parsed = JSON.parse(key) as unknown[]
+        const path = parsed[2]
+        return Array.isArray(path) ? String(path.at(-1) ?? '') : ''
+      } catch {
+        return ''
+      }
+    })()
+    if (
+      [
+        'boi_face_label_list',
+        'bl_label_list',
+        'zone_selection_list',
+        'boundary_label_list',
+      ].includes(argumentName) &&
+      Array.isArray(value)
+    ) {
+      const labels = value
+        .filter((item): item is string => typeof item === 'string')
+        .map((item) => item.trim())
+        .filter(Boolean)
+      setFaceLabelCatalog((current) =>
+        Array.from(new Set([...current, ...labels])).sort((left, right) =>
+          left.localeCompare(right),
+        ),
+      )
+    }
+    setHasTemplateEdit(true)
+    markEdited()
+  }
+
+  const addFaceLabel = (label: string): void => {
+    if (faceLabelCatalog.includes(label)) {
+      message.info(`面标签“${label}”已在目录中。`)
+      return
+    }
+    setFaceLabelCatalog((current) =>
+      [...current, label].sort((left, right) => left.localeCompare(right)),
+    )
+    setHasTemplateEdit(true)
+    markEdited()
+  }
+
+  const removeFaceLabel = (label: string): void => {
+    setFaceLabelCatalog((current) => current.filter((item) => item !== label))
+    setValues((current) => {
+      const next = { ...current }
+      for (const [key, value] of Object.entries(next)) {
+        if (!Array.isArray(value)) continue
+        let argumentName = ''
+        try {
+          const parsed = JSON.parse(key) as unknown[]
+          const path = parsed[2]
+          argumentName = Array.isArray(path) ? String(path.at(-1) ?? '') : ''
+        } catch {
+          continue
+        }
+        if (
+          ['boi_face_label_list', 'bl_label_list', 'zone_selection_list'].includes(argumentName)
+        ) {
+          next[key] = value.filter((item) => item !== label)
+        }
+      }
+      return next
+    })
+    setHasTemplateEdit(true)
+    markEdited()
   }
 
   const addChild = (task: MeshingSchemaTask, taskPath: string[]) => {
@@ -1081,6 +1590,7 @@ export function MeshingAutomationCreatePage() {
       }
       return next
     })
+    markEdited()
   }
 
   const removeChild = (taskPath: string[], instanceId: string) => {
@@ -1103,6 +1613,7 @@ export function MeshingAutomationCreatePage() {
     setValues((state) =>
       Object.fromEntries(Object.entries(state).filter(([key]) => !belongsToRemovedChild(key))),
     )
+    markEdited()
   }
 
   const renameChild = (taskPath: string[], instanceId: string, name: string) => {
@@ -1110,19 +1621,10 @@ export function MeshingAutomationCreatePage() {
     setChildInstances((state) => ({
       ...state,
       [key]: (state[key] ?? []).map((instance) =>
-        instance.id === instanceId ? { ...instance, name } : instance,
+        instance.id === instanceId ? { ...instance, name, optional: false } : instance,
       ),
     }))
-  }
-
-  const reload = () => {
-    setLoading(true)
-    setError(null)
-    setSchema(null)
-    if (isEditing) {
-      setSourceAutomation(null)
-    }
-    setReloadVersion((version) => version + 1)
+    markEdited()
   }
 
   const reportIssues = (issues: ReturnType<typeof buildMeshingPresetItems>['issues']): void => {
@@ -1144,72 +1646,100 @@ export function MeshingAutomationCreatePage() {
     void message.error([...new Set(messages)].join('; '))
   }
 
-  const executeActiveStep = async (): Promise<void> => {
-    if (!activeTask) return
-    const { items, issues } = buildMeshingPresetItems(
-      [activeTask],
-      included,
-      values,
-      childInstances,
+  useEffect(() => {
+    if (
+      (!sourceAutomation && !hasTemplateEdit) ||
+      !schema ||
+      loading ||
+      editorRevision === autoSavedRevisionRef.current
     )
-    if (issues.length > 0) {
-      reportIssues(issues)
       return
-    }
-    if (items.length === 0) {
-      message.warning(t('meshing.noStepItems'))
-      return
-    }
-    setStepRunning(true)
-    try {
-      const report = await fluentAiService.meshing.write({
+    const timer = window.setTimeout(() => {
+      const { items, issues } = buildMeshingPresetItems(
+        workflowSteps,
+        included,
+        values,
+        childInstances,
+      )
+      const formValues = form.getFieldsValue()
+      const taskErrors = workflowSteps.flatMap((task) => validateTask(task))
+      if (
+        issues.length > 0 ||
+        taskErrors.length > 0 ||
+        (items.length === 0 && faceLabelCatalog.length === 0) ||
+        !formValues.name?.trim()
+      ) {
+        setAutoSaveState('pending')
+        return
+      }
+      if (autoSaveInFlightRef.current) {
+        setAutoSaveState('pending')
+        return
+      }
+      const preset: MeshingPresetDocument = {
+        schema_version: 2,
+        fluent_version: schema.fluent_version,
         workflow_type: workflowType,
         items,
-        verify: true,
-        create_compound_child: true,
-      })
-      if (report.status !== 'success') {
-        throw new Error(report.error ?? t('settings.meshingDiagnosticFailed'))
+        face_label_catalog: faceLabelCatalog,
       }
-      setCompletedSteps((current) => new Set(current).add(activeTask.python_name))
-      message.success(t('meshing.stepVerified'))
-    } catch (stepError) {
-      message.error(stepError instanceof Error ? stepError.message : String(stepError))
-    } finally {
-      setStepRunning(false)
-    }
-  }
-
-  const restoreActiveStep = (): void => {
-    if (!activeTask) return
-    const defaults = buildInitialValues([activeTask], childInstances, workflowContract)
-    setValues((current) => ({ ...current, ...defaults }))
-    const belongsToActiveTask = (key: string): boolean => {
-      try {
-        const parsed = JSON.parse(key) as unknown[]
-        return (
-          Array.isArray(parsed) &&
-          Array.isArray(parsed[0]) &&
-          parsed[0][0] === activeTask.python_name
-        )
-      } catch {
-        return false
-      }
-    }
-    setIncluded((current) =>
-      Object.fromEntries(Object.entries(current).filter(([key]) => !belongsToActiveTask(key))),
-    )
-    setCompletedSteps((current) => {
-      const next = new Set(current)
-      next.delete(activeTask.python_name)
-      return next
-    })
-  }
+      setAutoSaveState('saving')
+      autoSaveInFlightRef.current = true
+      void (async () => {
+        try {
+          const validation = await fluentAiService.meshing.validatePreset(preset)
+          if (!validation.valid) throw new Error(validation.errors.join('; '))
+          const payload = {
+            name: formValues.name.trim(),
+            description: formValues.description ?? '',
+            model_family: formValues.model_family ?? '',
+            reference_model_id: formValues.reference_model_id ?? null,
+            preset,
+            status: sourceAutomation?.status ?? 'draft',
+          } as const
+          const updated = sourceAutomation
+            ? await fluentAiService.meshingAutomations.update(sourceAutomation.id, payload)
+            : await fluentAiService.meshingAutomations.create(payload)
+          setSourceAutomation(updated)
+          autoSavedRevisionRef.current = editorRevision
+          setAutoSaveState('saved')
+        } catch (autoSaveError) {
+          setAutoSaveState('error')
+          message.error(
+            `自动保存失败：${autoSaveError instanceof Error ? autoSaveError.message : String(autoSaveError)}`,
+          )
+        } finally {
+          autoSaveInFlightRef.current = false
+          if (latestEditorRevisionRef.current > autoSavedRevisionRef.current) {
+            setAutoSaveRetry((current) => current + 1)
+          }
+        }
+      })()
+    }, 700)
+    return () => window.clearTimeout(timer)
+  }, [
+    childInstances,
+    defaultValues,
+    editorRevision,
+    faceLabelCatalog,
+    form,
+    hasTemplateEdit,
+    included,
+    loading,
+    message,
+    schema,
+    sourceAutomation,
+    autoSaveRetry,
+    values,
+    validateTask,
+    workflowType,
+    workflowSteps,
+  ])
 
   const save = async (formValues: MeshingFormValues): Promise<void> => {
     if (!schema) return
     const { items, issues } = buildMeshingPresetItems(
-      schema.tasks,
+      workflowSteps,
       included,
       values,
       childInstances,
@@ -1218,15 +1748,21 @@ export function MeshingAutomationCreatePage() {
       reportIssues(issues)
       return
     }
-    if (items.length === 0) {
+    const taskErrors = workflowSteps.flatMap((task) => validateTask(task))
+    if (taskErrors.length > 0) {
+      message.error([...new Set(taskErrors)].join('；'))
+      return
+    }
+    if (!sourceAutomation && items.length === 0 && faceLabelCatalog.length === 0) {
       message.warning(t('meshing.selectAtLeastOne'))
       return
     }
     const preset: MeshingPresetDocument = {
-      schema_version: 1,
+      schema_version: 2,
       fluent_version: schema.fluent_version,
       workflow_type: workflowType,
       items,
+      face_label_catalog: faceLabelCatalog,
     }
     setSaving(true)
     try {
@@ -1243,13 +1779,20 @@ export function MeshingAutomationCreatePage() {
         preset,
         status: sourceAutomation?.status ?? 'draft',
       } as const
-      if (isEditing) {
-        await fluentAiService.meshingAutomations.update(sourceAutomationId, payload)
+      if (sourceAutomation) {
+        const updated = await fluentAiService.meshingAutomations.update(
+          sourceAutomation.id,
+          payload,
+        )
+        setSourceAutomation(updated)
         message.success(t('meshing.updated'))
       } else {
-        await fluentAiService.meshingAutomations.create(payload)
+        const created = await fluentAiService.meshingAutomations.create(payload)
+        setSourceAutomation(created)
         message.success(t('meshing.created'))
       }
+      autoSavedRevisionRef.current = editorRevision
+      setAutoSaveState('saved')
       navigate('/meshing')
     } catch (saveError) {
       message.error(saveError instanceof Error ? saveError.message : String(saveError))
@@ -1314,6 +1857,7 @@ export function MeshingAutomationCreatePage() {
               model_family: '',
               reference_model_id: null,
             }}
+            onValuesChange={() => markEdited()}
             onFinish={(formValues) => void save(formValues)}
           >
             <Space align="start" wrap>
@@ -1339,11 +1883,41 @@ export function MeshingAutomationCreatePage() {
               >
                 <Select
                   allowClear
+                  onChange={() => {
+                    setReferenceLabels([])
+                    setReferenceReadError(null)
+                  }}
                   options={models.map((model) => ({ value: model.id, label: model.name }))}
                   placeholder={t('meshing.referenceModelPlaceholder')}
                 />
               </Form.Item>
             </Space>
+            <Space wrap>
+              <Button loading={readingReference} onClick={() => void readReferenceLabels()}>
+                从参考模型读取标签
+              </Button>
+              {referenceLabels.length > 0 ? (
+                <Typography.Text type="secondary">
+                  已读取 {referenceLabels.length} 个标签：{referenceLabels.join('、')}
+                </Typography.Text>
+              ) : null}
+              <Typography.Text type="secondary">
+                读取参考模型只获取面标签；应用模板时仍需另选目标几何。
+              </Typography.Text>
+            </Space>
+            {referenceReadError ? (
+              <Alert
+                type="error"
+                showIcon
+                message="读取参考模型面标签失败"
+                description={referenceReadError}
+              />
+            ) : null}
+            <FaceLabelCatalogEditor
+              labels={faceLabelCatalog}
+              onAdd={addFaceLabel}
+              onRemove={removeFaceLabel}
+            />
             <Form.Item name="description" label={t('pages.automationCreate.descriptionField')}>
               <Input.TextArea rows={2} maxLength={2_000} />
             </Form.Item>
@@ -1383,62 +1957,44 @@ export function MeshingAutomationCreatePage() {
                   values={values}
                   showDeveloper={showDeveloper}
                   lengthUnit={lengthUnit}
-                  onPickFile={pickGeometryFile}
+                  faceLabelCatalog={faceLabelCatalog}
                   onToggle={toggle}
                   onValueChange={changeValue}
                   onAddChild={addChild}
                   onRemoveChild={removeChild}
                   onRenameChild={renameChild}
                 />
-                <Space wrap className="meshing-step-actions">
-                  {activeTask.python_name === 'update_regions' ? (
-                    <Button onClick={() => message.info(t('meshing.previewUnavailable'))}>
-                      {t('meshing.printSummary')}
-                    </Button>
-                  ) : null}
-                  <Button
-                    type="primary"
-                    loading={stepRunning}
-                    onClick={() => void executeActiveStep()}
-                  >
-                    {localizedMeshingTaskName(t, activeTask)}
-                  </Button>
-                  <Button onClick={restoreActiveStep}>{t('meshing.restoreEdit')}</Button>
-                  {['add_local_sizing', 'create_surface_mesh'].includes(activeTask.python_name) ? (
-                    <Button onClick={() => message.info(t('meshing.previewUnavailable'))}>
-                      {t('meshing.clearPreview')}
-                    </Button>
-                  ) : null}
-                  {activeTask.python_name === 'import_geometry' ||
-                  activeTask.python_name === 'add_local_sizing' ? (
-                    <Button onClick={() => message.info(t('meshing.previewUnavailable'))}>
-                      {t('meshing.drawGeometry')}
-                    </Button>
-                  ) : null}
-                  {['update_regions', 'add_boundary_layer'].includes(activeTask.python_name) ? (
-                    <Button onClick={() => message.info(t('meshing.previewUnavailable'))}>
-                      {t('meshing.drawRegions')}
-                    </Button>
-                  ) : null}
-                </Space>
+                <Typography.Text type="secondary">
+                  模板编辑只保存 Fluent 参数，不会在 Fluent 中执行当前步骤。
+                </Typography.Text>
               </Card>
             ) : null}
             <Form.Item className="form-actions">
+              <Typography.Text type={autoSaveState === 'error' ? 'danger' : 'secondary'}>
+                {autoSaveState === 'saving'
+                  ? '正在自动保存…'
+                  : autoSaveState === 'saved'
+                    ? sourceAutomation
+                      ? '参数已自动保存'
+                      : '点击保存后，后续修改会自动保存'
+                    : autoSaveState === 'error'
+                      ? '自动保存失败，请点击保存重试'
+                      : sourceAutomation
+                        ? '有未保存的修改'
+                        : '模板尚未创建'}
+              </Typography.Text>
               <Button
                 type="primary"
                 htmlType="submit"
                 icon={<SaveOutlined />}
                 loading={saving}
-                aria-label={isEditing ? t('meshing.updateAutomation') : t('meshing.save')}
+                aria-label={sourceAutomation ? t('meshing.updateAutomation') : t('meshing.save')}
               >
                 {saving
                   ? t('pages.automationCreate.saving')
-                  : isEditing
+                  : sourceAutomation
                     ? t('meshing.updateAutomation')
                     : t('meshing.save')}
-              </Button>
-              <Button icon={<ReloadOutlined />} onClick={reload} className="reload-meshing">
-                {t('common.reload')}
               </Button>
             </Form.Item>
           </Form>

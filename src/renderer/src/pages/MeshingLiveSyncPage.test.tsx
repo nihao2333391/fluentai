@@ -184,13 +184,14 @@ describe('MeshingLiveSyncPage', () => {
         executeStep: vi.fn().mockResolvedValue(stepReport),
         nextModel: vi.fn().mockResolvedValue(snapshot),
         retryModel: vi.fn().mockResolvedValue(snapshot),
+        archives: vi.fn().mockResolvedValue([]),
         stop: vi.fn().mockResolvedValue(snapshot),
       },
     } as unknown as FluentAIApi
     Object.defineProperty(window, 'fluentAI', { configurable: true, value: api })
   })
 
-  it('enters the current step, shows readback values, and executes the task', async () => {
+  it('does not expose a grid generation action before preparation is ready', async () => {
     render(
       <AppProviders>
         <MemoryRouter initialEntries={['/meshing/live/session-1']}>
@@ -202,43 +203,115 @@ describe('MeshingLiveSyncPage', () => {
     )
 
     expect(await screen.findByText('Live Venturi')).toBeInTheDocument()
-    await waitFor(() => {
-      expect((window.fluentAI as FluentAIApi).meshingLive.enterStep).toHaveBeenCalledWith(
-        'session-1',
-        { step_index: 1 },
-      )
-    })
-    expect(await screen.findByText('目标网格尺寸')).toBeInTheDocument()
-    const sizeInput = screen.getByRole('spinbutton')
-    expect(sizeInput).toHaveValue('0.0020')
+    expect(screen.queryByRole('button', { name: '生成面网格' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '生成体网格' })).not.toBeInTheDocument()
+  })
 
-    fireEvent.change(sizeInput, { target: { value: '0.003' } })
-    await waitFor(
-      () => {
-        expect((window.fluentAI as FluentAIApi).meshingLive.writeStep).toHaveBeenCalledWith(
-          'session-1',
-          expect.objectContaining({
-            step_index: 1,
-            items: expect.arrayContaining([
-              expect.objectContaining({
-                argument_path: ['boi_size'],
-                value: 0.003,
-                compound_child_name: 'facesize_1',
-              }),
-            ]),
-          }),
-        )
-      },
-      { timeout: 2000 },
+  it('shows a visible warning when live status polling fails', async () => {
+    const api = window.fluentAI as FluentAIApi
+    vi.mocked(api.meshingLive.get)
+      .mockResolvedValueOnce(snapshot)
+      .mockRejectedValueOnce(new Error('本地服务连接中断'))
+
+    render(
+      <AppProviders>
+        <MemoryRouter initialEntries={['/meshing/live/session-1']}>
+          <Routes>
+            <Route path="/meshing/live/:sessionId" element={<MeshingLiveSyncPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AppProviders>,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /执行.*添加局部尺寸/ }))
-    await waitFor(() => {
-      expect((window.fluentAI as FluentAIApi).meshingLive.executeStep).toHaveBeenCalledWith(
-        'session-1',
-        { step_index: 1 },
-      )
+    expect(await screen.findByText('Live Venturi')).toBeInTheDocument()
+    expect(
+      await screen.findByText('实时状态刷新受阻', {}, { timeout: 5000 }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/平台会自动重试/)).toBeInTheDocument()
+  }, 10_000)
+
+  it('shows a visible warning when Fluent returns a failed step read report', async () => {
+    const api = window.fluentAI as FluentAIApi
+    vi.mocked(api.meshingLive.readStep).mockResolvedValue({
+      ...stepReport,
+      status: 'failed',
+      read_report: {
+        ...stepReport.read_report,
+        status: 'failed',
+        error: 'Fluent 参数读取失败: RuntimeError: task arguments are unavailable',
+      },
     })
+
+    render(
+      <AppProviders>
+        <MemoryRouter initialEntries={['/meshing/live/session-1']}>
+          <Routes>
+            <Route path="/meshing/live/:sessionId" element={<MeshingLiveSyncPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AppProviders>,
+    )
+
+    expect(await screen.findByText('实时状态刷新受阻', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(screen.getByText(/task arguments are unavailable/)).toBeInTheDocument()
+  }, 10_000)
+
+  it('shows the active automatic preparation phase and elapsed time while Fluent is running', async () => {
+    const api = window.fluentAI as FluentAIApi
+    const runningSnapshot: MeshingLiveSessionSnapshot = {
+      ...snapshot,
+      status: 'running',
+      phase: 'executing_local_sizing',
+      phase_elapsed_ms: 200_000,
+      message: '正在 Fluent 中执行局部尺寸。',
+    }
+    vi.mocked(api.meshingLive.get).mockResolvedValue(runningSnapshot)
+
+    render(
+      <AppProviders>
+        <MemoryRouter initialEntries={['/meshing/live/session-1']}>
+          <Routes>
+            <Route path="/meshing/live/:sessionId" element={<MeshingLiveSyncPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AppProviders>,
+    )
+
+    expect(await screen.findByText('正在 Fluent 中执行局部尺寸')).toBeInTheDocument()
+    expect(
+      await screen.findByText(/本阶段已运行 200\.0 秒。平台正在等待当前 Fluent 请求/),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '生成面网格' })).not.toBeInTheDocument()
+    expect(api.meshingLive.readStep).not.toHaveBeenCalled()
+  })
+
+  it('shows a Fluent timeout and blocks retry while the original request is still running', async () => {
+    const api = window.fluentAI as FluentAIApi
+    vi.mocked(api.meshingLive.get).mockResolvedValue({
+      ...snapshot,
+      status: 'failed',
+      phase: 'failed',
+      current_step_index: 1,
+      message: 'Fluent 在“执行局部尺寸”阶段连续 180 秒没有返回。平台已停止后续自动步骤。',
+    })
+
+    render(
+      <AppProviders>
+        <MemoryRouter initialEntries={['/meshing/live/session-1']}>
+          <Routes>
+            <Route path="/meshing/live/:sessionId" element={<MeshingLiveSyncPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AppProviders>,
+    )
+
+    expect(await screen.findByText(/连续 180 秒没有返回/)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/平台已停止后续自动步骤；请先检查 Fluent 控制台/),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '重试准备' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '生成面网格' })).not.toBeInTheDocument()
+    expect(api.meshingLive.readStep).not.toHaveBeenCalled()
   })
 
   it('marks values changed in Fluent Meshing as external', async () => {
@@ -271,4 +344,46 @@ describe('MeshingLiveSyncPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('外部已修改')).toBeInTheDocument()
   }, 10_000)
+
+  it('shows the surface generation action only at the surface-ready checkpoint', async () => {
+    const api = window.fluentAI as FluentAIApi
+    const readySnapshot: MeshingLiveSessionSnapshot = {
+      ...snapshot,
+      phase: 'surface_ready',
+      current_step_index: 2,
+      steps: snapshot.steps.map((step, index) => ({
+        ...step,
+        status: index === 2 ? 'active' : step.status,
+      })),
+    }
+    vi.mocked(api.meshingLive.get).mockResolvedValue(readySnapshot)
+    vi.mocked(api.meshingLive.readStep).mockResolvedValue({
+      ...stepReport,
+      snapshot: readySnapshot,
+    })
+    vi.mocked(api.meshingLive.executeStep).mockResolvedValue({
+      ...stepReport,
+      snapshot: readySnapshot,
+      step_index: 2,
+      task_path: ['create_surface_mesh'],
+    })
+
+    render(
+      <AppProviders>
+        <MemoryRouter initialEntries={['/meshing/live/session-1']}>
+          <Routes>
+            <Route path="/meshing/live/:sessionId" element={<MeshingLiveSyncPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AppProviders>,
+    )
+
+    const generateSurface = await screen.findByRole('button', { name: '生成面网格' })
+    await waitFor(() => expect(generateSurface).toBeEnabled())
+    fireEvent.click(generateSurface)
+    await waitFor(() => {
+      expect(api.meshingLive.executeStep).toHaveBeenCalledWith('session-1', { step_index: 2 })
+    })
+    expect(screen.queryByRole('button', { name: '生成体网格' })).not.toBeInTheDocument()
+  })
 })

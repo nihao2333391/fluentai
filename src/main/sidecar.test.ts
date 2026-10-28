@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 import type { Automation } from '../shared/contracts'
-import { SidecarManager } from './sidecar'
+import { resolveSidecarDataDirectory, SidecarManager } from './sidecar'
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -26,6 +26,23 @@ const resolvePython = (): string => {
 }
 
 describe('SidecarManager', () => {
+  it('uses an explicitly configured data directory when provided', () => {
+    const userDataDirectory = join(tmpdir(), 'fluent-ai-user-data')
+    const configuredDirectory = join(tmpdir(), 'fluent-ai-sidecar-data')
+
+    expect(resolveSidecarDataDirectory(userDataDirectory, configuredDirectory)).toBe(
+      resolve(configuredDirectory),
+    )
+  })
+
+  it('keeps the default database under Electron user data when no override is set', () => {
+    const userDataDirectory = join(tmpdir(), 'fluent-ai-user-data')
+
+    expect(resolveSidecarDataDirectory(userDataDirectory, '')).toBe(
+      join(userDataDirectory, 'data'),
+    )
+  })
+
   it('starts, reports an authenticated ready state, restarts, and stops', async () => {
     const dataDirectory = mkdtempSync(join(tmpdir(), 'fluent-ai-sidecar-'))
     const manager = new SidecarManager({

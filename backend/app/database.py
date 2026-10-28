@@ -124,6 +124,23 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ON sync_logs(meshing_automation_id, created_at DESC);
         """,
     ),
+    (
+        4,
+        """
+        CREATE TABLE meshing_result_archives (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            automation_id INTEGER REFERENCES meshing_automations(id) ON DELETE SET NULL,
+            model_id INTEGER REFERENCES models(id) ON DELETE SET NULL,
+            mesh_path TEXT NOT NULL,
+            record_json_path TEXT NOT NULL,
+            record_markdown_path TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX meshing_result_archives_session
+            ON meshing_result_archives(session_id, created_at DESC);
+        """,
+    ),
 )
 
 

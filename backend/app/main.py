@@ -20,7 +20,7 @@ from app.meshing.pyfluent_adapter import PyFluentMeshingAdapter
 from app.repositories.errors import RepositoryConflictError, RepositoryNotFoundError
 from app.schemas import HealthResponse, ReadyResponse, ShutdownResponse
 from app.services.fluent_service import FluentService
-from app.services.meshing_service import MeshingService
+from app.services.meshing_service import MeshingAdapterBusyError, MeshingService
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -66,6 +66,12 @@ def create_app(
     @app.exception_handler(RepositoryConflictError)
     def handle_conflict(_request: Request, exc: RepositoryConflictError) -> JSONResponse:
         return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"detail": str(exc)})
+
+    @app.exception_handler(MeshingAdapterBusyError)
+    def handle_meshing_adapter_busy(
+        _request: Request, exc: MeshingAdapterBusyError
+    ) -> JSONResponse:
+        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content={"detail": str(exc)})
 
     @app.exception_handler(FileNotFoundError)
     def handle_file_not_found(_request: Request, exc: FileNotFoundError) -> JSONResponse:
