@@ -322,6 +322,33 @@ def _write_argument_state(task: Any, state: dict[str, Any]) -> None:
     arguments.set_state(remaining)
 
 
+def _write_boundary_argument_state(task: Any, state: dict[str, Any]) -> None:
+    """Submit Update Boundaries' old/new values as one command-argument state."""
+    arguments = task.arguments
+    set_state = getattr(arguments, "set_state", None)
+    if callable(set_state):
+        set_state(state)
+        return
+    _write_argument_state(task, state)
+
+
+def _boundary_state_summary(state: dict[str, Any]) -> dict[str, Any]:
+    names = (
+        "selection_type",
+        "boundary_label_list",
+        "boundary_label_type_list",
+        "old_boundary_label_list",
+        "old_boundary_label_type_list",
+        "boundary_zone_list",
+        "boundary_zone_type_list",
+        "old_boundary_zone_list",
+        "old_boundary_zone_type_list",
+        "boundary_current_list",
+        "boundary_current_type_list",
+    )
+    return {name: state[name] for name in names if name in state}
+
+
 def _update_boundary_previous_state(task: Any, state: dict[str, Any]) -> dict[str, Any]:
     """Capture Fluent's current boundary types before writing template targets.
 
@@ -640,7 +667,10 @@ class PyFluentMeshingAdapter:
                         else {}
                     )
                     state.update(internal_state)
-                    _write_argument_state(target, state)
+                    if task_path_tuple == ("update_boundaries",) and child_name is None:
+                        _write_boundary_argument_state(target, state)
+                    else:
+                        _write_argument_state(target, state)
                     actual_state = _normalize_state(target.arguments.get_state())
                     for item in items:
                         actual = _read_state_path(actual_state, item.argument_path)
@@ -847,7 +877,21 @@ class PyFluentMeshingAdapter:
         try:
             workflow = self._get_workflow(workflow_type)
             task = _find_task(workflow, task_path)
+            if task_path == ["update_boundaries"]:
+                before = _boundary_state_summary(
+                    _normalize_state(task.arguments.get_state())
+                )
+                report.output.append(
+                    "Update Boundaries arguments before execution: " + repr(before)
+                )
             result = task()
+            if task_path == ["update_boundaries"]:
+                after = _boundary_state_summary(
+                    _normalize_state(task.arguments.get_state())
+                )
+                report.output.append(
+                    "Update Boundaries state after execution: " + repr(after)
+                )
             report.output.append("Task completed." if result is None else str(result))
             if result is False:
                 report.message = f"{'/'.join(task_path)} returned False."
