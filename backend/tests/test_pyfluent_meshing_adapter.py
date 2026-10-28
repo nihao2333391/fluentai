@@ -190,3 +190,73 @@ def test_live_selector_write_verifies_against_fluent_readback(monkeypatch: Any) 
     assert report.results[0].success
     assert report.results[0].actual == ["wall"]
     assert sizing_child.arguments.read_count == 1
+
+
+def test_update_boundaries_writes_old_and_target_boundary_types(monkeypatch: Any) -> None:
+    adapter_module = _import_adapter(monkeypatch)
+    update_boundaries = FakeTask(
+        "update_boundaries",
+        {
+            "selection_type": "label",
+            "boundary_current_list": ["inlet-hot", "inlet-cold"],
+            "boundary_current_type_list": ["velocity-inlet", "velocity-inlet"],
+            "boundary_label_list": ["inlet-hot", "inlet-cold"],
+            "boundary_label_type_list": ["velocity-inlet", "velocity-inlet"],
+        },
+    )
+    adapter = adapter_module.PyFluentMeshingAdapter(session=ActiveSession())
+    adapter._workflow = FakeWorkflow([update_boundaries])
+    adapter._workflow_type = "watertight"
+
+    report = adapter.write_arguments(
+        MeshingWriteRequest(
+            workflow_type="watertight",
+            items=[
+                MeshingPresetItem(
+                    task_path=["update_boundaries"],
+                    argument_path=["selection_type"],
+                    value="label",
+                ),
+                MeshingPresetItem(
+                    task_path=["update_boundaries"],
+                    argument_path=["boundary_label_list"],
+                    value=["inlet-hot", "inlet-cold"],
+                ),
+                MeshingPresetItem(
+                    task_path=["update_boundaries"],
+                    argument_path=["boundary_label_type_list"],
+                    value=["wall", "wall"],
+                ),
+            ],
+            verify=True,
+        )
+    )
+
+    assert report.status == "success"
+    assert update_boundaries.arguments.state["old_boundary_label_list"] == [
+        "inlet-hot",
+        "inlet-cold",
+    ]
+    assert update_boundaries.arguments.state["old_boundary_label_type_list"] == [
+        "velocity-inlet",
+        "velocity-inlet",
+    ]
+    assert update_boundaries.arguments.state["boundary_label_type_list"] == ["wall", "wall"]
+
+
+def test_update_boundaries_fails_when_fluent_task_returns_false(monkeypatch: Any) -> None:
+    adapter_module = _import_adapter(monkeypatch)
+
+    class FalseTask(FakeTask):
+        def __call__(self) -> bool:
+            return False
+
+    update_boundaries = FalseTask("update_boundaries", {})
+    adapter = adapter_module.PyFluentMeshingAdapter(session=ActiveSession())
+    adapter._workflow = FakeWorkflow([update_boundaries])
+    adapter._workflow_type = "watertight"
+
+    report = adapter.execute_task("watertight", ["update_boundaries"])
+
+    assert report.status == "failed"
+    assert "returned False" in report.message

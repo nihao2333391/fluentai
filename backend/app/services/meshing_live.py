@@ -689,6 +689,11 @@ class MeshingLiveManager:
         if read_report is not None and read_report.status == "failed":
             execution.status = "failed"
             execution.message = read_report.error or "Fluent 任务完成，但参数回读失败。"
+        if read_report is not None and task_path == ["update_boundaries"]:
+            mismatch = self._boundary_update_mismatch(session, read_report)
+            if mismatch:
+                execution.status = "failed"
+                execution.message = mismatch
         if execution.status == "success":
             session.steps[step_index].status = "completed"
             session.steps[step_index].message = (
@@ -1343,6 +1348,11 @@ class MeshingLiveManager:
     ) -> list[MeshingArgumentReference]:
         references = self._argument_references(task.get("arguments") or [], task_path)
         if task_path == ["update_boundaries"]:
+            fixed_arguments = {
+                item.argument_path[-1]
+                for item in session.preset_items
+                if item.task_path == task_path and item.value_mode == "fixed"
+            }
             selection_type = next(
                 (
                     str(item.value)
@@ -1351,7 +1361,11 @@ class MeshingLiveManager:
                     and item.argument_path == ["selection_type"]
                     and item.value_mode == "fixed"
                 ),
-                "zone",
+                "label"
+                if fixed_arguments.intersection(
+                    {"boundary_label_list", "boundary_label_type_list"}
+                )
+                else "zone",
             )
             name_argument = (
                 "boundary_label_list" if selection_type == "label" else "boundary_zone_list"
@@ -1366,8 +1380,28 @@ class MeshingLiveManager:
                 for reference in references
                 if reference.argument_path
                 and reference.argument_path[-1]
-                in {"selection_type", name_argument, type_argument}
+                in {
+                    "selection_type",
+                    name_argument,
+                    type_argument,
+                    "boundary_current_list",
+                    "boundary_current_type_list",
+                }
             ]
+            references.extend(
+                MeshingArgumentReference(
+                    task_path=task_path,
+                    argument_path=[argument_name],
+                )
+                for argument_name in (
+                    "boundary_current_list",
+                    "boundary_current_type_list",
+                )
+                if not any(
+                    reference.argument_path == [argument_name]
+                    for reference in references
+                )
+            )
         template = task.get("child_template")
         if isinstance(template, dict):
             for child_name in sorted(self._child_names_for_task(session, task_path)):
@@ -1379,6 +1413,75 @@ class MeshingLiveManager:
                     )
                 )
         return references
+
+    @staticmethod
+    def _boundary_update_mismatch(
+        session: _LiveSession,
+        read_report: MeshingReadReport,
+    ) -> str | None:
+        """Verify Fluent applied the configured boundary mapping to its live table."""
+        actual_values = {
+            item.argument_path[-1]: item.value
+            for item in read_report.items
+            if item.task_path == ["update_boundaries"] and item.argument_path
+        }
+        preset_values = {
+            item.argument_path[-1]: item.value
+            for item in session.preset_items
+            if item.task_path == ["update_boundaries"] and item.value_mode == "fixed"
+        }
+        selection_type = preset_values.get("selection_type")
+        if selection_type not in {"label", "zone"}:
+            if {"boundary_label_list", "boundary_label_type_list"}.intersection(preset_values):
+                selection_type = "label"
+            elif {"boundary_zone_list", "boundary_zone_type_list"}.intersection(preset_values):
+                selection_type = "zone"
+            else:
+                selection_type = actual_values.get("selection_type")
+        if selection_type not in {"label", "zone"}:
+            return None
+        name_argument = (
+            "boundary_label_list" if selection_type == "label" else "boundary_zone_list"
+        )
+        type_argument = (
+            "boundary_label_type_list"
+            if selection_type == "label"
+            else "boundary_zone_type_list"
+        )
+        names = preset_values.get(name_argument, actual_values.get(name_argument))
+        target_types = preset_values.get(type_argument, actual_values.get(type_argument))
+        if names is None and target_types is None:
+            return None
+        if not isinstance(names, list) or not isinstance(target_types, list):
+            return "Fluent 未回读完整的边界名称和目标类型列表。"
+        if len(names) != len(target_types):
+            return "边界名称与目标类型数量不一致，Fluent 未应用边界映射。"
+        if not names:
+            return None
+
+        current_names = actual_values.get("boundary_current_list")
+        current_types = actual_values.get("boundary_current_type_list")
+        if not isinstance(current_names, list) or not isinstance(current_types, list):
+            return "Fluent 未返回更新后的实际边界表，无法确认边界类型。"
+        if len(current_names) != len(current_types):
+            return "Fluent 返回的实际边界表名称与类型数量不一致。"
+
+        current_by_name = {
+            name: boundary_type
+            for name, boundary_type in zip(current_names, current_types, strict=False)
+            if isinstance(name, str) and isinstance(boundary_type, str)
+        }
+        mismatches = [
+            f"{name}：模板要求 {expected_type}，Fluent 实际为 "
+            f"{current_by_name.get(name, '未返回该边界')}"
+            for name, expected_type in zip(names, target_types, strict=False)
+            if not isinstance(name, str)
+            or not isinstance(expected_type, str)
+            or current_by_name.get(name) != expected_type
+        ]
+        if not mismatches:
+            return None
+        return "Fluent 更新边界后的实际类型与模板不一致：" + "；".join(mismatches)
 
     @staticmethod
     def _argument_references(

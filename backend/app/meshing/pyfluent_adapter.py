@@ -322,6 +322,75 @@ def _write_argument_state(task: Any, state: dict[str, Any]) -> None:
     arguments.set_state(remaining)
 
 
+def _update_boundary_previous_state(task: Any, state: dict[str, Any]) -> dict[str, Any]:
+    """Capture Fluent's current boundary types before writing template targets.
+
+    Fluent's Update Boundaries task tracks edits as old/new parallel lists. The
+    template stores only the desired values, so derive the old side from the
+    live task state immediately before replacing the editable lists.
+    """
+    selection_type = state.get("selection_type")
+    if selection_type not in {"label", "zone"}:
+        if {"boundary_label_list", "boundary_label_type_list"}.intersection(state):
+            selection_type = "label"
+        elif {"boundary_zone_list", "boundary_zone_type_list"}.intersection(state):
+            selection_type = "zone"
+    if selection_type not in {"label", "zone"}:
+        return {}
+
+    if selection_type == "label":
+        names_argument = "boundary_label_list"
+        types_argument = "boundary_label_type_list"
+        old_names_argument = "old_boundary_label_list"
+        old_types_argument = "old_boundary_label_type_list"
+    else:
+        names_argument = "boundary_zone_list"
+        types_argument = "boundary_zone_type_list"
+        old_names_argument = "old_boundary_zone_list"
+        old_types_argument = "old_boundary_zone_type_list"
+
+    if names_argument not in state and types_argument not in state:
+        return {}
+    target_names = state.get(names_argument)
+    target_types = state.get(types_argument)
+    if not isinstance(target_names, list) or not isinstance(target_types, list):
+        raise ValueError(f"{names_argument} and {types_argument} must both be lists.")
+    if len(target_names) != len(target_types):
+        raise ValueError(
+            f"{names_argument} and {types_argument} must contain paired values."
+        )
+    if not target_names:
+        return {}
+    if any(not isinstance(name, str) for name in target_names):
+        raise ValueError(f"{names_argument} must contain only names.")
+
+    # The current table follows Selection Type. Switch it before reading the
+    # baseline so label mappings cannot accidentally use Fluent's zone table.
+    getattr(task.arguments, "selection_type").set_state(selection_type)
+    current_state = _normalize_state(task.arguments.get_state())
+    current_pairs: dict[str, str] = {}
+    current_names = _read_state_path(current_state, ["boundary_current_list"])
+    current_types = _read_state_path(current_state, ["boundary_current_type_list"])
+    if not isinstance(current_names, list) or not isinstance(current_types, list):
+        raise LookupError("Fluent did not return its current boundary table.")
+    if len(current_names) != len(current_types):
+        raise ValueError("Fluent's current boundary table has unpaired names and types.")
+    for current_name, current_type in zip(current_names, current_types):
+        if isinstance(current_name, str) and isinstance(current_type, str):
+            current_pairs.setdefault(current_name, current_type)
+
+    missing = [name for name in target_names if name not in current_pairs]
+    if missing:
+        raise LookupError(
+            "Fluent did not return current boundary types for: " + ", ".join(map(str, missing))
+        )
+
+    return {
+        old_names_argument: list(target_names),
+        old_types_argument: [current_pairs[name] for name in target_names],
+    }
+
+
 def _create_child(task: Any, state: dict[str, Any]) -> Any:
     try:
         child = task.add_child_and_update(state=state or None)
@@ -565,6 +634,12 @@ class PyFluentMeshingAdapter:
                             else:
                                 raise LookupError(f"Compound child was not found: {child_name}")
                         target = child
+                    internal_state = (
+                        _update_boundary_previous_state(target, state)
+                        if task_path_tuple == ("update_boundaries",) and child_name is None
+                        else {}
+                    )
+                    state.update(internal_state)
                     _write_argument_state(target, state)
                     actual_state = _normalize_state(target.arguments.get_state())
                     for item in items:
@@ -590,6 +665,24 @@ class PyFluentMeshingAdapter:
                                 actual=cast(MeshingPresetValue | None, actual),
                                 success=success,
                                 message="" if success else "Meshing readback did not match.",
+                            )
+                        )
+                    for argument_name, expected in internal_state.items():
+                        actual = _read_state_path(actual_state, [argument_name])
+                        success = not request.verify or _values_equal(expected, actual)
+                        report.results.append(
+                            MeshingArgumentWriteResult(
+                                task_path=list(task_path_tuple),
+                                argument_path=[argument_name],
+                                compound_child_name=child_name,
+                                expected=cast(MeshingPresetValue, expected),
+                                actual=cast(MeshingPresetValue | None, actual),
+                                success=success,
+                                message=(
+                                    ""
+                                    if success
+                                    else "Fluent's previous boundary state did not match."
+                                ),
                             )
                         )
                 except Exception as exc:
@@ -756,6 +849,10 @@ class PyFluentMeshingAdapter:
             task = _find_task(workflow, task_path)
             result = task()
             report.output.append("Task completed." if result is None else str(result))
+            if result is False:
+                report.message = f"{'/'.join(task_path)} returned False."
+                report.output.append(report.message)
+                return report
             report.status = "success"
             report.message = f"{'/'.join(task_path)} completed."
         except Exception as exc:

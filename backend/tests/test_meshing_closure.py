@@ -370,6 +370,80 @@ def test_two_checkpoints_generate_only_after_confirmation_and_archive_mesh(tmp_p
     assert Path(archived.record_markdown_path).is_file()
 
 
+def test_boundary_update_fails_when_fluent_keeps_name_based_default(tmp_path: Path) -> None:
+    database = Database(tmp_path / "app.db")
+    database.initialize()
+    target = tmp_path / "A-compact.scdocx"
+    target.write_bytes(b"test geometry")
+    model = ModelRepository(database).create(ModelCreate(name="A-compact", file_path=str(target)))
+    preset = MeshingPresetDocument(
+        schema_version=2,
+        workflow_type="watertight",
+        items=[
+            MeshingPresetItem(
+                task_path=["describe_geometry"],
+                argument_path=["setup_type"],
+                value="The geometry consists of only fluid regions with no voids",
+            ),
+            MeshingPresetItem(
+                task_path=["update_boundaries"],
+                argument_path=["selection_type"],
+                value="label",
+            ),
+            MeshingPresetItem(
+                task_path=["update_boundaries"],
+                argument_path=["boundary_label_list"],
+                value=["inlet-hot"],
+            ),
+            MeshingPresetItem(
+                task_path=["update_boundaries"],
+                argument_path=["boundary_label_type_list"],
+                value=["wall"],
+            ),
+        ],
+    )
+    automation = MeshingAutomationRepository(database).create(
+        MeshingAutomationCreate(name="Boundary default regression", preset=preset)
+    )
+
+    class NameDefaultBoundaryAdapter(FakeMeshingAdapter):
+        def __init__(self) -> None:
+            super().__init__(known_names={"inlet-hot"})
+            self.values[(
+                ("update_boundaries",), ("boundary_current_list",), None
+            )] = ["inlet-hot"]
+            self.values[(
+                ("update_boundaries",), ("boundary_current_type_list",), None
+            )] = ["velocity-inlet"]
+
+    adapter = NameDefaultBoundaryAdapter()
+    live = MeshingLiveManager(database, adapter)
+    started = live.start(
+        automation.id, [model.id], FluentConnectionConfig(mode="launch"), False
+    )
+    live.begin(started.session_id)
+    snapshot = live.get(started.session_id)
+    surface_index = next(
+        index for index, step in enumerate(snapshot.steps)
+        if step.task_path == ["create_surface_mesh"]
+    )
+    boundary_index = next(
+        index for index, step in enumerate(snapshot.steps)
+        if step.task_path == ["update_boundaries"]
+    )
+
+    live.execute_step(started.session_id, surface_index)
+
+    snapshot = live.get(started.session_id)
+    assert snapshot.phase == "failed"
+    assert snapshot.steps[boundary_index].status == "failed"
+    assert "inlet-hot" in snapshot.steps[boundary_index].message
+    assert "velocity-inlet" in snapshot.steps[boundary_index].message
+    assert "wall" in snapshot.steps[boundary_index].message
+    assert ("watertight", ("update_boundaries",)) in adapter.executed_tasks
+    assert ("watertight", ("create_volume_mesh",)) not in adapter.executed_tasks
+
+
 def test_native_surface_mesh_completion_resumes_downstream_preparation_once(
     tmp_path: Path,
 ) -> None:
