@@ -350,11 +350,42 @@ class MeshingService:
         )
 
     def read_live_step(self, session_id: str, step_index: int) -> MeshingLiveStepReport:
-        return self._run(
-            lambda: self.live.read_step(session_id, step_index),
-            session_id=session_id,
-            operation_name="读取 Fluent 步骤参数",
-        )
+        # The UI asks for the session and current step in one refresh cycle.
+        # get_live_session() may have scheduled a native task poll just before
+        # this read. Wait for that read-only poll to finish, then retry the
+        # guard in _run() in case another refresh scheduled a poll in between.
+        while True:
+            with self._operation_state_lock:
+                pending_poll = self._native_poll.get(session_id)
+                if pending_poll is not None and pending_poll.done():
+                    pending_poll = None
+            if pending_poll is not None:
+                try:
+                    pending_poll.result(
+                        timeout=min(self._native_poll_timeout_seconds, 10.0)
+                    )
+                except FutureTimeoutError as exc:
+                    raise MeshingAdapterBusyError(
+                        "Fluent 当前步骤查询仍未返回。平台继续等待当前查询，没有重复读取参数。"
+                    ) from exc
+                except Exception:
+                    # The poll observer records this failure. Parameter reads
+                    # may still work, so allow the normal read to try next.
+                    pass
+            try:
+                return self._run(
+                    lambda: self.live.read_step(session_id, step_index),
+                    session_id=session_id,
+                    operation_name="读取 Fluent 步骤参数",
+                )
+            except MeshingAdapterBusyError:
+                # A second refresh may have scheduled a poll just after the
+                # wait above. Retry only when that exact read-only poll exists;
+                # other busy states must continue to block this request.
+                with self._operation_state_lock:
+                    pending_poll = self._native_poll.get(session_id)
+                    if pending_poll is None or pending_poll.done():
+                        raise
 
     def write_live_step(
         self, session_id: str, payload: MeshingLiveWriteRequest

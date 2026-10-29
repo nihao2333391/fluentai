@@ -1,7 +1,7 @@
 """Direct checks for reusable Meshing rules, native steps, and result archiving."""
 
 import json
-from concurrent.futures import Future
+from concurrent.futures import Future, ThreadPoolExecutor
 from threading import Event
 from pathlib import Path
 from time import monotonic
@@ -997,6 +997,39 @@ def test_live_session_uses_available_event_subscriptions_without_redundant_poll(
         assert snapshot.phase == "surface_ready"
         assert session_id not in service._native_poll
     finally:
+        service._executor.shutdown(wait=True, cancel_futures=True)
+
+
+def test_live_step_read_waits_for_native_status_poll(tmp_path: Path) -> None:
+    service, adapter, session_id = _start_callback_test_session(tmp_path)
+    pending_poll: Future[None] = Future()
+    read_started = Event()
+    original_read = adapter.read_arguments
+
+    def observe_read(request: object) -> object:
+        read_started.set()
+        return original_read(request)  # type: ignore[arg-type]
+
+    adapter.read_arguments = observe_read  # type: ignore[method-assign]
+    with service._operation_state_lock:
+        service._native_poll[session_id] = pending_poll
+        service._active_adapter_future = pending_poll  # type: ignore[assignment]
+
+    reader = ThreadPoolExecutor(max_workers=1)
+    try:
+        current_step = service.live.get(session_id).current_step_index
+        read_future = reader.submit(service.read_live_step, session_id, current_step)
+
+        assert not read_started.wait(timeout=0.05)
+        pending_poll.set_result(None)
+
+        report = read_future.result(timeout=3)
+        assert read_started.is_set()
+        assert report.status == "success"
+    finally:
+        if not pending_poll.done():
+            pending_poll.set_result(None)
+        reader.shutdown(wait=True, cancel_futures=True)
         service._executor.shutdown(wait=True, cancel_futures=True)
 
 

@@ -140,6 +140,48 @@ def test_read_arguments_fetches_state_once_per_task_or_child(monkeypatch: Any) -
     assert surface.arguments.read_count == 1
 
 
+def test_read_arguments_error_includes_task_and_missing_argument_paths(
+    monkeypatch: Any,
+) -> None:
+    adapter_module = _import_adapter(monkeypatch)
+
+    class BrokenArguments(CountingArguments):
+        def get_state(self) -> dict[str, Any]:
+            raise RuntimeError("Fluent RPC channel closed")
+
+    surface = FakeTask("create_surface_mesh", {})
+    surface.arguments = BrokenArguments({})
+    geometry = FakeTask("describe_geometry", {})
+    adapter = adapter_module.PyFluentMeshingAdapter(session=ActiveSession())
+    adapter._workflow = FakeWorkflow([surface, geometry])
+    adapter._workflow_type = "watertight"
+
+    report = adapter.read_arguments(
+        MeshingReadRequest(
+            workflow_type="watertight",
+            items=[
+                MeshingArgumentReference(
+                    task_path=["create_surface_mesh"],
+                    argument_path=["cfd_surface_mesh_controls", "min_size"],
+                ),
+                MeshingArgumentReference(
+                    task_path=["describe_geometry"],
+                    argument_path=["setup", "geometry_type"],
+                ),
+            ],
+        )
+    )
+
+    assert report.status == "failed"
+    assert report.error is not None
+    assert "create_surface_mesh: RuntimeError: Fluent RPC channel closed" in report.error
+    assert "describe_geometry.setup.geometry_type" in report.error
+    assert [item.error for item in report.items] == [
+        "RuntimeError: Fluent RPC channel closed",
+        "Argument path was not found.",
+    ]
+
+
 def test_normalize_state_parses_pyfluent_stringified_list_arguments(monkeypatch: Any) -> None:
     adapter_module = _import_adapter(monkeypatch)
 

@@ -58,6 +58,44 @@ def _safe_call(value: Any, default: Any = None) -> Any:
         return default
 
 
+def _read_arguments_error(items: list[MeshingReadItemResult]) -> str:
+    """Summarize read failures so the live workflow can show the failing path."""
+    read_errors: list[str] = []
+    missing_paths: list[str] = []
+    seen_errors: set[str] = set()
+    seen_missing: set[str] = set()
+    for item in items:
+        if item.found and item.error is None:
+            continue
+        task_name = "/".join(item.task_path)
+        if item.compound_child_name:
+            task_name += f"[{item.compound_child_name}]"
+        if item.error == "Argument path was not found.":
+            path = ".".join([*item.task_path, *item.argument_path])
+            if item.compound_child_name:
+                path += f"[{item.compound_child_name}]"
+            if path not in seen_missing:
+                missing_paths.append(path)
+                seen_missing.add(path)
+            continue
+        cause = item.error or "Argument was not returned."
+        detail = f"{task_name}: {cause}"
+        if detail not in seen_errors:
+            read_errors.append(detail)
+            seen_errors.add(detail)
+
+    details = read_errors
+    if missing_paths:
+        details.append("missing argument paths: " + ", ".join(missing_paths))
+    message = "One or more Meshing arguments could not be read."
+    if details:
+        detail_text = "; ".join(details)
+        if len(detail_text) > 1200:
+            detail_text = detail_text[:1197] + "..."
+        message += f" Details: {detail_text}"
+    return message
+
+
 def _read_argument_state(target: Any, *, fresh: bool = False) -> dict[str, Any]:
     """Read task arguments, bypassing PyFluent's cache when freshness matters."""
     arguments = getattr(target, "arguments", None)
@@ -653,7 +691,7 @@ class PyFluentMeshingAdapter:
                 else "failed"
             )
             if report.status == "failed":
-                report.error = "One or more Meshing arguments could not be read."
+                report.error = _read_arguments_error(report.items)
             return report
         except Exception as exc:
             report.error = f"{type(exc).__name__}: {exc}"
