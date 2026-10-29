@@ -12,12 +12,14 @@ from app.database import Database
 from app.domain import (
     FluentConnectionConfig,
     MeshingArchiveCreate,
+    MeshingArgumentWriteResult,
     MeshingAutomationCreate,
     MeshingLiveSessionStart,
     MeshingLiveStepRequest,
     MeshingPresetDocument,
     MeshingPresetItem,
     MeshingTaskExecutionReport,
+    MeshingWriteReport,
     ModelCreate,
 )
 from app.meshing.fake import FakeMeshingAdapter
@@ -25,7 +27,7 @@ from app.meshing.schema_index import MESHING_SCHEMA_INDEX
 from app.meshing.workflow_plan import watertight_steps
 from app.repositories.meshing_automations import MeshingAutomationRepository
 from app.repositories.models import ModelRepository
-from app.services.meshing_live import MeshingLiveManager
+from app.services.meshing_live import MeshingLiveManager, _write_report_message
 from app.services.meshing_service import MeshingAdapterBusyError, MeshingService
 
 
@@ -74,6 +76,31 @@ def test_boundary_mapping_pairs_survive_schema_validation_and_database_reload(
     saved = repository.create(MeshingAutomationCreate(name="Boundary mapping roundtrip", preset=preset))
     reopened = repository.get(saved.id)
     assert reopened.preset.items == items
+
+
+def test_boundary_write_failure_message_includes_field_values_and_cause() -> None:
+    report = MeshingWriteReport(
+        workflow_type="watertight",
+        status="failed",
+        error="One or more Meshing arguments failed to write or verify.",
+        results=[
+            MeshingArgumentWriteResult(
+                task_path=["update_boundaries"],
+                argument_path=["boundary_label_type_list"],
+                expected=["wall", "wall"],
+                actual=None,
+                success=False,
+                message="LookupError: Fluent did not return the requested labels.",
+            )
+        ],
+    )
+
+    message = _write_report_message(report)
+
+    assert "update_boundaries.boundary_label_type_list" in message
+    assert "期望=['wall', 'wall']" in message
+    assert "回读=None" in message
+    assert "LookupError: Fluent did not return the requested labels." in message
 
 
 def test_live_step_write_exception_marks_session_failed_instead_of_running(

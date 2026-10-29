@@ -53,6 +53,33 @@ def _live_steps_for_preset(items: list[MeshingPresetItem]) -> list[str]:
     return watertight_steps(items)
 
 
+def _write_report_message(report: MeshingWriteReport) -> str:
+    """Keep per-argument write failures visible in the live workflow log."""
+    message = report.error or "Fluent 参数写入或回读失败。"
+    failures = [result for result in report.results if not result.success]
+    if not failures:
+        return message
+
+    details: list[str] = []
+    for result in failures[:8]:
+        path = ".".join([*result.task_path, *result.argument_path])
+        if result.compound_child_name:
+            path += f"[{result.compound_child_name}]"
+        expected = repr(result.expected)
+        actual = repr(result.actual)
+        if len(expected) > 240:
+            expected = expected[:237] + "..."
+        if len(actual) > 240:
+            actual = actual[:237] + "..."
+        detail = f"{path}: 期望={expected}，回读={actual}"
+        if result.message:
+            detail += f"，原因={result.message}"
+        details.append(detail)
+    if len(failures) > len(details):
+        details.append(f"另有 {len(failures) - len(details)} 项失败未展开")
+    return f"{message} 失败字段：" + "；".join(details)
+
+
 @dataclass
 class _LiveSession:
     session_id: str
@@ -569,7 +596,9 @@ class MeshingLiveManager:
         failed = write_report.status == "failed" or read_report.status == "failed"
         session.steps[step_index].status = "failed" if failed else "active"
         session.steps[step_index].message = (
-            write_report.error or read_report.error or "参数已写入 Fluent 并回读。"
+            (_write_report_message(write_report) if write_report.status == "failed" else None)
+            or read_report.error
+            or "参数已写入 Fluent 并回读。"
         )
         step.duration_ms = round((perf_counter() - started) * 1000)
         session.steps[step_index].message += f"（耗时 {step.duration_ms / 1000:.1f} 秒）"
