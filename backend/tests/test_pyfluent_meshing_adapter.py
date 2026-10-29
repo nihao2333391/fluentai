@@ -41,6 +41,7 @@ class CountingArguments:
     def __init__(self, state: dict[str, Any]) -> None:
         self.state = state
         self.remote_state = state
+        self.mirror_writes_to_remote = True
         self.read_count = 0
         self.remote_read_count = 0
         self.batch_state_calls: list[dict[str, Any]] = []
@@ -56,7 +57,7 @@ class CountingArguments:
     def set_state(self, state: dict[str, Any]) -> None:
         self.batch_state_calls.append(dict(state))
         self.state.update(state)
-        if self.remote_state is not self.state:
+        if self.remote_state is not self.state and self.mirror_writes_to_remote:
             self.remote_state.update(state)
 
     def __getattr__(self, name: str) -> Any:
@@ -240,6 +241,7 @@ def test_update_boundaries_writes_old_and_target_boundary_types(monkeypatch: Any
         **update_boundaries.arguments.state,
         "boundary_current_type_list": ["pressure-outlet", "wall"],
     }
+    update_boundaries.arguments.mirror_writes_to_remote = False
     adapter = adapter_module.PyFluentMeshingAdapter(session=ActiveSession())
     adapter._workflow = FakeWorkflow([update_boundaries])
     adapter._workflow_type = "watertight"
@@ -287,7 +289,11 @@ def test_update_boundaries_writes_old_and_target_boundary_types(monkeypatch: Any
         "wall",
         "wall",
     ]
-    assert update_boundaries.arguments.remote_read_count >= 2
+    assert update_boundaries.arguments.remote_read_count == 1
+    assert update_boundaries.arguments.remote_state["boundary_label_type_list"] == [
+        "velocity-inlet",
+        "velocity-inlet",
+    ]
 
 
 def test_execute_update_boundaries_reports_submitted_and_live_table_state(

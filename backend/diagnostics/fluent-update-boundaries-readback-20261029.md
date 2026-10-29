@@ -88,3 +88,24 @@ live workflow.
                 wall-small: 模板要求 mass-flow-outlet，平台读到 wall；
                 outlet: 模板要求 velocity-inlet，平台读到 pressure-outlet
 ```
+
+## Follow-up after restarting the sidecar
+
+The user then retried the template after restarting the sidecar. The platform
+reported `update_boundaries 准备失败: One or more Meshing arguments failed to
+write or verify.` The user's other screenshot showed a transient
+`meshing-live:read-step` timeout and stated that the platform would retry the
+read without resubmitting the write.
+
+The write/verify error came from a timing distinction in the previous patch:
+before `update_boundaries` executes, its new mapping is staged in the PyFluent
+command arguments, while Fluent's live boundary table still contains the old
+types. `write_arguments()` had switched this pre-execution check to
+`get_remote_state()`, so it compared the staged template values with the old
+live table and rejected them before the update task could run.
+
+The follow-up change now verifies staged Update Boundaries arguments through
+`get_state()` before execution, then keeps `get_remote_state()` for the live
+boundary table after execution. The regression test models the same split:
+staged values are updated locally while the remote table remains old until the
+task runs. A real-platform rerun after this follow-up change is still required.

@@ -670,9 +670,9 @@ class PyFluentMeshingAdapter:
         )
         try:
             workflow = self._get_workflow(request.workflow_type)
-            # The write result is verified against Fluent's actual readback below.
-            # Scanning every task to pre-validate a selected label adds many RPCs
-            # before the step can start, so live writes use the direct readback.
+            # Group reads by task so each task is fetched once. Update Boundaries
+            # is verified from its staged command arguments here; the live table
+            # is verified by a fresh remote read after the task executes.
             grouped: dict[tuple[tuple[str, ...], str | None], list[MeshingPresetItem]] = {}
             for item in request.items:
                 if item.value_mode == "at_use":
@@ -705,10 +705,13 @@ class PyFluentMeshingAdapter:
                         _write_boundary_argument_state(target, state)
                     else:
                         _write_argument_state(target, state)
-                    actual_state = _read_argument_state(
-                        target,
-                        fresh=task_path_tuple == ("update_boundaries",) and child_name is None,
-                    )
+                    # Update Boundaries target values are staged on the command
+                    # argument object until its task executes. At this point the
+                    # Fluent remote state still contains the previous table, so
+                    # verify the staged values through PyFluent's local state.
+                    # The post-execution read in read_arguments() fetches the
+                    # actual boundary table directly from Fluent.
+                    actual_state = _read_argument_state(target)
                     for item in items:
                         actual = _read_state_path(actual_state, item.argument_path)
                         schema_argument = MESHING_SCHEMA_INDEX.get_argument(
