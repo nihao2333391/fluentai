@@ -109,3 +109,36 @@ The follow-up change now verifies staged Update Boundaries arguments through
 boundary table after execution. The regression test models the same split:
 staged values are updated locally while the remote table remains old until the
 task runs. A real-platform rerun after this follow-up change is still required.
+
+## Reproduction after the staged-state change
+
+The user restarted the sidecar and retried `A-compact`. The platform again
+reported `update_boundaries 准备失败: One or more Meshing arguments failed to
+write or verify.` The separate `meshing-live:read-step` warning still reported a
+timed-out current-step query and automatic retry.
+
+The newest Fluent transcript (`fluent-20261029-082543-40868.trn`) records
+surface-mesh completion and `Describe Geometry task complete`, followed by the
+name-based automatic inlet/outlet classification. It contains no
+`Boundary Conditions Updated` message. In this run, Fluent's boundary-update
+command had not executed when the platform failed.
+
+The code path is `retry_prepare()` -> `_prepare_volume()` -> `_prepare_step()`
+-> `enter_step()` -> `_write_step()` -> `PyFluentMeshingAdapter.write_arguments()`.
+The adapter returns a generic write/verify failure before `_execute_one_step()`
+can call `update_boundaries`. The post-execution fresh-table comparison therefore
+never runs. This reproduction places the failure before task execution; it does
+not support attributing this run to Fluent overwriting a completed update.
+
+PyFluent 0.42.1 source shows that `PyStateContainer.get_state()` reads its
+service cache, and `set_state()` updates that cache from the service response.
+The staged-state workaround still failed in the real workflow. The new code
+therefore defers verification of Update Boundaries command arguments until the
+task executes, then checks the live boundary table through the existing fresh
+remote read and `_boundary_update_mismatch()` comparison. This avoids rejecting
+the staged command on pre-execution state while preserving verification of the
+actual requested boundary types.
+
+Backend regression coverage passed (32 tests), including a check that an
+unchanged Fluent boundary table is rejected after execution. The changed path
+still requires a new real-Fluent run before it can be considered verified.

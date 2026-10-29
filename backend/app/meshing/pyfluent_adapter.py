@@ -705,27 +705,45 @@ class PyFluentMeshingAdapter:
                         _write_boundary_argument_state(target, state)
                     else:
                         _write_argument_state(target, state)
-                    # Update Boundaries target values are staged on the command
-                    # argument object until its task executes. At this point the
-                    # Fluent remote state still contains the previous table, so
-                    # verify the staged values through PyFluent's local state.
-                    # The post-execution read in read_arguments() fetches the
-                    # actual boundary table directly from Fluent.
-                    actual_state = _read_argument_state(target)
+                    defer_boundary_verification = (
+                        task_path_tuple == ("update_boundaries",) and child_name is None
+                    )
+                    if defer_boundary_verification:
+                        # Fluent's Update Boundaries command holds paired old/new
+                        # values until execution. PyFluent's get_state() is backed
+                        # by the service cache, which can still contain Fluent's
+                        # current table after set_state(). Verify the applied
+                        # boundary types from a fresh remote read after the task
+                        # executes instead of rejecting this staged command here.
+                        report.verified = False
+                        actual_state: dict[str, Any] = {}
+                    else:
+                        actual_state = _read_argument_state(target)
                     for item in items:
-                        actual = _read_state_path(actual_state, item.argument_path)
-                        schema_argument = MESHING_SCHEMA_INDEX.get_argument(
-                            request.workflow_type,
-                            item.task_path,
-                            item.argument_path,
-                            item.compound_child_name,
-                        )
-                        value_type = (
-                            str(schema_argument.get("value_type")) if schema_argument else None
-                        )
-                        success = not request.verify or _values_equal(
-                            item.value, actual, value_type
-                        )
+                        if defer_boundary_verification:
+                            actual = None
+                            success = True
+                            message = (
+                                "Boundary mapping will be verified from Fluent's live table "
+                                "after Update Boundaries executes."
+                            )
+                        else:
+                            actual = _read_state_path(actual_state, item.argument_path)
+                            schema_argument = MESHING_SCHEMA_INDEX.get_argument(
+                                request.workflow_type,
+                                item.task_path,
+                                item.argument_path,
+                                item.compound_child_name,
+                            )
+                            value_type = (
+                                str(schema_argument.get("value_type"))
+                                if schema_argument
+                                else None
+                            )
+                            success = not request.verify or _values_equal(
+                                item.value, actual, value_type
+                            )
+                            message = "" if success else "Meshing readback did not match."
                         report.results.append(
                             MeshingArgumentWriteResult(
                                 task_path=item.task_path,
@@ -734,10 +752,12 @@ class PyFluentMeshingAdapter:
                                 expected=item.value,
                                 actual=cast(MeshingPresetValue | None, actual),
                                 success=success,
-                                message="" if success else "Meshing readback did not match.",
+                                message=message,
                             )
                         )
                     for argument_name, expected in internal_state.items():
+                        if defer_boundary_verification:
+                            continue
                         actual = _read_state_path(actual_state, [argument_name])
                         success = not request.verify or _values_equal(expected, actual)
                         report.results.append(

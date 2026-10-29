@@ -595,11 +595,19 @@ class MeshingLiveManager:
         read_report = self._read_step(session, step_index)
         failed = write_report.status == "failed" or read_report.status == "failed"
         session.steps[step_index].status = "failed" if failed else "active"
-        session.steps[step_index].message = (
-            (_write_report_message(write_report) if write_report.status == "failed" else None)
-            or read_report.error
-            or "参数已写入 Fluent 并回读。"
-        )
+        if write_report.status == "failed":
+            session.steps[step_index].message = _write_report_message(write_report)
+        elif read_report.status == "failed":
+            session.steps[step_index].message = read_report.error or "Fluent 参数回读失败。"
+        elif (
+            not write_report.verified
+            and any(item.task_path == ["update_boundaries"] for item in items)
+        ):
+            session.steps[step_index].message = (
+                "边界映射已暂存；执行 Update Boundaries 后会回读 Fluent 实际边界表。"
+            )
+        else:
+            session.steps[step_index].message = "参数已写入 Fluent 并回读。"
         step.duration_ms = round((perf_counter() - started) * 1000)
         session.steps[step_index].message += f"（耗时 {step.duration_ms / 1000:.1f} 秒）"
         session.status = "failed" if failed else "waiting"

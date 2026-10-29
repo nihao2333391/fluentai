@@ -289,7 +289,12 @@ def test_update_boundaries_writes_old_and_target_boundary_types(monkeypatch: Any
         "wall",
         "wall",
     ]
+    assert update_boundaries.arguments.read_count == 0
     assert update_boundaries.arguments.remote_read_count == 1
+    assert report.verified is False
+    assert report.status == "success"
+    assert all(result.success for result in report.results)
+    assert all("after Update Boundaries executes" in result.message for result in report.results)
     assert update_boundaries.arguments.remote_state["boundary_label_type_list"] == [
         "velocity-inlet",
         "velocity-inlet",
