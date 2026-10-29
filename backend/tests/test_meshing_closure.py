@@ -985,6 +985,21 @@ def test_native_task_callback_exceptions_are_observed_and_reported(tmp_path: Pat
         service._executor.shutdown(wait=True, cancel_futures=True)
 
 
+def test_live_session_uses_available_event_subscriptions_without_redundant_poll(
+    tmp_path: Path,
+) -> None:
+    service, _adapter, session_id = _start_callback_test_session(tmp_path)
+    try:
+        assert service.live.native_task_poll_required(session_id) is False
+
+        snapshot = service.get_live_session(session_id)
+
+        assert snapshot.phase == "surface_ready"
+        assert session_id not in service._native_poll
+    finally:
+        service._executor.shutdown(wait=True, cancel_futures=True)
+
+
 def test_pending_native_task_callback_keeps_stop_responsive(tmp_path: Path) -> None:
     service, adapter, session_id = _start_callback_test_session(tmp_path)
     callback = adapter.current_task_callback
@@ -1026,6 +1041,8 @@ def test_native_task_poll_errors_are_visible_and_clear_after_recovery(
         )
     )
     adapter = FakeMeshingAdapter()
+    adapter.register_current_task_callback = lambda _callback: False  # type: ignore[method-assign]
+    adapter.register_transcript_callback = lambda _callback: None  # type: ignore[method-assign]
     service = MeshingService(database, adapter)
     started = service.start_live_session(
         MeshingLiveSessionStart(
@@ -1089,6 +1106,8 @@ def test_hung_native_task_poll_is_reported_and_stop_remains_responsive(
         )
     )
     adapter = FakeMeshingAdapter()
+    adapter.register_current_task_callback = lambda _callback: False  # type: ignore[method-assign]
+    adapter.register_transcript_callback = lambda _callback: None  # type: ignore[method-assign]
     entered = Event()
     release = Event()
 

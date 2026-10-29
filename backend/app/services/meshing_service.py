@@ -275,7 +275,7 @@ class MeshingService:
         should_poll_native_task = snapshot.status in {"waiting", "connected"} or (
             snapshot.status == "running" and snapshot.phase == "generating_surface"
         )
-        if should_poll_native_task:
+        if should_poll_native_task and self.live.native_task_poll_required(session_id):
             self._schedule_native_poll(session_id)
         return snapshot
 

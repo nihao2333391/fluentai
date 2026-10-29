@@ -102,6 +102,7 @@ class _LiveSession:
     next_log_sequence: int = 1
     message: str = ""
     native_step_subscription: bool = False
+    native_transcript_subscription: bool = False
     last_native_task: str | None = None
     native_task_poll_error: str | None = None
     native_task_poll_failures: int = 0
@@ -200,17 +201,37 @@ class MeshingLiveManager:
             session.status = "running"
             session.message = "Fluent Meshing 已连接, 正在导入几何模型。"
             self._log(session, "info", session.message)
-            self.adapter.register_transcript_callback(
+            transcript_subscription = self.adapter.register_transcript_callback(
                 lambda text: self._ingest_transcript(
                     session, text, on_native_surface_mesh_complete
                 )
             )
+            session.native_transcript_subscription = transcript_subscription is not None
             self._raise_if_aborted(session)
             if on_native_task is not None:
                 session.native_step_subscription = self.adapter.register_current_task_callback(
                     on_native_task
                 )
                 self._raise_if_aborted(session)
+            if session.native_step_subscription or session.native_transcript_subscription:
+                active_sources = []
+                if session.native_step_subscription:
+                    active_sources.append("当前任务变更订阅")
+                if session.native_transcript_subscription:
+                    active_sources.append("Fluent 控制台输出订阅")
+                self._log(
+                    session,
+                    "info",
+                    "Fluent 自动步骤检测已启用事件监听：" + "、".join(active_sources) + "。",
+                    self._current_model(session).model_id,
+                )
+            else:
+                self._log(
+                    session,
+                    "warning",
+                    "Fluent 事件监听不可用，平台将轮询当前步骤。",
+                    self._current_model(session).model_id,
+                )
             self._execute_import_step(session)
         except Exception as exc:
             if session.abort_event.is_set():
@@ -227,6 +248,12 @@ class MeshingLiveManager:
 
     def get(self, session_id: str) -> MeshingLiveSessionSnapshot:
         return self._snapshot(self._require(session_id))
+
+    def native_task_poll_required(self, session_id: str) -> bool:
+        session = self._require(session_id)
+        return not (
+            session.native_step_subscription or session.native_transcript_subscription
+        )
 
     def fail_background_start(self, session_id: str, error: BaseException) -> None:
         session = self._require(session_id)

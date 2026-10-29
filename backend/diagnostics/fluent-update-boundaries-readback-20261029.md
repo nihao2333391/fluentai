@@ -142,3 +142,26 @@ actual requested boundary types.
 Backend regression coverage passed (32 tests), including a check that an
 unchanged Fluent boundary table is rejected after execution. The changed path
 still requires a new real-Fluent run before it can be considered verified.
+
+## Repeated live-status read collision
+
+A later transcript started at 08:39:25, before commit `7f5acf3`. It records
+geometry import and two local-sizing additions, then Fluent's TGrid process
+ended abnormally before surface-mesh generation. This run does not test the
+deferred boundary verification change.
+
+The UI refresh path calls `get_live_session()` and then `read_live_step()` in
+the same two-second polling cycle. `get_live_session()` also started a native
+`Workflow.CurrentTask` poll whenever the session was waiting. Both operations
+use the same single-thread Fluent executor. If the task poll is still running,
+`_run()` rejects the step read with `Fluent 当前步骤查询仍未返回`, matching the
+warning in the user's screenshot.
+
+The live session already records whether Fluent current-task and transcript
+change subscriptions registered successfully. The service now uses those
+events instead of starting redundant periodic task polls when either source is
+available. If both subscriptions are unavailable, polling remains as a
+fallback. The backend closure and adapter regression tests passed (33 tests).
+The UI log now states which event subscriptions are available. A new platform
+run is still needed to confirm both the poll warning and boundary mapping on
+the user's Fluent session.
