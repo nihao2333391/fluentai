@@ -147,8 +147,11 @@ still requires a new real-Fluent run before it can be considered verified.
 
 A later transcript started at 08:39:25, before commit `7f5acf3`. It records
 geometry import and two local-sizing additions, then Fluent's TGrid process
-ended abnormally before surface-mesh generation. This run does not test the
-deferred boundary verification change.
+ended before surface-mesh generation. Its tail first says `Shutting down
+Server...`; the generated cleanup script sends `CLEANUP_EXITING` and then kills
+the Fluent host and compute PIDs. The `BAD TERMINATION` report is consistent
+with that process cleanup and does not prove that local sizing crashed TGrid.
+This run does not test the deferred boundary verification change.
 
 The UI refresh path calls `get_live_session()` and then `read_live_step()` in
 the same two-second polling cycle. `get_live_session()` also started a native
