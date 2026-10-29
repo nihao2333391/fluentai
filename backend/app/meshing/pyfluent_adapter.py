@@ -8,7 +8,7 @@ import os
 import re
 import traceback
 import sys
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -58,6 +58,23 @@ def _safe_call(value: Any, default: Any = None) -> Any:
         return default
 
 
+def _read_argument_state(target: Any, *, fresh: bool = False) -> dict[str, Any]:
+    """Read task arguments, bypassing PyFluent's cache when freshness matters."""
+    arguments = getattr(target, "arguments", None)
+    getter = getattr(arguments, "get_remote_state" if fresh else "get_state", None)
+    if not callable(getter):
+        if fresh:
+            raise RuntimeError(
+                "PyFluent does not expose get_remote_state(); "
+                "a fresh Update Boundaries readback is unavailable."
+            )
+        raise RuntimeError("PyFluent task arguments do not expose get_state().")
+    state = _normalize_state(getter())
+    if not isinstance(state, dict):
+        raise RuntimeError("PyFluent returned task arguments in an unsupported format.")
+    return state
+
+
 def _find_task(workflow: Any, task_path: list[str]) -> Any:
     candidates = list(workflow.tasks())
     task: Any = None
@@ -94,10 +111,24 @@ def _merge_state(target: dict[str, Any], path: list[str], value: Any) -> None:
 
 def _normalize_state(value: Any) -> Any:
     if isinstance(value, dict):
-        return {
-            camel_to_snake_case(str(key)): _normalize_state(item) for key, item in value.items()
-        }
-    if isinstance(value, (list, tuple)):
+        normalized: dict[str, Any] = {}
+        for key, item in value.items():
+            normalized_key = camel_to_snake_case(str(key))
+            normalized_item = _normalize_state(item)
+            # Fluent 2025 R2's legacy workflow API returns some list arguments
+            # as Python-literal strings, for example "['inlet-hot', 'outlet']".
+            # Normalize only fields named as lists; ordinary text may itself
+            # happen to look like a Python list.
+            if normalized_key.endswith("_list") and isinstance(normalized_item, str):
+                try:
+                    parsed = ast.literal_eval(normalized_item)
+                except (ValueError, SyntaxError):
+                    parsed = None
+                if isinstance(parsed, (list, tuple, set)):
+                    normalized_item = _normalize_state(parsed)
+            normalized[normalized_key] = normalized_item
+        return normalized
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         return [_normalize_state(item) for item in value]
     return value
 
@@ -394,7 +425,7 @@ def _update_boundary_previous_state(task: Any, state: dict[str, Any]) -> dict[st
     # The current table follows Selection Type. Switch it before reading the
     # baseline so label mappings cannot accidentally use Fluent's zone table.
     getattr(task.arguments, "selection_type").set_state(selection_type)
-    current_state = _normalize_state(task.arguments.get_state())
+    current_state = _read_argument_state(task, fresh=True)
     current_pairs: dict[str, str] = {}
     current_names = _read_state_path(current_state, ["boundary_current_list"])
     current_types = _read_state_path(current_state, ["boundary_current_type_list"])
@@ -589,7 +620,10 @@ class PyFluentMeshingAdapter:
                                 f"Compound child was not found: {child_name}"
                             )
                         target = child
-                    state = _normalize_state(target.arguments.get_state())
+                    state = _read_argument_state(
+                        target,
+                        fresh=task_path == ("update_boundaries",) and child_name is None,
+                    )
                     for index, reference in group:
                         found = _state_path_exists(state, reference.argument_path)
                         results[index] = MeshingReadItemResult(
@@ -671,7 +705,10 @@ class PyFluentMeshingAdapter:
                         _write_boundary_argument_state(target, state)
                     else:
                         _write_argument_state(target, state)
-                    actual_state = _normalize_state(target.arguments.get_state())
+                    actual_state = _read_argument_state(
+                        target,
+                        fresh=task_path_tuple == ("update_boundaries",) and child_name is None,
+                    )
                     for item in items:
                         actual = _read_state_path(actual_state, item.argument_path)
                         schema_argument = MESHING_SCHEMA_INDEX.get_argument(
@@ -879,18 +916,32 @@ class PyFluentMeshingAdapter:
             task = _find_task(workflow, task_path)
             if task_path == ["update_boundaries"]:
                 before = _boundary_state_summary(
-                    _normalize_state(task.arguments.get_state())
+                    _read_argument_state(task)
                 )
                 report.output.append(
-                    "Update Boundaries arguments before execution: " + repr(before)
+                    "Update Boundaries arguments before execution (cached): " + repr(before)
+                )
+                fresh_before = _boundary_state_summary(
+                    _read_argument_state(task, fresh=True)
+                )
+                report.output.append(
+                    "Update Boundaries arguments before execution (fresh Fluent readback): "
+                    + repr(fresh_before)
                 )
             result = task()
             if task_path == ["update_boundaries"]:
-                after = _boundary_state_summary(
-                    _normalize_state(task.arguments.get_state())
+                cached_after = _boundary_state_summary(
+                    _read_argument_state(task)
                 )
                 report.output.append(
-                    "Update Boundaries state after execution: " + repr(after)
+                    "Update Boundaries state after execution (cached): " + repr(cached_after)
+                )
+                fresh_after = _boundary_state_summary(
+                    _read_argument_state(task, fresh=True)
+                )
+                report.output.append(
+                    "Update Boundaries state after execution (fresh Fluent readback): "
+                    + repr(fresh_after)
                 )
             report.output.append("Task completed." if result is None else str(result))
             if result is False:
