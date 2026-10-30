@@ -19,3 +19,15 @@ cortexerror.log
 fluenterror.log
 FM_*/
 cleanup-fluent-*.bat
+
+# local agent/tool temp files
+.playwright-mcp/
+.wb-probe/
+.workbuddy/
+node-compile-cache/
+backend/.codex-pytest-tmp/
+test-artifacts-*/
+backend/fluent-*-error.log
+
+# Office lock files
+~$*

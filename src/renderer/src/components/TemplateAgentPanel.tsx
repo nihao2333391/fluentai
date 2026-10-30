@@ -6,8 +6,11 @@ import {
   UploadOutlined,
 } from '@ant-design/icons'
 import { Alert, Button, Card, Collapse, Flex, Input, Space, Tag, Typography } from 'antd'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+
+import { AgentToolMessage } from './AgentToolMessage'
+import { MarkdownText } from './MarkdownText'
 
 import type {
   AgentImageAttachment,
@@ -250,7 +253,23 @@ export function TemplateAgentPanel({ templateId, activeStep = '' }: TemplateAgen
     setRequestId(null)
   }
 
-  const visibleMessages = loadedTemplateId === templateId ? messages : []
+  const visibleMessages = useMemo(() => {
+    if (loadedTemplateId !== templateId) return []
+    const toolOf = (item: PanelMessage) => item.tool_name ?? item.toolName ?? null
+    const statusOf = (item: PanelMessage) => item.tool_status ?? item.toolStatus ?? null
+    // 同一 run 内同名工具一旦完成，隐藏多余的 running 占位，避免刷屏
+    const completedToolKeys = new Set(
+      messages
+        .filter((item) => toolOf(item) && statusOf(item) !== 'running')
+        .map((item) => `${item.run_id}:${toolOf(item)}`),
+    )
+    return messages.filter((item) => {
+      const tool = toolOf(item)
+      if (!tool) return true
+      if (statusOf(item) !== 'running') return true
+      return !completedToolKeys.has(`${item.run_id}:${tool}`)
+    })
+  }, [loadedTemplateId, messages, templateId])
 
   if (collapsed) {
     return (
@@ -267,7 +286,7 @@ export function TemplateAgentPanel({ templateId, activeStep = '' }: TemplateAgen
   return (
     <Card
       className="template-agent-panel"
-      styles={{ body: { padding: 0, height: '100%' } }}
+      styles={{ body: { padding: 0, height: 'calc(100% - 49px)', minHeight: 0 } }}
       title={
         <Flex align="center" gap={8}>
           <Typography.Text strong>工程辅助 Agent</Typography.Text>
@@ -302,9 +321,7 @@ export function TemplateAgentPanel({ templateId, activeStep = '' }: TemplateAgen
                     className="template-agent-suggestion"
                     title="Agent 主动建议"
                   >
-                    <Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>
-                      {suggestion.suggestion}
-                    </Typography.Paragraph>
+                    <MarkdownText text={suggestion.suggestion} />
                     {suggestion.follow_up_questions.length ? (
                       <Space wrap>
                         {suggestion.follow_up_questions.map((question) => (
@@ -325,61 +342,81 @@ export function TemplateAgentPanel({ templateId, activeStep = '' }: TemplateAgen
                         .map(({ source, section }) => `${source} · ${section}`)
                         .join('；')}
                     </Typography.Paragraph>
-                    <Collapse
-                      size="small"
-                      items={[
-                        {
-                          key: 'execution',
-                          label: '检索与判断记录',
-                          children: suggestion.execution_records.map((record, index) => (
-                            <div key={`${record.tool_name}-${index}`}>
-                              <Typography.Text strong>
-                                {record.tool_name} · {record.status}
+                    {suggestion.execution_records.length ? (
+                      <Collapse
+                        size="small"
+                        ghost
+                        items={[
+                          {
+                            key: 'execution',
+                            label: (
+                              <Typography.Text type="secondary">
+                                检索与判断记录（{suggestion.execution_records.length}）
                               </Typography.Text>
-                              <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
-                                检索目标：{JSON.stringify(record.target)}
-                              </Typography.Paragraph>
-                              <Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>
-                                检索结果：{JSON.stringify(record.result, null, 2)}
-                              </Typography.Paragraph>
-                            </div>
-                          )),
-                        },
-                      ]}
-                    />
+                            ),
+                            children: suggestion.execution_records.map((record, index) => (
+                              <AgentToolMessage
+                                key={`${record.tool_name}-${index}`}
+                                toolName={record.tool_name}
+                                toolStatus={record.status === 'running' ? 'running' : 'completed'}
+                                content={
+                                  typeof record.result === 'string' && record.result.trim()
+                                    ? record.result
+                                    : JSON.stringify(record.result ?? record.target ?? {})
+                                }
+                              />
+                            )),
+                          },
+                        ]}
+                      />
+                    ) : null}
                   </Card>
                 ))
             : null}
-          {visibleMessages.map((item) => (
-            <Card
-              key={item.id}
-              size="small"
-              className={`template-agent-message is-${item.role}${item.toolName ? ' is-tool' : ''}`}
-              title={
-                item.tool_name || item.toolName
-                  ? `${item.tool_name ?? item.toolName} · ${item.tool_status ?? item.toolStatus ?? ''}`
-                  : undefined
-              }
-            >
-              {item.attachments?.length ? (
-                <div className="template-agent-attachments">
-                  {item.attachments.map((image, index) => (
-                    <img
-                      key={`${item.id}-${index}`}
-                      src={`data:${image.mime_type};base64,${image.data_base64}`}
-                      alt={image.filename}
-                      title={image.filename}
-                    />
-                  ))}
-                </div>
-              ) : null}
-              {item.content ? (
-                <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', marginBottom: 0 }}>
-                  {item.content}
-                </Typography.Paragraph>
-              ) : null}
-            </Card>
-          ))}
+          {visibleMessages.map((item) => {
+            const toolName = item.tool_name ?? item.toolName
+            if (toolName) {
+              return (
+                <AgentToolMessage
+                  key={item.id}
+                  toolName={toolName}
+                  toolStatus={item.tool_status ?? item.toolStatus ?? 'completed'}
+                  content={item.content ?? ''}
+                />
+              )
+            }
+            return (
+              <Card
+                key={item.id}
+                size="small"
+                className={`template-agent-message is-${item.role}`}
+              >
+                {item.attachments?.length ? (
+                  <div className="template-agent-attachments">
+                    {item.attachments.map((image, index) => (
+                      <img
+                        key={`${item.id}-${index}`}
+                        src={`data:${image.mime_type};base64,${image.data_base64}`}
+                        alt={image.filename}
+                        title={image.filename}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+                {item.content
+                  ? item.role === 'assistant'
+                    ? <MarkdownText text={item.content} />
+                    : (
+                        <Typography.Paragraph
+                          style={{ whiteSpace: 'pre-wrap', marginBottom: 0 }}
+                        >
+                          {item.content}
+                        </Typography.Paragraph>
+                      )
+                  : null}
+              </Card>
+            )
+          })}
           {error ? <Alert type="error" showIcon message={error} /> : null}
         </div>
         {needsRangeConfirmation ? (

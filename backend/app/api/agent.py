@@ -173,6 +173,22 @@ def _record_event(
         )
 
 
+def _tool_event_content(event_payload: dict[str, Any]) -> str:
+    """Return tool args/result as a single JSON string for the session message list.
+
+    工具结果本身已是 JSON 字符串时原样返回，避免双重编码；
+    非字符串或非法 JSON 时再序列化，保证输出始终可被前端解析。
+    """
+    raw = event_payload.get("result", event_payload.get("tool_args", {}))
+    if isinstance(raw, str):
+        try:
+            json.loads(raw)
+            return raw
+        except json.JSONDecodeError:
+            return json.dumps(raw, ensure_ascii=False)
+    return json.dumps(raw, ensure_ascii=False)
+
+
 @router.get("/model", response_model=AgentModelConfig)
 def read_model_config(database: DatabaseDependency) -> AgentModelConfig:
     return _get_config(database)
@@ -306,7 +322,7 @@ async def test_model_capabilities(
     )
     tool_passed = False
     stream_passed = False
-    final_status_value = ""
+    run_error = ""
     try:
         async for event in agent.arun(
             "请调用 calculate_smooth_layers 工具，参数为 first_cell_y_plus=1, "
@@ -315,9 +331,8 @@ async def test_model_capabilities(
             stream_events=True,
         ):
             event_name = _event_name(event)
-            final_status = getattr(event, "status", None)
-            if final_status is not None:
-                final_status_value = str(getattr(final_status, "value", final_status)).upper()
+            if event_name == "runerror":
+                run_error = str(getattr(event, "content", "") or "模型运行出错。")
             if "runcontent" in event_name and getattr(event, "content", None):
                 stream_passed = True
             if "toolcallcompleted" not in event_name:
@@ -337,12 +352,11 @@ async def test_model_capabilities(
             streaming_status="failed",
             message=f"能力测试失败：{str(exc)[:1_000]}",
         )
-    if final_status_value == "ERROR":
-        error_detail = str(getattr(event, "content", "") or "未返回错误详情。")
+    if run_error:
         return AgentCapabilityTestResult(
             tool_status="failed",
             streaming_status="failed",
-            message=f"模型接口返回错误：{error_detail[:1_000]}",
+            message=f"模型接口返回错误：{run_error[:1_000]}",
         )
     return AgentCapabilityTestResult(
         tool_status="passed" if tool_passed else "unsupported",
@@ -493,10 +507,7 @@ def read_session(template_id: int, database: DatabaseDependency) -> AgentSession
                 AgentMessageRead(
                     id=f"tool:{event_row['id']}",
                     role="assistant",
-                    content=json.dumps(
-                        event_payload.get("result", event_payload.get("tool_args", {})),
-                        ensure_ascii=False,
-                    ),
+                    content=_tool_event_content(event_payload),
                     run_id=run_key,
                     status=str(row["status"]),
                     created_at=str(event_row["created_at"]),
@@ -608,6 +619,7 @@ async def generate_proactive_suggestion(
         return None
 
     accumulated = ""
+    final_content = ""
     retrieved_citations: set[tuple[str, str]] = set()
     _record_event(
         database,
@@ -660,9 +672,16 @@ async def generate_proactive_suggestion(
             metadata={"template_id": template_id, "trigger_key": trigger_key},
         ):
             event_name = _event_name(event)
-            content = getattr(event, "content", None)
-            if content:
-                accumulated += str(content)
+            # RunContent events carry incremental text; RunCompleted re-delivers the
+            # full content, so prefer the final event when parsing the JSON output.
+            if event_name == "runcontent":
+                content = getattr(event, "content", None)
+                if content:
+                    accumulated += str(content)
+            elif event_name == "runcompleted":
+                complete_content = getattr(event, "content", None)
+                if complete_content:
+                    final_content = str(complete_content)
             if "toolcallstarted" in event_name:
                 tool = getattr(event, "tool", None)
                 _record_event(
@@ -701,7 +720,9 @@ async def generate_proactive_suggestion(
                 )
 
         try:
-            advice = AgentProactiveOutput.model_validate_json(accumulated.strip())
+            advice = AgentProactiveOutput.model_validate_json(
+                (final_content or accumulated).strip()
+            )
         except ValueError:
             advice = AgentProactiveOutput()
         citations = {(item.source, item.section) for item in advice.sources}
@@ -795,6 +816,8 @@ async def send_message(
 
     async def event_stream() -> AsyncIterator[str]:
         accumulated = ""
+        final_content = ""
+        run_error = ""
         yield _sse({"type": "started", "run_id": run_id})
         try:
             _record_event(
@@ -840,11 +863,21 @@ async def send_message(
                 metadata={"template_id": template_id, "business_run_id": run_id},
             ):
                 event_name = _event_name(event)
-                content = getattr(event, "content", None)
-                if content:
-                    text = str(content)
-                    accumulated += text
-                    yield _sse({"type": "content", "run_id": run_id, "content": text})
+                # Agno streams incremental text via RunContent events; RunCompleted
+                # re-delivers the full content and tool events carry progress strings,
+                # so only RunContent deltas are forwarded and accumulated.
+                if event_name == "runcontent":
+                    content = getattr(event, "content", None)
+                    if content:
+                        text = str(content)
+                        accumulated += text
+                        yield _sse({"type": "content", "run_id": run_id, "content": text})
+                elif event_name == "runcompleted":
+                    complete_content = getattr(event, "content", None)
+                    if complete_content:
+                        final_content = str(complete_content)
+                elif event_name == "runerror":
+                    run_error = str(getattr(event, "content", "") or "模型运行出错。")
                 if "toolcallstarted" in event_name:
                     tool = getattr(event, "tool", None)
                     tool_name = str(getattr(tool, "tool_name", "计算工具"))
@@ -907,29 +940,23 @@ async def send_message(
                             "content": str(result_text or ""),
                         }
                     )
-            final_status = getattr(event, "status", None)
-            final_status_value = (
-                str(getattr(final_status, "value", final_status)).upper()
-                if final_status is not None
-                else ""
-            )
-            if final_status_value == "ERROR":
-                # Agno surfaces provider errors via RunOutput.status instead of raising.
-                error_text = accumulated.strip() or "模型接口返回错误。"
+            if run_error:
+                # Agno surfaces provider errors as RunError stream events.
                 with database.connect() as connection:
                     connection.execute(
                         """UPDATE agent_runs SET status = 'failed', assistant_message = ?,
                            error = ?, finished_at = ? WHERE id = ?""",
-                        ("", error_text[:4_000], utc_now(), run_id),
+                        ("", run_error[:4_000], utc_now(), run_id),
                     )
-                _record_event(database, run_id, "failed", {"error": error_text[:2_000]})
-                yield _sse({"type": "error", "run_id": run_id, "content": error_text[:2_000]})
+                _record_event(database, run_id, "failed", {"error": run_error[:2_000]})
+                yield _sse({"type": "error", "run_id": run_id, "content": run_error[:2_000]})
                 return
+            assistant_message = final_content or accumulated
             with database.connect() as connection:
                 connection.execute(
                     """UPDATE agent_runs SET status = 'completed', assistant_message = ?,
                        agno_run_id = ?, finished_at = ? WHERE id = ?""",
-                    (accumulated, str(getattr(event, "run_id", "")) or None, utc_now(), run_id),
+                    (assistant_message, str(getattr(event, "run_id", "")) or None, utc_now(), run_id),
                 )
             _record_event(database, run_id, "completed", {})
             yield _sse({"type": "completed", "run_id": run_id})

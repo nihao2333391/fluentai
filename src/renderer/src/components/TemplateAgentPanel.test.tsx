@@ -139,9 +139,9 @@ describe('TemplateAgentPanel', () => {
 
     expect(await screen.findByText('检索结果提示本模板阶段需要确认增长率。')).toBeTruthy()
     expect(screen.getByText('来源：规则.md · 增长条件')).toBeTruthy()
-    fireEvent.click(screen.getByText('检索与判断记录'))
-    expect(await screen.findByText(/search_boundary_layer_rules · completed/)).toBeTruthy()
-    expect(screen.getByText(/当前阶段增长率/)).toBeTruthy()
+    fireEvent.click(screen.getByText('检索与判断记录（1）'))
+    expect(await screen.findByText('规则库检索')).toBeTruthy()
+    expect(screen.getByText(/命中 1 条规则（规则\.md）/)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: '当前增长率是多少？' }))
     await waitFor(() =>
       expect(agent.sendMessage).toHaveBeenCalledWith(7, '当前增长率是多少？', false),
