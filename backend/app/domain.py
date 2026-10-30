@@ -284,7 +284,9 @@ class MeshingPresetDocument(BaseModel):
         file_arguments = {"file_name", "file_names", "mesh_file_name"}
         for item in self.items:
             if item.task_path == ["import_geometry"] and item.argument_path[-1] in file_arguments:
-                raise ValueError("Geometry file paths belong to the application task, not the template.")
+                raise ValueError(
+                    "Geometry file paths belong to the application task, not the template."
+                )
             if item.value_mode == "at_use" and item.value is not None:
                 raise ValueError("An at-use Meshing rule cannot store a model-specific value.")
         return self
@@ -299,6 +301,7 @@ class MeshingAutomationCreate(BaseModel):
     reference_model_id: int | None = Field(default=None, gt=0)
     preset: MeshingPresetDocument
     status: Literal["draft", "active"] = "draft"
+    category_id: str = "uncategorized"
 
 
 class MeshingAutomationUpdate(MeshingAutomationCreate):
@@ -307,6 +310,29 @@ class MeshingAutomationUpdate(MeshingAutomationCreate):
 
 class MeshingAutomationRead(MeshingAutomationCreate):
     id: int
+    created_at: str
+    updated_at: str
+    revision: int = 1
+    published_revision: int | None = None
+
+
+class PartCategoryCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    name: str = Field(min_length=1, max_length=120)
+    description: str = Field(default="", max_length=2_000)
+
+
+class PartCategoryRename(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    name: str = Field(min_length=1, max_length=120)
+
+
+class PartCategoryRead(PartCategoryCreate):
+    id: str
+    is_system: bool = False
+    template_count: int = 0
     created_at: str
     updated_at: str
 
@@ -462,6 +488,7 @@ class MeshingArchiveCreate(BaseModel):
 class MeshingArchiveRecord(BaseModel):
     id: str
     session_id: str
+    task_id: str | None = None
     automation_id: int
     model_id: int
     mesh_path: str
@@ -510,10 +537,13 @@ class MeshingLiveModelState(BaseModel):
 
 class MeshingLiveSessionSnapshot(BaseModel):
     session_id: str
+    task_id: str
     automation_id: int
     automation_name: str
     workflow_type: MeshingWorkflowType
-    status: Literal["starting", "connected", "running", "waiting", "completed", "failed", "stopped"]
+    status: Literal[
+        "queued", "starting", "connected", "running", "waiting", "completed", "failed", "stopped"
+    ]
     phase: Literal[
         "connecting",
         "importing",
@@ -538,6 +568,76 @@ class MeshingLiveSessionSnapshot(BaseModel):
     logs: list[MeshingLiveLogEntry] = Field(default_factory=list)
     message: str = ""
     native_task_poll_error: str | None = None
+
+
+class MeshingTaskRead(BaseModel):
+    id: str
+    automation_id: int | None = None
+    automation_name: str
+    template_revision: int
+    model_names: list[str] = Field(default_factory=list)
+    session_id: str | None = None
+    status: Literal[
+        "queued",
+        "preparing",
+        "waiting_surface",
+        "waiting_volume",
+        "completed",
+        "failed",
+        "stopped",
+        "interrupted",
+    ]
+    surface_mesh_status: Literal["pending", "ready", "running", "completed", "failed"] = "pending"
+    volume_mesh_status: Literal["pending", "ready", "running", "completed", "failed"] = "pending"
+    phase: str
+    message: str = ""
+    created_at: str
+    updated_at: str
+    completed_at: str | None = None
+    deleted_at: str | None = None
+    artifact_count: int = 0
+
+
+class MeshingTaskArtifactRead(BaseModel):
+    id: str
+    task_id: str
+    archive_id: str | None = None
+    kind: Literal["mesh", "record_json", "record_markdown", "log", "report"]
+    file_path: str
+    file_size: int | None = None
+    status: Literal["retained", "missing", "deleted"]
+    created_at: str
+    metadata: dict[str, object] = Field(default_factory=dict)
+
+
+class MeshingTaskEventRead(BaseModel):
+    id: str
+    task_id: str
+    event_type: str
+    status: str
+    phase: str
+    message: str = ""
+    payload: dict[str, object] = Field(default_factory=dict)
+    created_at: str
+
+
+class MeshingTaskHistoryRead(BaseModel):
+    task: MeshingTaskRead
+    artifacts: list[MeshingTaskArtifactRead] = Field(default_factory=list)
+    events: list[MeshingTaskEventRead] = Field(default_factory=list)
+
+
+class MeshingTaskDeleteRequest(BaseModel):
+    cleanup_artifacts: bool = False
+
+
+class MeshingTaskDeleteReport(BaseModel):
+    task_id: str
+    deleted: bool
+    files_retained: int = 0
+    files_deleted: int = 0
+    files_missing: int = 0
+    message: str = ""
 
 
 class MeshingLiveStepReport(BaseModel):

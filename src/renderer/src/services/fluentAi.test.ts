@@ -47,6 +47,26 @@ describe('fluentAiService', () => {
         getStatus: vi.fn(),
         setFluentPassword: vi.fn(),
         clearFluentPassword: vi.fn(),
+        getAgentApiKeyStatus: vi.fn(),
+        setAgentApiKey: vi.fn(),
+        clearAgentApiKey: vi.fn(),
+      },
+      agent: {
+        getModelConfig: vi.fn(),
+        saveModelConfig: vi.fn(),
+        testModel: vi.fn(),
+        testCapabilities: vi.fn(),
+        getSession: vi.fn(),
+        getProactiveSuggestion: vi.fn(),
+        sendMessage: vi.fn(),
+        onEvent: vi.fn(),
+        stopMessage: vi.fn(),
+        getCategoryCapabilities: vi.fn().mockResolvedValue({
+          category_id: 'uncategorized',
+          knowledge: [],
+          rules: [],
+          tools: [],
+        }),
       },
       fluent: {
         status: vi.fn(),
@@ -82,6 +102,7 @@ describe('fluentAiService', () => {
         update: vi.fn(),
         delete: vi.fn(),
         validate: vi.fn(),
+        publish: vi.fn(),
       },
       meshingLive: {
         start: vi.fn(),
@@ -97,6 +118,17 @@ describe('fluentAiService', () => {
         pickMeshFile: vi.fn(),
         archive: vi.fn(),
         archives: vi.fn().mockResolvedValue([]),
+      },
+      categories: {
+        list: vi.fn().mockResolvedValue([]),
+        create: vi.fn(),
+        rename: vi.fn(),
+        delete: vi.fn(),
+      },
+      meshingTasks: {
+        list: vi.fn().mockResolvedValue([]),
+        history: vi.fn(),
+        delete: vi.fn(),
       },
     } satisfies FluentAIApi
 

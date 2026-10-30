@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import ast
+import contextlib
 import math
 import os
 import re
-import traceback
 import sys
+import traceback
 from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -41,9 +42,30 @@ SELECTOR_ARGUMENT_PATTERN = re.compile(
 )
 STOP_TASKS = ["Generate the Surface Mesh", "Generate the Volume Mesh"]
 LOCAL_FLUENT_STARTUP_ARGUMENTS = (
-    '-setenv="FLUENT_HOST_IP=-127.0.0.1" '
-    '-setenv="REMOTING_SERVER_ADDRESS=127.0.0.1"'
+    '-setenv="FLUENT_HOST_IP=-127.0.0.1" -setenv="REMOTING_SERVER_ADDRESS=127.0.0.1"'
 )
+
+
+def _awp_root_environment_key(product_version: str) -> str | None:
+    match = re.search(r"(?<!\d)(\d{2})[.]?(\d)", str(product_version))
+    if match is None:
+        return None
+    return f"AWP_ROOT{match.group(1)}{match.group(2)}"
+
+
+def _configured_awp_root(config: FluentConnectionConfig) -> Path | None:
+    if not config.fluent_path:
+        return None
+    root_key = _awp_root_environment_key(config.product_version)
+    if root_key is None:
+        return None
+    expected_directory = f"v{root_key.removeprefix('AWP_ROOT')}".casefold()
+    fluent_path = Path(config.fluent_path).expanduser()
+    candidates = fluent_path.parents if fluent_path.suffix else (fluent_path, *fluent_path.parents)
+    for candidate in candidates:
+        if candidate.name.casefold() == expected_directory:
+            return candidate
+    return None
 
 
 def _debug(message: str) -> None:
@@ -119,9 +141,7 @@ def _read_remote_argument(target: Any, argument_name: str) -> Any:
     argument = getattr(arguments, argument_name, None)
     getter = getattr(argument, "get_remote_state", None)
     if not callable(getter):
-        raise RuntimeError(
-            f"PyFluent does not expose a remote reader for {argument_name}."
-        )
+        raise RuntimeError(f"PyFluent does not expose a remote reader for {argument_name}.")
     value = _normalize_state(getter())
     if argument_name.endswith("_list") and isinstance(value, str):
         value = _parse_list_literal(value)
@@ -475,9 +495,7 @@ def _update_boundary_previous_state(task: Any, state: dict[str, Any]) -> dict[st
     if not isinstance(target_names, list) or not isinstance(target_types, list):
         raise ValueError(f"{names_argument} and {types_argument} must both be lists.")
     if len(target_names) != len(target_types):
-        raise ValueError(
-            f"{names_argument} and {types_argument} must contain paired values."
-        )
+        raise ValueError(f"{names_argument} and {types_argument} must contain paired values.")
     if not target_names:
         return {}
     if any(not isinstance(name, str) for name in target_names):
@@ -488,7 +506,7 @@ def _update_boundary_previous_state(task: Any, state: dict[str, Any]) -> dict[st
     # unnecessary RPC cannot clear Fluent's dynamically-populated table.
     initial_state = _read_argument_state(task, fresh=True)
     if initial_state.get("selection_type") != selection_type:
-        getattr(task.arguments, "selection_type").set_state(selection_type)
+        task.arguments.selection_type.set_state(selection_type)
         initial_state = _read_argument_state(task, fresh=True)
 
     # PyFluent's task-level remote snapshot can omit dynamically-populated
@@ -505,9 +523,7 @@ def _update_boundary_previous_state(task: Any, state: dict[str, Any]) -> dict[st
     try:
         current_types = _read_remote_argument(task, "boundary_current_type_list")
     except Exception as exc:
-        read_errors.append(
-            f"boundary_current_type_list field read: {type(exc).__name__}: {exc}"
-        )
+        read_errors.append(f"boundary_current_type_list field read: {type(exc).__name__}: {exc}")
 
     def has_target_table(names: Any, types: Any) -> bool:
         return (
@@ -546,7 +562,7 @@ def _update_boundary_previous_state(task: Any, state: dict[str, Any]) -> dict[st
     if len(current_names) != len(current_types):
         raise ValueError("Fluent's current boundary table has unpaired names and types.")
     current_pairs: dict[str, str] = {}
-    for current_name, current_type in zip(current_names, current_types):
+    for current_name, current_type in zip(current_names, current_types, strict=False):
         if isinstance(current_name, str) and isinstance(current_type, str):
             current_pairs.setdefault(current_name, current_type)
 
@@ -601,11 +617,25 @@ class PyFluentMeshingAdapter:
         self._current_task_subscription: Any | None = None
 
     def connect(self, config: FluentConnectionConfig) -> FluentStatus:
-        if self._session is not None and self._is_active():
-            self.disconnect()
+        if self._session is not None:
+            if self._is_active():
+                self.disconnect()
+            else:
+                self.unregister_current_task_callback()
+                self._session = None
+                self._connection_mode = None
+                self._workflow = None
+                self._workflow_type = None
+                self._transcript_callback_id = None
 
         pyfluent = self._pyfluent_module or self._load_pyfluent()
         if config.mode == "launch":
+            awp_root = _configured_awp_root(config)
+            awp_root_key = _awp_root_environment_key(config.product_version)
+            if awp_root is not None and awp_root_key is not None:
+                # PyFluent resolves the installation root from this variable before
+                # starting Fluent, even when fluent_path points at fluent.exe.
+                os.environ[awp_root_key] = str(awp_root)
             # Fluent 2025 R2 may bind its gRPC server to a LAN interface even when
             # REMOTING_SERVER_ADDRESS is inherited by the launcher process. Set both
             # variables through Fluent's own startup parser so its server-info file
@@ -631,12 +661,13 @@ class PyFluentMeshingAdapter:
             }
             if config.fluent_path:
                 launch_kwargs["fluent_path"] = config.fluent_path
+            if awp_root is not None and awp_root_key is not None:
+                launch_kwargs["env"] = {awp_root_key: str(awp_root)}
             try:
                 self._session = pyfluent.launch_fluent(**launch_kwargs)
             except Exception as exc:
                 _debug(
-                    "local Fluent launch or session handshake failed: "
-                    f"{type(exc).__name__}: {exc}"
+                    f"local Fluent launch or session handshake failed: {type(exc).__name__}: {exc}"
                 )
                 raise
         else:
@@ -729,9 +760,7 @@ class PyFluentMeshingAdapter:
                     if child_name:
                         child = _find_compound_child(task, child_name)
                         if child is None:
-                            raise LookupError(
-                                f"Compound child was not found: {child_name}"
-                            )
+                            raise LookupError(f"Compound child was not found: {child_name}")
                         target = child
                     # Update Boundaries populates its live table dynamically and
                     # PyFluent's cached snapshot can lag behind Fluent, so always
@@ -740,9 +769,7 @@ class PyFluentMeshingAdapter:
                     # return no list value; only then fall back to the snapshot,
                     # and mark the field unreadable when neither source yields
                     # a list so the caller can treat the table as unavailable.
-                    fresh_boundary_read = (
-                        task_path == ("update_boundaries",) and child_name is None
-                    )
+                    fresh_boundary_read = task_path == ("update_boundaries",) and child_name is None
                     state = _read_argument_state(target, fresh=fresh_boundary_read)
                     dynamic_read_errors: dict[str, str] = {}
                     if fresh_boundary_read:
@@ -808,7 +835,7 @@ class PyFluentMeshingAdapter:
         except Exception as exc:
             report.error = f"{type(exc).__name__}: {exc}"
             if repr(exc) != str(exc):
-                report.error += f" (diagnostic: {repr(exc)})"
+                report.error += f" (diagnostic: {exc!r})"
             report.error += "\n" + "\n".join(traceback.format_exc().strip().splitlines()[-12:])
             return report
 
@@ -867,7 +894,9 @@ class PyFluentMeshingAdapter:
                         if defer_boundary_verification:
                             actual = None
                             success = True
-                            message = "Boundary mapping will be checked after Update Boundaries executes."
+                            message = (
+                                "Boundary mapping will be checked after Update Boundaries executes."
+                            )
                         else:
                             actual = _read_state_path(actual_state, item.argument_path)
                             schema_argument = MESHING_SCHEMA_INDEX.get_argument(
@@ -877,9 +906,7 @@ class PyFluentMeshingAdapter:
                                 item.compound_child_name,
                             )
                             value_type = (
-                                str(schema_argument.get("value_type"))
-                                if schema_argument
-                                else None
+                                str(schema_argument.get("value_type")) if schema_argument else None
                             )
                             success = not request.verify or _values_equal(
                                 item.value, actual, value_type
@@ -1060,7 +1087,7 @@ class PyFluentMeshingAdapter:
         except Exception as exc:
             report.error = f"{type(exc).__name__}: {exc}"
             if repr(exc) != str(exc):
-                report.error += f" (diagnostic: {repr(exc)})"
+                report.error += f" (diagnostic: {exc!r})"
             report.error += "\n" + "\n".join(traceback.format_exc().strip().splitlines()[-12:])
             return report
 
@@ -1079,30 +1106,22 @@ class PyFluentMeshingAdapter:
             workflow = self._get_workflow(workflow_type)
             task = _find_task(workflow, task_path)
             if task_path == ["update_boundaries"]:
-                before = _boundary_state_summary(
-                    _read_argument_state(task)
-                )
+                before = _boundary_state_summary(_read_argument_state(task))
                 report.output.append(
                     "Update Boundaries arguments before execution (cached): " + repr(before)
                 )
-                fresh_before = _boundary_state_summary(
-                    _read_argument_state(task, fresh=True)
-                )
+                fresh_before = _boundary_state_summary(_read_argument_state(task, fresh=True))
                 report.output.append(
                     "Update Boundaries arguments before execution (fresh Fluent readback): "
                     + repr(fresh_before)
                 )
             result = task()
             if task_path == ["update_boundaries"]:
-                cached_after = _boundary_state_summary(
-                    _read_argument_state(task)
-                )
+                cached_after = _boundary_state_summary(_read_argument_state(task))
                 report.output.append(
                     "Update Boundaries state after execution (cached): " + repr(cached_after)
                 )
-                fresh_after = _boundary_state_summary(
-                    _read_argument_state(task, fresh=True)
-                )
+                fresh_after = _boundary_state_summary(_read_argument_state(task, fresh=True))
                 report.output.append(
                     "Update Boundaries state after execution (fresh Fluent readback): "
                     + repr(fresh_after)
@@ -1132,8 +1151,7 @@ class PyFluentMeshingAdapter:
     def available_task_names(self, workflow_type: str) -> list[str]:
         workflow = self._get_workflow(workflow_type)
         return [
-            str(_safe_call(getattr(task, "python_name", None), ""))
-            for task in workflow.tasks()
+            str(_safe_call(getattr(task, "python_name", None), "")) for task in workflow.tasks()
         ]
 
     def inspect_reference_labels(self, model_path: str) -> list[str]:
@@ -1202,10 +1220,8 @@ class PyFluentMeshingAdapter:
         subscription = self._current_task_subscription
         self._current_task_subscription = None
         if subscription is not None:
-            try:
+            with contextlib.suppress(Exception):
                 subscription.unsubscribe()
-            except Exception:
-                pass
 
     def _ensure_session(self) -> Any:
         if self._session is None or not self._is_active():

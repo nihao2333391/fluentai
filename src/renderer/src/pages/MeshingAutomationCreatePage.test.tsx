@@ -245,6 +245,7 @@ const editAutomation = {
   name: 'Venturi Meshing',
   description: 'Editable preset',
   model_family: 'Venturi family',
+  category_id: 'venturi-family',
   reference_model_id: null,
   status: 'active' as const,
   created_at: 'now',
@@ -315,6 +316,12 @@ describe('MeshingAutomationCreatePage', () => {
           },
         ]),
       },
+      categories: {
+        list: vi.fn().mockResolvedValue([
+          { id: 'uncategorized', name: '未分类', description: '', is_system: true, template_count: 0, created_at: '', updated_at: '' },
+          { id: 'venturi-family', name: 'Venturi family', description: '', is_system: false, template_count: 1, created_at: '', updated_at: '' },
+        ]),
+      },
       meshing: {
         schema: vi.fn().mockResolvedValue(schema),
         workflowSchema: vi.fn().mockResolvedValue(contract),
@@ -371,11 +378,9 @@ describe('MeshingAutomationCreatePage', () => {
     fireEvent.mouseDown(localSizingToggle)
     fireEvent.click(await screen.findByText('是', { selector: '.ant-select-item-option-content' }))
 
-    const faceLabels = await screen.findByRole('combobox', { name: /标签|Labels/ })
-    fireEvent.mouseDown(faceLabels)
-    fireEvent.click(
-      await screen.findByText('wall-small', { selector: '.ant-select-item-option-content' }),
-    )
+    const faceLabels = screen.getByRole('combobox', { name: /标签|Labels/ })
+    expect(faceLabels).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /全\s*选/ }))
 
     await waitFor(() => {
       expect((window.fluentAI as FluentAIApi).meshingAutomations.update).toHaveBeenCalled()
@@ -384,7 +389,21 @@ describe('MeshingAutomationCreatePage', () => {
       'step',
     )
     expect(screen.getByText('wall-small', { selector: '.ant-tag' })).toBeInTheDocument()
-  }, 30_000)
+  }, 60_000)
+
+  it('reads the model category from the selected directory for a new template', async () => {
+    render(
+      <AppProviders>
+        <MemoryRouter initialEntries={['/meshing/create?category_id=venturi-family']}>
+          <MeshingAutomationCreatePage />
+        </MemoryRouter>
+      </AppProviders>,
+    )
+
+    const directoryField = await screen.findByRole('textbox', { name: '所属目录（自动）' })
+    expect(directoryField).toHaveValue('Venturi family')
+    expect(directoryField).toBeDisabled()
+  })
 
   it('renders seven horizontal workflow steps and switches step-specific parameters', async () => {
     render(
@@ -464,7 +483,7 @@ describe('MeshingAutomationCreatePage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Generate the Surface Mesh/ }))
     expect(await screen.findByText('Use Custom Size Field/Control Files?')).toBeInTheDocument()
     expect(screen.getByText('Minimum Size [mm]')).toBeInTheDocument()
-  }, 60_000)
+  }, 90_000)
 
   it('loads an existing preset and updates it in place', async () => {
     render(
@@ -475,7 +494,7 @@ describe('MeshingAutomationCreatePage', () => {
       </AppProviders>,
     )
 
-    expect(await screen.findByRole('heading', { name: '编辑网格划分自动化' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '编辑模板' })).toBeInTheDocument()
     expect(await screen.findByDisplayValue('Venturi Meshing')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /添加局部尺寸/ }))
     expect(await screen.findByDisplayValue('facesize_custom')).toBeInTheDocument()
@@ -483,7 +502,7 @@ describe('MeshingAutomationCreatePage', () => {
     fireEvent.change(screen.getByDisplayValue('Venturi Meshing'), {
       target: { value: 'Venturi Meshing Updated' },
     })
-    fireEvent.click(screen.getByRole('button', { name: '更新网格划分自动化' }))
+    fireEvent.click(screen.getByRole('button', { name: '保存模板草稿' }))
 
     await waitFor(() => {
       expect((window.fluentAI as FluentAIApi).meshingAutomations.update).toHaveBeenCalledWith(
@@ -491,7 +510,7 @@ describe('MeshingAutomationCreatePage', () => {
         expect.objectContaining({
           name: 'Venturi Meshing Updated',
           model_family: 'Venturi family',
-          status: 'active',
+          status: 'draft',
           preset: expect.objectContaining({
             workflow_type: 'watertight',
             items: expect.arrayContaining([

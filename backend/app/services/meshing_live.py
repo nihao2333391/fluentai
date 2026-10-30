@@ -3,21 +3,23 @@
 from __future__ import annotations
 
 import json
+import logging
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Event, RLock, Timer
 from time import perf_counter
-from typing import Any, Callable, Literal
+from typing import Any, Literal, cast
 from uuid import uuid4
 
 from app.database import Database
 from app.domain import (
     FluentConnectionConfig,
     FluentStatus,
-    MeshingArgumentReference,
     MeshingArchiveCreate,
     MeshingArchiveRecord,
+    MeshingArgumentReference,
     MeshingLiveLogEntry,
     MeshingLiveModelState,
     MeshingLiveSessionSnapshot,
@@ -36,6 +38,7 @@ from app.meshing.schema_index import MESHING_SCHEMA_INDEX
 from app.meshing.workflow_plan import watertight_steps
 from app.repositories.common import utc_now
 from app.repositories.meshing_automations import MeshingAutomationRepository
+from app.repositories.meshing_tasks import MeshingTaskRepository
 from app.repositories.models import ModelRepository
 
 WATERTIGHT_LIVE_STEPS = [
@@ -47,6 +50,7 @@ WATERTIGHT_LIVE_STEPS = [
     "add_boundary_layer",
     "create_volume_mesh",
 ]
+logger = logging.getLogger(__name__)
 FLUID_ONLY_SETUP_TYPE = "The geometry consists of only fluid regions with no voids"
 
 
@@ -84,6 +88,7 @@ def _write_report_message(report: MeshingWriteReport) -> str:
 @dataclass
 class _LiveSession:
     session_id: str
+    task_id: str
     automation_id: int
     automation_name: str
     workflow_type: Literal["watertight", "fault-tolerant"]
@@ -91,11 +96,13 @@ class _LiveSession:
     models: list[MeshingLiveModelState]
     steps: list[MeshingLiveStepState]
     preset_items: list[MeshingPresetItem]
+    adapter: MeshingWorkflowAdapter
+    run_dir: Path | None = None
     connection_status: FluentStatus | None = None
     reuse_connection: bool = False
     status: Literal[
-        "starting", "connected", "running", "waiting", "completed", "failed", "stopped"
-    ] = "starting"
+        "queued", "starting", "connected", "running", "waiting", "completed", "failed", "stopped"
+    ] = "queued"
     current_model_index: int = 0
     current_step_index: int = 0
     logs: list[MeshingLiveLogEntry] = field(default_factory=list)
@@ -116,7 +123,9 @@ class _LiveSession:
     phase_generation: int = 0
     phase_timer: Timer | None = None
     phase_deadline_timer: Timer | None = None
-    satisfied_at_use: set[tuple[tuple[str, ...], tuple[str, ...], str | None]] = field(default_factory=set)
+    satisfied_at_use: set[tuple[tuple[str, ...], tuple[str, ...], str | None]] = field(
+        default_factory=set
+    )
 
 
 class MeshingLiveManager:
@@ -129,13 +138,13 @@ class MeshingLiveManager:
         *,
         phase_timeout_seconds: float = 180.0,
         phase_hard_timeout_seconds: float = 900.0,
+        session_adapter_factory: Callable[[], MeshingWorkflowAdapter] | None = None,
     ) -> None:
         self.database = database
         self.adapter = adapter
+        self._session_adapter_factory = session_adapter_factory
         self.phase_timeout_seconds = phase_timeout_seconds
-        self.phase_hard_timeout_seconds = max(
-            phase_timeout_seconds, phase_hard_timeout_seconds
-        )
+        self.phase_hard_timeout_seconds = max(phase_timeout_seconds, phase_hard_timeout_seconds)
         self._sessions: dict[str, _LiveSession] = {}
         self._log_lock = RLock()
         self._phase_lock = RLock()
@@ -146,19 +155,35 @@ class MeshingLiveManager:
         model_ids: list[int],
         connection_config: FluentConnectionConfig,
         reuse_connection: bool,
+        *,
+        adapter: MeshingWorkflowAdapter | None = None,
+        session_id: str | None = None,
+        task_id: str | None = None,
+        run_dir: Path | None = None,
     ) -> MeshingLiveSessionSnapshot:
         automation = MeshingAutomationRepository(self.database).get(automation_id)
-        if automation.preset.workflow_type != "watertight":
+        preset = (
+            MeshingAutomationRepository(self.database).preset_revision(
+                automation_id, automation.published_revision
+            )
+            if automation.published_revision is not None
+            else automation.preset
+        )
+        if preset.workflow_type != "watertight":
             raise ValueError("实时同步目前仅支持 Watertight Geometry 工作流程。")
         repository = ModelRepository(self.database)
         models = [repository.get(model_id) for model_id in dict.fromkeys(model_ids)]
-        preset_items = list(automation.preset.items)
+        preset_items = list(preset.items)
         step_names = _live_steps_for_preset(preset_items)
+        session_adapter = adapter
+        if session_adapter is None and self._session_adapter_factory is not None:
+            session_adapter = self._session_adapter_factory()
         session = _LiveSession(
-            session_id=str(uuid4()),
+            session_id=session_id or str(uuid4()),
+            task_id=task_id or str(uuid4()),
             automation_id=automation.id,
             automation_name=automation.name,
-            workflow_type=automation.preset.workflow_type,
+            workflow_type=preset.workflow_type,
             connection_config=connection_config,
             models=[
                 MeshingLiveModelState(model_id=model.id, name=model.name, file_path=model.file_path)
@@ -166,10 +191,38 @@ class MeshingLiveManager:
             ],
             steps=[MeshingLiveStepState(task_path=[name]) for name in step_names],
             preset_items=preset_items,
+            adapter=session_adapter or self.adapter,
+            run_dir=run_dir,
             reuse_connection=reuse_connection,
+            message="任务已排队，等待 Fluent 连接。",
         )
         self._sessions[session.session_id] = session
         self._log(session, "info", f"正在启动 Fluent Meshing: {automation.name}")
+        return self._snapshot(session)
+
+    def activate(self, session_id: str) -> MeshingLiveSessionSnapshot:
+        session = self._require(session_id)
+        if session.status != "queued":
+            return self._snapshot(session)
+        session.status = "starting"
+        session.phase = "connecting"
+        session.phase_started_at = perf_counter()
+        session.message = "正在连接 Fluent Meshing。"
+        return self._snapshot(session)
+
+    def connection_config(self, session_id: str) -> FluentConnectionConfig:
+        return self._require(session_id).connection_config
+
+    def set_reuse_connection(self, session_id: str, reuse_connection: bool) -> None:
+        self._require(session_id).reuse_connection = reuse_connection
+
+    def stop_queued(self, session_id: str) -> MeshingLiveSessionSnapshot:
+        session = self._require(session_id)
+        if session.status == "queued":
+            session.status = "stopped"
+            session.phase = "failed"
+            session.message = "排队中的任务已停止。"
+            self._log(session, "warning", session.message)
         return self._snapshot(session)
 
     def begin(
@@ -184,11 +237,11 @@ class MeshingLiveManager:
         try:
             self._raise_if_aborted(session)
             if session.reuse_connection:
-                status = self.adapter.status()
+                status = session.adapter.status()
                 if not status.connected:
                     raise RuntimeError("Existing Fluent Meshing session is no longer connected.")
             else:
-                status = self.adapter.connect(session.connection_config)
+                status = session.adapter.connect(session.connection_config)
             self._raise_if_aborted(session)
             session.connection_status = status
             self._log(
@@ -202,15 +255,13 @@ class MeshingLiveManager:
             session.status = "running"
             session.message = "Fluent Meshing 已连接, 正在导入几何模型。"
             self._log(session, "info", session.message)
-            transcript_subscription = self.adapter.register_transcript_callback(
-                lambda text: self._ingest_transcript(
-                    session, text, on_native_surface_mesh_complete
-                )
+            transcript_subscription = session.adapter.register_transcript_callback(
+                lambda text: self._ingest_transcript(session, text, on_native_surface_mesh_complete)
             )
             session.native_transcript_subscription = transcript_subscription is not None
             self._raise_if_aborted(session)
             if on_native_task is not None:
-                session.native_step_subscription = self.adapter.register_current_task_callback(
+                session.native_step_subscription = session.adapter.register_current_task_callback(
                     on_native_task
                 )
                 self._raise_if_aborted(session)
@@ -252,9 +303,7 @@ class MeshingLiveManager:
 
     def native_task_poll_required(self, session_id: str) -> bool:
         session = self._require(session_id)
-        return not (
-            session.native_step_subscription or session.native_transcript_subscription
-        )
+        return not (session.native_step_subscription or session.native_transcript_subscription)
 
     def fail_background_start(self, session_id: str, error: BaseException) -> None:
         session = self._require(session_id)
@@ -272,15 +321,12 @@ class MeshingLiveManager:
         model.error = message
         self._log(session, "error", message, model.model_id)
 
-    def fail_background_task_change(
-        self, session_id: str, error: BaseException
-    ) -> None:
+    def fail_background_task_change(self, session_id: str, error: BaseException) -> None:
         session = self._require(session_id)
         if session.status in {"failed", "stopped", "completed"}:
             return
         message = (
-            "Fluent 原生步骤状态处理失败："
-            f"{self._error_message(error)}。平台已停止后续自动步骤。"
+            f"Fluent 原生步骤状态处理失败：{self._error_message(error)}。平台已停止后续自动步骤。"
         )
         with self._phase_lock:
             session.abort_message = message
@@ -372,7 +418,7 @@ class MeshingLiveManager:
             return
         if session.phase not in {"surface_ready", "generating_surface"}:
             return
-        self.native_task_changed(session_id, self.adapter.read_current_task())
+        self.native_task_changed(session_id, session.adapter.read_current_task())
 
     def native_task_poll_failed(
         self, session_id: str, error: BaseException, *, timeout_seconds: float | None = None
@@ -435,7 +481,9 @@ class MeshingLiveManager:
         if previous_native_task is None or previous_native_task.strip().casefold() != normalized:
             session.last_native_task = native_name
             self._log(
-                session, "info", f"Fluent 当前选择: {native_name}",
+                session,
+                "info",
+                f"Fluent 当前选择: {native_name}",
                 self._current_model(session).model_id,
             )
 
@@ -448,8 +496,11 @@ class MeshingLiveManager:
         if session.phase not in {"surface_ready", "generating_surface"}:
             return False
         surface_index = next(
-            (i for i, step in enumerate(session.steps)
-             if step.task_path == ["create_surface_mesh"]),
+            (
+                i
+                for i, step in enumerate(session.steps)
+                if step.task_path == ["create_surface_mesh"]
+            ),
             None,
         )
         if surface_index is None or native_step_index != surface_index + 1:
@@ -502,14 +553,16 @@ class MeshingLiveManager:
             step.duration_ms = round((perf_counter() - started) * 1000)
             step.status = "active" if read_report.status == "success" else "failed"
             session.status = "waiting" if read_report.status == "success" else "failed"
-            step.message = read_report.error or f"步骤状态已读取，用时 {step.duration_ms / 1000:.1f} 秒。"
+            step.message = read_report.error or (
+                f"步骤状态已读取，用时 {step.duration_ms / 1000:.1f} 秒。"
+            )
             self._log(session, "info", step.message, self._current_model(session).model_id)
             return self._step_report(session, step_index, None, read_report)
         items = self._step_preset_items(session, step_index)
         write_report: MeshingWriteReport | None = None
         boundary_staged = False
         if items:
-            write_report = self.adapter.write_arguments(
+            write_report = session.adapter.write_arguments(
                 MeshingWriteRequest(
                     workflow_type=session.workflow_type,
                     items=items,
@@ -626,7 +679,7 @@ class MeshingLiveManager:
         step.status = "running"
         session.status = "running"
         session.message = f"正在写入并回读 Fluent 参数: {'/'.join(step.task_path)}"
-        write_report = self.adapter.write_arguments(
+        write_report = session.adapter.write_arguments(
             MeshingWriteRequest(
                 workflow_type=session.workflow_type,
                 items=items,
@@ -658,9 +711,9 @@ class MeshingLiveManager:
         elif not write_report.verified and any(
             item.task_path == ["update_boundaries"] for item in items
         ):
-            session.steps[step_index].message = (
-                "边界映射已暂存；执行更新边界后将核对 Fluent 实际边界表。"
-            )
+            session.steps[
+                step_index
+            ].message = "边界映射已暂存；执行更新边界后将核对 Fluent 实际边界表。"
         else:
             session.steps[step_index].message = "参数已写入 Fluent 并回读。"
         step.duration_ms = round((perf_counter() - started) * 1000)
@@ -741,7 +794,7 @@ class MeshingLiveManager:
         session.message = f"正在执行 Fluent 步骤: {'/'.join(task_path)}"
         self._log(session, "info", session.message, model.model_id)
         try:
-            execution = self.adapter.execute_task(session.workflow_type, task_path)
+            execution = session.adapter.execute_task(session.workflow_type, task_path)
             self._raise_if_aborted(session)
         except Exception as exc:
             if session.abort_event.is_set():
@@ -831,9 +884,9 @@ class MeshingLiveManager:
             )
         if execution.status == "success":
             session.steps[step_index].status = "completed"
-            session.steps[step_index].message = (
-                f"{execution.message}（耗时 {duration_ms / 1000:.1f} 秒）"
-            )
+            session.steps[
+                step_index
+            ].message = f"{execution.message}（耗时 {duration_ms / 1000:.1f} 秒）"
             self._log(session, "success", session.steps[step_index].message, model.model_id)
             if step_index == len(session.steps) - 1:
                 model.status = "completed"
@@ -875,7 +928,7 @@ class MeshingLiveManager:
         session.status = "running"
         self._log(session, "info", f"正在执行导入几何模型: {model.name}", model.model_id)
         try:
-            self.adapter.reset_workflow(session.workflow_type)
+            session.adapter.reset_workflow(session.workflow_type)
             self._raise_if_aborted(session)
             self._import_current_model(session)
             self._raise_if_aborted(session)
@@ -884,12 +937,9 @@ class MeshingLiveManager:
             if session.phase == "failed":
                 return self._step_report(session, 0, None, None)
             if session.phase != "surface_ready":
-                raise RuntimeError(
-                    f"自动准备结束时阶段状态异常: {session.phase}。"
-                )
+                raise RuntimeError(f"自动准备结束时阶段状态异常: {session.phase}。")
             local_sizing_configured = any(
-                item.task_path == ["add_local_sizing"]
-                for item in session.preset_items
+                item.task_path == ["add_local_sizing"] for item in session.preset_items
             )
             sizing_result = "局部尺寸已执行" if local_sizing_configured else "模板未配置局部尺寸"
             self._log(
@@ -934,9 +984,9 @@ class MeshingLiveManager:
     def stop(self, session_id: str) -> MeshingLiveSessionSnapshot:
         session = self._require(session_id)
         try:
-            self.adapter.unregister_current_task_callback()
-            self.adapter.unregister_transcript_callback()
-            self.adapter.disconnect()
+            session.adapter.unregister_current_task_callback()
+            session.adapter.unregister_transcript_callback()
+            session.adapter.disconnect()
         finally:
             session.connection_status = FluentStatus(connected=False, mode=None)
             session.status = "stopped"
@@ -956,14 +1006,21 @@ class MeshingLiveManager:
         if source.stat().st_size == 0:
             raise ValueError("网格文件为空。")
         archive_id = str(uuid4())
-        directory = self.database.path.parent / "meshing-results" / archive_id
-        directory.mkdir(parents=True, exist_ok=False)
-        archived_mesh = directory / source.name
+        if session.run_dir is not None:
+            mesh_directory = session.run_dir / "mesh" / archive_id
+            report_directory = session.run_dir / "report" / archive_id
+        else:
+            mesh_directory = self.database.path.parent / "meshing-results" / archive_id
+            report_directory = mesh_directory
+        mesh_directory.mkdir(parents=True, exist_ok=False)
+        report_directory.mkdir(parents=True, exist_ok=True)
+        archived_mesh = mesh_directory / source.name
         shutil.copy2(source, archived_mesh)
 
         static_schema = json.loads(
-            (Path(__file__).resolve().parents[1] / "meshing" / "workflow_schema.json")
-            .read_text(encoding="utf-8")
+            (Path(__file__).resolve().parents[1] / "meshing" / "workflow_schema.json").read_text(
+                encoding="utf-8"
+            )
         )
         defaults = {
             (tuple(step["task_path"]), tuple(field["path"])): field["default"]
@@ -997,7 +1054,7 @@ class MeshingLiveManager:
             raise RuntimeError("最终参数读取未完成: " + "; ".join(read_errors))
 
         model = self._current_model(session)
-        record = {
+        record: dict[str, Any] = {
             "schema_version": 1,
             "fluent_version": session.connection_status.version,
             "default_source_version": "Fluent 2025 R2 / 25.2.0",
@@ -1015,8 +1072,8 @@ class MeshingLiveManager:
             "unavailable_comparisons": unavailable,
             "created_at": utc_now(),
         }
-        json_path = directory / "record.json"
-        markdown_path = directory / "record.md"
+        json_path = report_directory / "record.json"
+        markdown_path = report_directory / "record.md"
         json_path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
         lines = [
             f"# {model.name} 网格结果记录",
@@ -1048,21 +1105,55 @@ class MeshingLiveManager:
             lines.append("- 无。")
         lines.extend(["", "## 建模笔记", "", payload.modeling_notes or "无。", ""])
         markdown_path.write_text("\n".join(lines), encoding="utf-8")
+        log_path = report_directory / "task.log"
+        log_lines = [
+            f"{entry.timestamp} [{entry.level}]"
+            f"{f' model_id={entry.model_id}' if entry.model_id is not None else ''} {entry.message}"
+            for entry in session.logs
+        ]
+        log_path.write_text("\n".join(log_lines) + "\n", encoding="utf-8")
+        with self.database.connect() as connection:
+            task_exists = (
+                connection.execute(
+                    "SELECT 1 FROM meshing_tasks WHERE id=?", (session.task_id,)
+                ).fetchone()
+                is not None
+            )
+        persisted_task_id = session.task_id if task_exists else None
         with self.database.connect() as connection:
             connection.execute(
                 """INSERT INTO meshing_result_archives
-                (id, session_id, automation_id, model_id, mesh_path,
+                (id, session_id, task_id, automation_id, model_id, mesh_path,
                  record_json_path, record_markdown_path, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    archive_id, session.session_id, session.automation_id, model.model_id,
-                    str(archived_mesh), str(json_path), str(markdown_path), record["created_at"],
+                    archive_id,
+                    session.session_id,
+                    persisted_task_id,
+                    session.automation_id,
+                    model.model_id,
+                    str(archived_mesh),
+                    str(json_path),
+                    str(markdown_path),
+                    record["created_at"],
                 ),
+            )
+        if persisted_task_id is not None:
+            MeshingTaskRepository(self.database).register_archive(
+                session.task_id,
+                archive_id,
+                [
+                    ("mesh", str(archived_mesh)),
+                    ("record_json", str(json_path)),
+                    ("record_markdown", str(markdown_path)),
+                    ("log", str(log_path)),
+                ],
             )
         self._log(session, "success", f"已归档网格与参数差异: {archived_mesh}", model.model_id)
         return MeshingArchiveRecord(
             id=archive_id,
             session_id=session.session_id,
+            task_id=persisted_task_id,
             automation_id=session.automation_id,
             model_id=model.model_id,
             mesh_path=str(archived_mesh),
@@ -1092,8 +1183,8 @@ class MeshingLiveManager:
             if model_index < index and model.status != "failed":
                 model.status = "completed"
         try:
-            self.adapter.reset_workflow(session.workflow_type)
-            session.connection_status = self.adapter.status()
+            session.adapter.reset_workflow(session.workflow_type)
+            session.connection_status = session.adapter.status()
             current = self._current_model(session)
             current.status = "pending"
             current.error = None
@@ -1125,13 +1216,14 @@ class MeshingLiveManager:
             fluent_version="25.2.0",
             workflow_type=session.workflow_type,
             items=[
-                item for item in session.preset_items
+                item
+                for item in session.preset_items
                 if item.task_path == ["import_geometry"]
                 and item.value_mode == "fixed"
                 and item.argument_path[-1] not in {"file_name", "file_names", "mesh_file_name"}
             ],
         )
-        report = self.adapter.apply_preset(preset, model.file_path, import_geometry=True)
+        report = session.adapter.apply_preset(preset, model.file_path, import_geometry=True)
         self._raise_if_aborted(session)
         if report.status != "success":
             session.steps[0].duration_ms = round((perf_counter() - started) * 1000)
@@ -1164,7 +1256,9 @@ class MeshingLiveManager:
         missing = [
             "/".join(item.argument_path)
             for item in session.preset_items
-            if item.task_path == step.task_path and item.value_mode == "at_use" and item.required
+            if item.task_path == step.task_path
+            and item.value_mode == "at_use"
+            and item.required
             and (tuple(item.task_path), tuple(item.argument_path), item.compound_child_name)
             not in session.satisfied_at_use
         ]
@@ -1389,7 +1483,9 @@ class MeshingLiveManager:
                     session.message = "面网格前设置已写入并回读，请检查后点击“生成面网格”。"
                 return
             if name == "add_local_sizing":
-                has_controls = any(item.task_path == step.task_path for item in session.preset_items)
+                has_controls = any(
+                    item.task_path == step.task_path for item in session.preset_items
+                )
                 if has_controls and not self._prepare_step(session, index, True):
                     return
                 if session.abort_event.is_set():
@@ -1405,8 +1501,9 @@ class MeshingLiveManager:
         session.native_surface_mesh_transcript_success = False
         self._set_phase(session, "preparing_volume", "正在准备体网格前设置。")
         session.status = "running"
-        surface_index = next(i for i, step in enumerate(session.steps)
-                             if step.task_path == ["create_surface_mesh"])
+        surface_index = next(
+            i for i, step in enumerate(session.steps) if step.task_path == ["create_surface_mesh"]
+        )
         for index in range(surface_index + 1, len(session.steps)):
             name = session.steps[index].task_path[-1]
             if name == "create_volume_mesh":
@@ -1418,15 +1515,24 @@ class MeshingLiveManager:
                     session.message = "体网格前设置已写入并回读，请检查后点击“生成体网格”。"
                 return
             if name == "enclose_fluid_regions":
-                capping = next((item.value for item in session.preset_items
-                                if item.task_path == ["describe_geometry"]
-                                and item.argument_path == ["capping_required"]
-                                and item.value_mode == "fixed"), "Yes")
-                has_caps = any(item.task_path == [name] and item.compound_child_name
-                               for item in session.preset_items)
+                capping = next(
+                    (
+                        item.value
+                        for item in session.preset_items
+                        if item.task_path == ["describe_geometry"]
+                        and item.argument_path == ["capping_required"]
+                        and item.value_mode == "fixed"
+                    ),
+                    "Yes",
+                )
+                has_caps = any(
+                    item.task_path == [name] and item.compound_child_name
+                    for item in session.preset_items
+                )
                 if capping == "Yes" and not has_caps:
                     self._preparation_failed(
-                        session, index,
+                        session,
+                        index,
                         "该几何需要封盖。请在模板中为每个开口配置封盖标签后重试。",
                     )
                     return
@@ -1440,12 +1546,13 @@ class MeshingLiveManager:
             if not self._prepare_step(session, index, True):
                 return
             if name == "describe_geometry":
-                available = set(self.adapter.available_task_names(session.workflow_type))
-                planned = [step.task_path[-1] for step in session.steps[index + 1:]]
+                available = set(session.adapter.available_task_names(session.workflow_type))
+                planned = [step.task_path[-1] for step in session.steps[index + 1 :]]
                 missing = [task for task in planned if task not in available]
                 if missing:
                     self._preparation_failed(
-                        session, index,
+                        session,
+                        index,
                         "Fluent 当前任务树缺少计划步骤: " + ", ".join(missing),
                     )
                     return
@@ -1460,8 +1567,10 @@ class MeshingLiveManager:
             raise RuntimeError("已停止的实时 Meshing 会话不能重试。")
         session.abort_event.clear()
         session.abort_message = ""
-        surface_done = any(step.task_path == ["create_surface_mesh"] and step.status == "completed"
-                           for step in session.steps)
+        surface_done = any(
+            step.task_path == ["create_surface_mesh"] and step.status == "completed"
+            for step in session.steps
+        )
         if surface_done:
             self._prepare_volume(session)
         else:
@@ -1508,7 +1617,7 @@ class MeshingLiveManager:
                 error=f"Unknown Meshing task: {'/'.join(task_path)}",
             )
         references = self._read_references(session, task, task_path, fresh=fresh)
-        report = self.adapter.read_arguments(
+        report = session.adapter.read_arguments(
             MeshingReadRequest(
                 workflow_type=session.workflow_type,
                 items=references,
@@ -1542,9 +1651,7 @@ class MeshingLiveManager:
                     and item.value_mode == "fixed"
                 ),
                 "label"
-                if fixed_arguments.intersection(
-                    {"boundary_label_list", "boundary_label_type_list"}
-                )
+                if fixed_arguments.intersection({"boundary_label_list", "boundary_label_type_list"})
                 else "zone",
             )
             name_argument = (
@@ -1563,11 +1670,7 @@ class MeshingLiveManager:
                 in {
                     "boundary_current_list",
                     "boundary_current_type_list",
-                    *(
-                        ()
-                        if fresh
-                        else ("selection_type", name_argument, type_argument)
-                    ),
+                    *(() if fresh else ("selection_type", name_argument, type_argument)),
                 }
             ]
             references.extend(
@@ -1579,10 +1682,7 @@ class MeshingLiveManager:
                     "boundary_current_list",
                     "boundary_current_type_list",
                 )
-                if not any(
-                    reference.argument_path == [argument_name]
-                    for reference in references
-                )
+                if not any(reference.argument_path == [argument_name] for reference in references)
             )
         template = task.get("child_template")
         if isinstance(template, dict):
@@ -1622,13 +1722,9 @@ class MeshingLiveManager:
                 selection_type = actual_values.get("selection_type")
         if selection_type not in {"label", "zone"}:
             return None
-        name_argument = (
-            "boundary_label_list" if selection_type == "label" else "boundary_zone_list"
-        )
+        name_argument = "boundary_label_list" if selection_type == "label" else "boundary_zone_list"
         type_argument = (
-            "boundary_label_type_list"
-            if selection_type == "label"
-            else "boundary_zone_type_list"
+            "boundary_label_type_list" if selection_type == "label" else "boundary_zone_type_list"
         )
         names = preset_values.get(name_argument, actual_values.get(name_argument))
         target_types = preset_values.get(type_argument, actual_values.get(type_argument))
@@ -1653,14 +1749,15 @@ class MeshingLiveManager:
             for name, boundary_type in zip(current_names, current_types, strict=False)
             if isinstance(name, str) and isinstance(boundary_type, str)
         }
-        mismatches = [
-            f"{name}：模板要求 {expected_type}，Fluent 实际为 "
-            f"{current_by_name.get(name, '未返回该边界')}"
-            for name, expected_type in zip(names, target_types, strict=False)
-            if not isinstance(name, str)
-            or not isinstance(expected_type, str)
-            or current_by_name.get(name) != expected_type
-        ]
+        mismatches: list[str] = []
+        for name, expected_type in zip(names, target_types, strict=False):
+            if not isinstance(name, str) or not isinstance(expected_type, str):
+                continue
+            if current_by_name.get(name) != expected_type:
+                mismatches.append(
+                    f"{name}：模板要求 {expected_type}，Fluent 实际为 "
+                    f"{current_by_name.get(name, '未返回该边界')}"
+                )
         if not mismatches:
             return None
         return "Fluent 更新边界后的实际类型与模板不一致：" + "；".join(mismatches)
@@ -1704,8 +1801,10 @@ class MeshingLiveManager:
     def _step_preset_items(self, session: _LiveSession, step_index: int) -> list[MeshingPresetItem]:
         task_path = session.steps[step_index].task_path
         return [
-            item for item in session.preset_items
-            if item.task_path == task_path and item.value_mode == "fixed"
+            item
+            for item in session.preset_items
+            if item.task_path == task_path
+            and item.value_mode == "fixed"
             and not (
                 task_path == ["import_geometry"]
                 and item.argument_path[-1] in {"file_name", "file_names", "mesh_file_name"}
@@ -1747,11 +1846,12 @@ class MeshingLiveManager:
         )
         return MeshingLiveSessionSnapshot(
             session_id=session.session_id,
+            task_id=session.task_id,
             automation_id=session.automation_id,
             automation_name=session.automation_name,
             workflow_type=session.workflow_type,
             status=session.status,
-            phase=session.phase,
+            phase=cast(Any, session.phase),
             phase_elapsed_ms=phase_elapsed_ms,
             connection=session.connection_status,
             models=session.models,
@@ -1803,6 +1903,18 @@ class MeshingLiveManager:
                 )
             )
             session.next_log_sequence += 1
+        try:
+            MeshingTaskRepository(self.database).add_event(
+                session.task_id,
+                "log",
+                session.status,
+                session.phase,
+                message,
+                {"level": level, "model_id": model_id},
+            )
+        except Exception:
+            # A history write failure must not stop the Fluent workflow itself.
+            logger.exception("Failed to persist Fluent task event for %s", session.task_id)
 
     def _ingest_transcript(
         self,
@@ -1827,10 +1939,9 @@ class MeshingLiveManager:
         model_stem = Path(self._current_model(session).file_path).stem.casefold()
         surface_start_marker = "remeshing..."
         surface_start = normalized.rfind(surface_start_marker)
-        surface_start_is_new = (
-            surface_start >= 0
-            and surface_start + len(surface_start_marker) > len(previous_tail)
-        )
+        surface_start_is_new = surface_start >= 0 and surface_start + len(
+            surface_start_marker
+        ) > len(previous_tail)
         if surface_start_is_new and session.phase == "surface_ready":
             self._set_phase(
                 session,
@@ -1849,10 +1960,9 @@ class MeshingLiveManager:
         completion_marker = "complete in"
         surface_start = normalized.rfind(surface_marker)
         completion_start = normalized.find(completion_marker, surface_start)
-        completion_is_new = (
-            completion_start >= 0
-            and completion_start + len(completion_marker) > len(previous_tail)
-        )
+        completion_is_new = completion_start >= 0 and completion_start + len(
+            completion_marker
+        ) > len(previous_tail)
         if (
             surface_start >= 0
             and completion_is_new
@@ -1869,7 +1979,7 @@ class MeshingLiveManager:
                 on_native_surface_mesh_complete()
 
     @staticmethod
-    def _error_message(error: Exception) -> str:
+    def _error_message(error: BaseException) -> str:
         message = f"{type(error).__name__}: {error}"
         diagnostic = repr(error)
         return f"{message} (diagnostic: {diagnostic})" if diagnostic != str(error) else message

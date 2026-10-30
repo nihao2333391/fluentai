@@ -3,7 +3,9 @@
 from fastapi import APIRouter, Depends
 
 from app.api import (
+    agent,
     automations,
+    categories,
     fluent,
     jobs,
     meshing_automations,
@@ -17,6 +19,8 @@ from app.auth import require_bearer_token
 
 api_router = APIRouter(prefix="/api", dependencies=[Depends(require_bearer_token)])
 api_router.include_router(automations.router, prefix="/automations")
+api_router.include_router(agent.router)
+api_router.include_router(categories.router)
 api_router.include_router(fluent.router, prefix="/fluent")
 api_router.include_router(meshing_automations.router)
 api_router.include_router(models.router, prefix="/models")

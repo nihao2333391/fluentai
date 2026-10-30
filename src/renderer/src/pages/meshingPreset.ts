@@ -414,8 +414,18 @@ export const isArgumentConditionVisible = (
     if (argument.name === 'mesh_unit') return fileFormat === 'Mesh'
   }
   if (task.python_name === 'create_surface_mesh') {
-    if (!['cfd_surface_mesh_controls', 'surface_mesh_preferences', 'separation_required',
-      'separation_angle', 'remesh_selection_type', 'remesh_zone_list', 'remesh_label_list'].includes(root)) return false
+    const conditionallyManagedArguments = [
+      'cfd_surface_mesh_controls',
+      'surface_mesh_preferences',
+      'separation_required',
+      'separation_angle',
+      'remesh_selection_type',
+      'remesh_zone_list',
+      'remesh_label_list',
+    ]
+    if (!conditionallyManagedArguments.includes(root)) {
+      return argument.name !== 'surface_mesh_method'
+    }
     const importedMesh = String(values[selectionKey(['import_geometry'], null, ['file_format'])] ?? 'CAD') === 'Mesh'
     const remesh = valueOf('remesh_imported_mesh')
     const selection = valueOf('remesh_selection_type')

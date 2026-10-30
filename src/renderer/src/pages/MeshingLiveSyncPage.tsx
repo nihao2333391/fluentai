@@ -261,7 +261,8 @@ export function MeshingLiveSyncPage() {
     [schema, session],
   )
   const phaseLabel = session
-    ? session.phase === 'connecting' ? '正在连接 Fluent' :
+    ? session.status === 'queued' ? '任务排队中，前序任务完成后会自动连接 Fluent' :
+      session.phase === 'connecting' ? '正在连接 Fluent' :
       session.phase === 'importing' ? '正在导入几何' :
       session.phase === 'preparing_local_sizing' ? '正在写入并回读局部尺寸' :
       session.phase === 'executing_local_sizing' ? '正在 Fluent 中执行局部尺寸' :
@@ -568,6 +569,8 @@ export function MeshingLiveSyncPage() {
             color={
               session.status === 'failed'
                 ? 'red'
+                : session.status === 'queued'
+                  ? 'blue'
                 : session.status === 'starting'
                 ? 'gold'
                 : session.status === 'running'
@@ -577,7 +580,9 @@ export function MeshingLiveSyncPage() {
                     : 'red'
             }
           >
-            {session.status === 'starting'
+            {session.status === 'queued'
+              ? '任务排队中'
+              : session.status === 'starting'
               ? t('meshing.liveStarting')
               : session.status === 'failed'
                 ? '准备失败'
@@ -669,7 +674,7 @@ export function MeshingLiveSyncPage() {
             ) : undefined
           }
         />
-        <Button onClick={() => setManualTakeover((current) => !current)}>
+        <Button disabled={session.status === 'queued'} onClick={() => setManualTakeover((current) => !current)}>
           {manualTakeover ? '结束人工接管' : '人工接管平台操作'}
         </Button>
         {externalKeys.size > 0 ? (

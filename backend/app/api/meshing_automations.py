@@ -9,10 +9,10 @@ from fastapi import APIRouter, HTTPException, Response, status
 from app.api.deps import DatabaseDependency, MeshingServiceDependency
 from app.domain import (
     ApplyMeshingAutomationRequest,
-    MeshingArchiveCreate,
-    MeshingArchiveRecord,
     FluentConnectionConfig,
     FluentStatus,
+    MeshingArchiveCreate,
+    MeshingArchiveRecord,
     MeshingAutomationCreate,
     MeshingAutomationRead,
     MeshingAutomationUpdate,
@@ -23,21 +23,55 @@ from app.domain import (
     MeshingLiveWriteRequest,
     MeshingPresetDocument,
     MeshingPresetValidationReport,
-    MeshingReferenceInspection,
     MeshingReadReport,
     MeshingReadRequest,
+    MeshingReferenceInspection,
     MeshingSchemaSummary,
+    MeshingTaskDeleteReport,
+    MeshingTaskDeleteRequest,
+    MeshingTaskHistoryRead,
+    MeshingTaskRead,
     MeshingWorkflowReport,
     MeshingWriteReport,
     MeshingWriteRequest,
 )
 from app.meshing.schema_index import MESHING_SCHEMA_INDEX
 from app.meshing.workflow_contract import get_watertight_workflow_contract
+from app.repositories.categories import PartCategoryRepository
 from app.repositories.meshing_automations import MeshingAutomationRepository
 from app.services.meshing_service import MeshingAdapterBusyError
 
 router = APIRouter(tags=["meshing"])
 logger = logging.getLogger(__name__)
+
+
+@router.get("/meshing/tasks", response_model=list[MeshingTaskRead])
+def list_meshing_tasks(
+    meshing: MeshingServiceDependency,
+    include_deleted: bool = False,
+) -> list[MeshingTaskRead]:
+    return meshing.list_meshing_tasks(include_deleted=include_deleted)
+
+
+@router.get("/meshing/tasks/{task_id}/history", response_model=MeshingTaskHistoryRead)
+def get_meshing_task_history(
+    task_id: str,
+    meshing: MeshingServiceDependency,
+    include_deleted: bool = False,
+) -> MeshingTaskHistoryRead:
+    return meshing.meshing_task_history(task_id, include_deleted=include_deleted)
+
+
+@router.delete("/meshing/tasks/{task_id}", response_model=MeshingTaskDeleteReport)
+def delete_meshing_task(
+    task_id: str,
+    payload: MeshingTaskDeleteRequest,
+    meshing: MeshingServiceDependency,
+) -> MeshingTaskDeleteReport:
+    try:
+        return meshing.delete_meshing_task(task_id, cleanup_artifacts=payload.cleanup_artifacts)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/meshing/status", response_model=FluentStatus)
@@ -157,6 +191,7 @@ def create_meshing_automation(
     database: DatabaseDependency,
 ) -> MeshingAutomationRead:
     _validate_preset(payload.preset)
+    PartCategoryRepository(database).get(payload.category_id)
     return MeshingAutomationRepository(database).create(payload)
 
 
@@ -175,7 +210,17 @@ def update_meshing_automation(
     database: DatabaseDependency,
 ) -> MeshingAutomationRead:
     _validate_preset(payload.preset)
+    PartCategoryRepository(database).get(payload.category_id)
     return MeshingAutomationRepository(database).update(automation_id, payload)
+
+
+@router.post("/meshing-automations/{automation_id}/publish", response_model=MeshingAutomationRead)
+def publish_meshing_automation(
+    automation_id: int, database: DatabaseDependency
+) -> MeshingAutomationRead:
+    automation = MeshingAutomationRepository(database).get(automation_id)
+    _validate_preset(automation.preset)
+    return MeshingAutomationRepository(database).publish(automation_id)
 
 
 @router.delete("/meshing-automations/{automation_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -208,6 +253,9 @@ def apply_meshing_automation(
     payload: ApplyMeshingAutomationRequest,
     meshing: MeshingServiceDependency,
 ) -> MeshingWorkflowReport:
+    automation = MeshingAutomationRepository(meshing.database).get(automation_id)
+    if automation.status != "active" or automation.published_revision is None:
+        raise HTTPException(status_code=422, detail="请先发布模板，再应用到模型。")
     return meshing.apply_automation(automation_id, payload)
 
 
@@ -217,6 +265,9 @@ def start_live_meshing_session(
     meshing: MeshingServiceDependency,
 ) -> MeshingLiveSessionSnapshot:
     try:
+        automation = MeshingAutomationRepository(meshing.database).get(payload.automation_id)
+        if automation.status != "active" or automation.published_revision is None:
+            raise HTTPException(status_code=422, detail="请先发布模板，再应用到模型。")
         return meshing.start_live_session(payload)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

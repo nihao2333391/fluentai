@@ -16,6 +16,7 @@ from app.fluent.fake import FakeFluentAdapter
 from app.repositories.automations import AutomationRepository
 from app.repositories.errors import RepositoryConflictError
 from app.repositories.jobs import JobRepository
+from app.repositories.meshing_tasks import MeshingTaskRepository
 from app.repositories.models import ModelRepository
 from app.repositories.settings import SettingsRepository
 from app.repositories.sync_logs import SyncLogRepository
@@ -147,6 +148,69 @@ def test_settings_jobs_and_sync_logs(tmp_path: Path) -> None:
     )
     assert log.direction == "apply"
     assert logs.list()[0].id == log.id
+
+
+def test_meshing_tasks_keep_snapshots_and_mark_interrupted_on_restart(tmp_path: Path) -> None:
+    database = Database(tmp_path / "meshing-tasks.db")
+    database.initialize()
+    tasks = MeshingTaskRepository(database)
+    tasks.create(
+        "task-1",
+        None,
+        "Venturi template",
+        3,
+        {"workflow_type": "watertight"},
+        [{"name": "Venturi.scdoc"}],
+        "session-1",
+    )
+    with database.connect() as connection:
+        connection.execute("UPDATE meshing_tasks SET status='waiting_surface' WHERE id='task-1'")
+
+    tasks.mark_running_interrupted()
+
+    task = tasks.list()[0]
+    assert task.id == "task-1"
+    assert task.template_revision == 3
+    assert task.model_names == ["Venturi.scdoc"]
+    assert task.status == "interrupted"
+    assert "应用重启" in task.message
+
+
+def test_legacy_archives_are_backfilled_into_task_history_idempotently(tmp_path: Path) -> None:
+    database = Database(tmp_path / "legacy-meshing.db")
+    database.initialize()
+    mesh = tmp_path / "old-result.msh.h5"
+    record_json = tmp_path / "old-record.json"
+    record_markdown = tmp_path / "old-record.md"
+    mesh.write_bytes(b"mesh")
+    record_json.write_text(
+        '{"model_name":"Legacy model","model_path":"/models/legacy.scdoc"}',
+        encoding="utf-8",
+    )
+    # Missing report files remain visible in the index as missing entries.
+    with database.connect() as connection:
+        connection.execute(
+            """INSERT INTO meshing_result_archives(
+                id, session_id, automation_id, model_id, mesh_path,
+                record_json_path, record_markdown_path, created_at
+            ) VALUES ('archive-old', 'session-old', NULL, NULL, ?, ?, ?, '2026-01-01T00:00:00Z')""",
+            (str(mesh), str(record_json), str(record_markdown)),
+        )
+
+    tasks = MeshingTaskRepository(database)
+    tasks.backfill_legacy_archives()
+    tasks.backfill_legacy_archives()
+
+    history = tasks.history("legacy-session-old")
+    assert history.task.status == "completed"
+    assert history.task.model_names == ["Legacy model"]
+    assert {artifact.kind: artifact.status for artifact in history.artifacts} == {
+        "mesh": "retained",
+        "record_json": "retained",
+        "record_markdown": "missing",
+    }
+    indexed = [event for event in history.events if event.event_type == "legacy_archive_indexed"]
+    assert len(indexed) == 1
 
 
 def test_fake_fluent_adapter_reads_and_writes_settings() -> None:

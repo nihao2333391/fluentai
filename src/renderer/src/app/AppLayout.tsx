@@ -2,6 +2,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SettingOutlined,
+  AppstoreOutlined,
   DatabaseOutlined,
   PartitionOutlined,
 } from '@ant-design/icons'
@@ -41,6 +42,11 @@ export function AppLayout() {
             icon: <DatabaseOutlined />,
             label: t('nav.myModels'),
           },
+          {
+            key: '/extensions',
+            icon: <AppstoreOutlined />,
+            label: t('nav.extensions'),
+          },
         ],
       },
       {
@@ -63,7 +69,9 @@ export function AppLayout() {
     ? '/models'
     : location.pathname.startsWith('/meshing')
       ? '/meshing'
-      : '/settings'
+      : location.pathname.startsWith('/extensions')
+        ? '/extensions'
+        : '/settings'
 
   return (
     <Layout className="app-layout">

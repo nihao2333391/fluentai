@@ -23,6 +23,23 @@ const DEFAULT_STOP_TIMEOUT_MS = 5_000
 const DEFAULT_MAX_AUTO_RESTARTS = 2
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000
 
+const formatErrorDetail = (detail: unknown): string => {
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item !== 'object' || item === null) return String(item)
+        const entry = item as { loc?: unknown; msg?: unknown }
+        const location = Array.isArray(entry.loc) ? entry.loc.map(String).join('.') : ''
+        const message = typeof entry.msg === 'string' ? entry.msg : JSON.stringify(item)
+        return location ? `${location}: ${message}` : message
+      })
+      .join('; ')
+  }
+  if (detail && typeof detail === 'object') return JSON.stringify(detail)
+  return String(detail ?? '')
+}
+
 export const resolveSidecarDataDirectory = (
   userDataDirectory: string,
   configuredDataDirectory = process.env.FLUENT_AI_DATA_DIR,
@@ -129,14 +146,91 @@ export class SidecarManager extends EventEmitter {
     }
 
     if (!response.ok) {
-      const detail =
+      const rawDetail =
         typeof payload === 'object' && payload !== null && 'detail' in payload
-          ? String((payload as { detail: unknown }).detail)
+          ? (payload as { detail: unknown }).detail
           : `HTTP ${response.status}`
-      throw new Error(`Sidecar request failed: ${detail}`)
+      throw new Error(`Sidecar request failed: ${formatErrorDetail(rawDetail)}`)
     }
 
     return payload as T
+  }
+
+  async streamRequest<T>(
+    path: string,
+    init: SidecarRequestInit,
+    onEvent: (event: T) => void,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    if (!path.startsWith('/api/')) {
+      throw new Error('Sidecar requests must use an authenticated /api path.')
+    }
+    if (this.status.state !== 'ready' || !this.port || !this.token) {
+      throw new Error('Sidecar is not ready.')
+    }
+    const { timeoutMs = 300_000, ...requestInit } = init
+    const headers = new Headers(requestInit.headers)
+    headers.set('Authorization', `Bearer ${this.token}`)
+    if (requestInit.body !== undefined && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json')
+    }
+    const response = await fetch(`http://127.0.0.1:${this.port}${path}`, {
+      ...requestInit,
+      headers,
+      signal: signal ?? AbortSignal.timeout(timeoutMs),
+    })
+    if (!response.ok) {
+      const body = await response.text()
+      let detail = body
+      try {
+        const parsed = JSON.parse(body) as { detail?: unknown }
+        if (parsed.detail !== undefined) detail = formatErrorDetail(parsed.detail)
+      } catch {
+        // Keep the original response text for non-JSON errors.
+      }
+      throw new Error(`Sidecar request failed: ${detail || `HTTP ${response.status}`}`)
+    }
+    if (!response.body) throw new Error('Sidecar did not return a stream.')
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    const emitFrames = (): void => {
+      const frames = buffer.split(/\r?\n\r?\n/)
+      buffer = frames.pop() ?? ''
+      for (const frame of frames) {
+        const data = frame
+          .split(/\r?\n/)
+          .filter((line) => line.startsWith('data:'))
+          .map((line) => line.slice(5).trimStart())
+          .join('\n')
+        if (!data) continue
+        try {
+          onEvent(JSON.parse(data) as T)
+        } catch {
+          // Ignore malformed frames and continue receiving later events.
+        }
+      }
+    }
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        emitFrames()
+      }
+      buffer += decoder.decode()
+      if (buffer.trim()) {
+        const data = buffer
+          .split(/\r?\n/)
+          .filter((line) => line.startsWith('data:'))
+          .map((line) => line.slice(5).trimStart())
+          .join('\n')
+        if (data) onEvent(JSON.parse(data) as T)
+      }
+    } finally {
+      reader.releaseLock()
+    }
   }
 
   async restart(): Promise<SidecarStatus> {

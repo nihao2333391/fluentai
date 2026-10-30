@@ -2,6 +2,7 @@ import type {
   FluentAIApi,
   FluentConnectionConfig,
   MeshingAutomationInput,
+  PartCategoryInput,
   MeshingLiveSessionStart,
   MeshingLiveStepRequest,
   MeshingLiveWriteRequest,
@@ -92,6 +93,24 @@ export const fluentAiService = {
       getFluentAIApi().meshingAutomations.update(id, payload),
     delete: (id: number) => getFluentAIApi().meshingAutomations.delete(id),
     validate: (id: number) => getFluentAIApi().meshingAutomations.validate(id),
+    publish: (id: number) => getFluentAIApi().meshingAutomations.publish(id),
+  },
+  categories: {
+    list: () => getFluentAIApi().categories.list(),
+    create: (payload: PartCategoryInput) => getFluentAIApi().categories.create(payload),
+    rename: (id: string, name: string) => getFluentAIApi().categories.rename(id, name),
+    delete: (id: string) => getFluentAIApi().categories.delete(id),
+  },
+  agent: {
+    getCategoryCapabilities: (categoryId: string) =>
+      getFluentAIApi().agent.getCategoryCapabilities(categoryId),
+  },
+  meshingTasks: {
+    list: (includeDeleted?: boolean) => getFluentAIApi().meshingTasks.list(includeDeleted),
+    history: (taskId: string, includeDeleted?: boolean) =>
+      getFluentAIApi().meshingTasks.history(taskId, includeDeleted),
+    delete: (taskId: string, cleanupArtifacts: boolean) =>
+      getFluentAIApi().meshingTasks.delete(taskId, cleanupArtifacts),
   },
   meshingLive: {
     start: (payload: MeshingLiveSessionStart) => getFluentAIApi().meshingLive.start(payload),

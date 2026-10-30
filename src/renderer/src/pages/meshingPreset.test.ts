@@ -72,6 +72,49 @@ const task: MeshingSchemaTask = {
 }
 
 describe('meshingPreset', () => {
+  it('keeps standard surface mesh controls visible and in the saved preset', () => {
+    const surfaceTask: MeshingSchemaTask = {
+      ...task,
+      python_name: 'create_surface_mesh',
+      display_name: 'Generate Surface Mesh',
+      supports_child_template: false,
+      child_template: null,
+      arguments: [
+        argument('use_size_files', 'string', 'No'),
+        argument('min_size', 'float', 0.1),
+        argument('max_size', 'float', 1),
+        argument('growth_rate', 'float', 1.2),
+        argument('size_functions', 'string', 'Curvature & Proximity'),
+      ],
+    }
+    const included = Object.fromEntries(
+      surfaceTask.arguments.map((item) => [
+        selectionKey(['create_surface_mesh'], null, [item.name]),
+        true,
+      ]),
+    )
+    const values = {
+      [selectionKey(['create_surface_mesh'], null, ['min_size'])]: 0.005,
+    }
+
+    expect(
+      isArgumentConditionVisible(
+        surfaceTask.arguments[1],
+        surfaceTask,
+        ['create_surface_mesh'],
+        null,
+        values,
+      ),
+    ).toBe(true)
+    expect(buildMeshingPresetItems([surfaceTask], included, values, {}).items).toContainEqual(
+      expect.objectContaining({
+        task_path: ['create_surface_mesh'],
+        argument_path: ['min_size'],
+        value: 0.005,
+      }),
+    )
+  })
+
   it('shows only local sizing fields that match the selected Fluent size control type', () => {
     const sizingArgs = [
       {

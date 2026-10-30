@@ -84,6 +84,7 @@ const schema: MeshingWorkflowSchema = {
 
 const snapshot: MeshingLiveSessionSnapshot = {
   session_id: 'session-1',
+  task_id: 'task-1',
   automation_id: 11,
   automation_name: 'Live Venturi',
   workflow_type: 'watertight',

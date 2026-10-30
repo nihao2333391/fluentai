@@ -4,13 +4,15 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
+from app.repositories.meshing_automations import MeshingAutomationRepository
+
 
 def _payload(name: str) -> dict[str, Any]:
     return {
         "name": name,
         "description": "Venturi preset",
         "model_family": "Venturi",
-        "status": "draft",
+        "status": "active",
         "preset": {
             "schema_version": 1,
             "fluent_version": "25.2.0",
@@ -27,7 +29,7 @@ def _payload(name: str) -> dict[str, Any]:
                     "argument_path": ["length_unit"],
                     "value": "m",
                     "required": True,
-                }
+                },
             ],
         },
     }
@@ -77,10 +79,62 @@ def test_meshing_schema_and_automation_api(
     assert listed.status_code == 200
     assert listed.json()[0]["id"] == automation_id
 
+    edited = _payload("Venturi A")
+    edited["preset"]["items"][1]["value"] = "mm"
+    updated = app_client.put(
+        f"/api/meshing-automations/{automation_id}", headers=auth_headers, json=edited
+    )
+    assert updated.status_code == 200
+    assert updated.json()["status"] == "draft"
+    assert updated.json()["revision"] == 2
+    assert updated.json()["published_revision"] == 1
+    published = MeshingAutomationRepository(app_client.app.state.database).preset_revision(
+        automation_id, 1
+    )
+    assert published.items[1].value == "m"
+
     invalid = _payload("Invalid")
     invalid["preset"]["items"][0]["argument_path"] = ["missing_argument"]
     rejected = app_client.post("/api/meshing-automations", headers=auth_headers, json=invalid)
     assert rejected.status_code == 422
+
+
+def test_renaming_category_updates_template_model_category(
+    app_client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    category = app_client.post(
+        "/api/categories",
+        headers=auth_headers,
+        json={"name": "Venturi parts", "description": ""},
+    )
+    assert category.status_code == 201
+    category_id = category.json()["id"]
+
+    template_payload = _payload("Venturi category template")
+    template_payload["category_id"] = category_id
+    created = app_client.post(
+        "/api/meshing-automations", headers=auth_headers, json=template_payload
+    )
+    assert created.status_code == 201
+    assert created.json()["model_family"] == "Venturi parts"
+
+    renamed = app_client.patch(
+        f"/api/categories/{category_id}",
+        headers=auth_headers,
+        json={"name": "文丘里管"},
+    )
+    assert renamed.status_code == 200
+    assert renamed.json()["id"] == category_id
+    assert renamed.json()["name"] == "文丘里管"
+    assert renamed.json()["template_count"] == 1
+
+    listed_templates = app_client.get("/api/meshing-automations", headers=auth_headers)
+    matching_template = next(
+        item for item in listed_templates.json() if item["id"] == created.json()["id"]
+    )
+    assert matching_template["category_id"] == category_id
+    assert matching_template["model_family"] == "文丘里管"
 
 
 def test_meshing_connection_and_direct_read_write_api(
@@ -260,7 +314,7 @@ def test_live_meshing_session_advances_steps_and_models(
         current = app_client.get(
             f"/api/meshing/live-sessions/{session_id}", headers=auth_headers
         ).json()
-        if current["status"] in {"waiting", "failed", "completed", "stopped"}:
+        if current["phase"] in {"surface_ready", "failed", "completed", "stopped"}:
             snapshot = current
             break
         time.sleep(0.05)
@@ -273,20 +327,28 @@ def test_live_meshing_session_advances_steps_and_models(
     assert fake_meshing_adapter.last_config.ui_mode == "gui"
     assert fake_meshing_adapter.connect_calls == 1
 
-    executed = app_client.post(
-        f"/api/meshing/live-sessions/{session_id}/execute",
-        headers=auth_headers,
-        json={"step_index": 2},
-    )
+    for _ in range(100):
+        executed = app_client.post(
+            f"/api/meshing/live-sessions/{session_id}/execute",
+            headers=auth_headers,
+            json={"step_index": 2},
+        )
+        if executed.status_code != 503:
+            break
+        time.sleep(0.05)
     assert executed.status_code == 200
     assert executed.json()["snapshot"]["steps"][2]["status"] == "completed"
     assert executed.json()["snapshot"]["phase"] == "volume_ready"
-    assert executed.json()["snapshot"]["current_step_index"] == 7
-    executed_volume = app_client.post(
-        f"/api/meshing/live-sessions/{session_id}/execute",
-        headers=auth_headers,
-        json={"step_index": 10},
-    )
+    assert executed.json()["snapshot"]["current_step_index"] == 6
+    for _ in range(100):
+        executed_volume = app_client.post(
+            f"/api/meshing/live-sessions/{session_id}/execute",
+            headers=auth_headers,
+            json={"step_index": 6},
+        )
+        if executed_volume.status_code != 503:
+            break
+        time.sleep(0.05)
     assert executed_volume.status_code == 200
     assert executed_volume.json()["snapshot"]["phase"] == "completed"
 
@@ -300,6 +362,190 @@ def test_live_meshing_session_advances_steps_and_models(
     assert next_model.json()["current_step_index"] == 2
     assert next_model.json()["steps"][0]["status"] == "completed"
     assert fake_meshing_adapter.workflow_resets == 2
+
+
+def test_live_sessions_queue_behind_the_task_waiting_for_mesh_action(
+    app_client: TestClient,
+    auth_headers: dict[str, str],
+    tmp_path: Path,
+    fake_meshing_adapter: Any,
+) -> None:
+    session_ids: list[str] = []
+    for index in range(2):
+        geometry = tmp_path / f"queued-{index}.dsco"
+        geometry.write_bytes(b"fake geometry")
+        model = app_client.post(
+            "/api/models",
+            headers=auth_headers,
+            json={
+                "name": f"Queued model {index}",
+                "file_path": str(geometry),
+                "description": "",
+                "tags": [],
+            },
+        )
+        automation = app_client.post(
+            "/api/meshing-automations",
+            headers=auth_headers,
+            json=_payload(f"Queued template {index}"),
+        )
+        started = app_client.post(
+            "/api/meshing/live-sessions",
+            headers=auth_headers,
+            json={"automation_id": automation.json()["id"], "model_ids": [model.json()["id"]]},
+        )
+        assert started.status_code == 200
+        session_ids.append(started.json()["session_id"])
+        if index == 0:
+            for _ in range(300):
+                first = app_client.get(
+                    f"/api/meshing/live-sessions/{session_ids[0]}", headers=auth_headers
+                ).json()
+                if first["status"] == "waiting" and first["phase"] == "surface_ready":
+                    break
+                time.sleep(0.05)
+            assert first["phase"] == "surface_ready", first
+
+    queued = app_client.get("/api/meshing/live-sessions/" + session_ids[1], headers=auth_headers)
+    assert queued.status_code == 200
+    assert queued.json()["status"] == "queued"
+    task_rows = app_client.get("/api/meshing/tasks", headers=auth_headers).json()
+    assert {task["status"] for task in task_rows[:2]} == {"queued", "waiting_surface"}
+    waiting_task = next(task for task in task_rows if task["session_id"] == session_ids[0])
+    assert waiting_task["surface_mesh_status"] == "ready"
+    assert waiting_task["volume_mesh_status"] == "pending"
+    refused = app_client.request(
+        "DELETE", f"/api/meshing/tasks/{waiting_task['id']}", headers=auth_headers, json={}
+    )
+    assert refused.status_code == 409
+    assert fake_meshing_adapter.connect_calls == 1
+
+    surface = app_client.post(
+        f"/api/meshing/live-sessions/{session_ids[0]}/execute",
+        headers=auth_headers,
+        json={"step_index": 2},
+    )
+    assert surface.status_code == 200
+    volume = app_client.post(
+        f"/api/meshing/live-sessions/{session_ids[0]}/execute",
+        headers=auth_headers,
+        json={"step_index": 6},
+    )
+    assert volume.status_code == 200
+    for _ in range(100):
+        finished = app_client.post(
+            f"/api/meshing/live-sessions/{session_ids[0]}/next-model", headers=auth_headers
+        )
+        if finished.status_code != 503:
+            break
+        time.sleep(0.05)
+    assert finished.status_code == 200, finished.text
+    assert finished.json()["status"] == "completed"
+    finished_task = next(
+        task
+        for task in app_client.get("/api/meshing/tasks", headers=auth_headers).json()
+        if task["session_id"] == session_ids[0]
+    )
+    assert finished_task["surface_mesh_status"] == "completed"
+    assert finished_task["volume_mesh_status"] == "completed"
+
+    # Completed tasks expose their archived mesh and history through one durable record.
+    mesh_file = tmp_path / "finished.msh.h5"
+    mesh_file.write_bytes(b"mesh result")
+    archived = app_client.post(
+        f"/api/meshing/live-sessions/{session_ids[0]}/archive",
+        headers=auth_headers,
+        json={"mesh_path": str(mesh_file), "modeling_notes": "completed mesh"},
+    )
+    assert archived.status_code == 200
+    assert archived.json()["task_id"] == finished_task["id"]
+    history = app_client.get(
+        f"/api/meshing/tasks/{finished_task['id']}/history", headers=auth_headers
+    )
+    assert history.status_code == 200
+    assert {artifact["kind"] for artifact in history.json()["artifacts"]} == {
+        "mesh",
+        "record_json",
+        "record_markdown",
+        "log",
+    }
+    assert any(event["event_type"] == "log" for event in history.json()["events"])
+
+    deleted = app_client.request(
+        "DELETE", f"/api/meshing/tasks/{finished_task['id']}", headers=auth_headers, json={}
+    )
+    assert deleted.status_code == 200
+    assert deleted.json()["files_retained"] == 4
+    assert deleted.json()["files_deleted"] == 0
+    assert Path(archived.json()["mesh_path"]).is_file()
+    assert (
+        app_client.get(
+            f"/api/meshing/tasks/{finished_task['id']}/history", headers=auth_headers
+        ).status_code
+        == 404
+    )
+    deleted_history = app_client.get(
+        f"/api/meshing/tasks/{finished_task['id']}/history?include_deleted=true",
+        headers=auth_headers,
+    )
+    assert deleted_history.status_code == 200
+    assert deleted_history.json()["task"]["deleted_at"]
+
+    for _ in range(100):
+        second = app_client.get(
+            f"/api/meshing/live-sessions/{session_ids[1]}", headers=auth_headers
+        ).json()
+        if second["status"] == "waiting":
+            break
+        time.sleep(0.05)
+    assert second["phase"] == "surface_ready"
+    assert second["status"] == "waiting"
+    persisted = app_client.get("/api/meshing/tasks", headers=auth_headers).json()
+    assert len(persisted) == 1
+    all_tasks = app_client.get(
+        "/api/meshing/tasks?include_deleted=true", headers=auth_headers
+    ).json()
+    assert len({task["id"] for task in all_tasks}) == 2
+
+    second_task = next(task for task in all_tasks if task["session_id"] == session_ids[1])
+    for step_index in (2, 6):
+        response = app_client.post(
+            f"/api/meshing/live-sessions/{session_ids[1]}/execute",
+            headers=auth_headers,
+            json={"step_index": step_index},
+        )
+        assert response.status_code == 200
+    for _ in range(100):
+        finished_second = app_client.post(
+            f"/api/meshing/live-sessions/{session_ids[1]}/next-model",
+            headers=auth_headers,
+        )
+        if finished_second.status_code != 503:
+            break
+        time.sleep(0.05)
+    assert finished_second.status_code == 200, finished_second.text
+    second_mesh = tmp_path / "finished-second.msh.h5"
+    second_mesh.write_bytes(b"second mesh result")
+    second_archive = app_client.post(
+        f"/api/meshing/live-sessions/{session_ids[1]}/archive",
+        headers=auth_headers,
+        json={"mesh_path": str(second_mesh), "modeling_notes": "cleanup test"},
+    )
+    assert second_archive.status_code == 200
+    cleaned = app_client.request(
+        "DELETE",
+        f"/api/meshing/tasks/{second_task['id']}",
+        headers=auth_headers,
+        json={"cleanup_artifacts": True},
+    )
+    assert cleaned.status_code == 200
+    assert cleaned.json()["files_deleted"] == 4
+    assert not Path(second_archive.json()["mesh_path"]).exists()
+    cleanup_history = app_client.get(
+        f"/api/meshing/tasks/{second_task['id']}/history?include_deleted=true",
+        headers=auth_headers,
+    ).json()
+    assert {artifact["status"] for artifact in cleanup_history["artifacts"]} == {"deleted"}
 
 
 def test_live_step_rejects_labels_missing_from_the_imported_geometry(
@@ -327,9 +573,7 @@ def test_live_step_rejects_labels_missing_from_the_imported_geometry(
             "compound_child_name": "missing-wall-size",
         }
     )
-    automation = app_client.post(
-        "/api/meshing-automations", headers=auth_headers, json=payload
-    )
+    automation = app_client.post("/api/meshing-automations", headers=auth_headers, json=payload)
     assert automation.status_code == 201
     connected = app_client.post(
         "/api/meshing/connect",
@@ -347,18 +591,13 @@ def test_live_step_rejects_labels_missing_from_the_imported_geometry(
         snapshot = app_client.get(
             f"/api/meshing/live-sessions/{session_id}", headers=auth_headers
         ).json()
-        if snapshot["status"] in {"waiting", "failed"}:
+        if snapshot["phase"] in {"surface_ready", "failed"}:
             break
         time.sleep(0.05)
-    assert snapshot["status"] == "waiting"
-
-    entered = app_client.post(
-        f"/api/meshing/live-sessions/{session_id}/enter",
-        headers=auth_headers,
-        json={"step_index": 1},
+    assert snapshot["status"] == "failed", snapshot.get("message")
+    assert snapshot["phase"] == "failed"
+    assert "wall-missing" in snapshot["message"]
+    assert all(
+        step["task_path"] != ["create_surface_mesh"] or step["status"] != "running"
+        for step in snapshot["steps"]
     )
-    assert entered.status_code == 200
-    body = entered.json()
-    assert body["status"] == "failed"
-    assert body["write_report"]["missing_names"] == ["wall-missing"]
-    assert "wall-missing" in body["message"]

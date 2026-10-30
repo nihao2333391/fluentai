@@ -16,6 +16,7 @@ from app.database import Database
 from app.fluent.base import FluentAdapter
 from app.fluent.pyfluent_adapter import PyFluentAdapter
 from app.meshing.base import MeshingWorkflowAdapter
+from app.meshing.factory import SessionAdapterFactory
 from app.meshing.pyfluent_adapter import PyFluentMeshingAdapter
 from app.repositories.errors import RepositoryConflictError, RepositoryNotFoundError
 from app.schemas import HealthResponse, ReadyResponse, ShutdownResponse
@@ -40,6 +41,7 @@ def create_app(
     database_path: Path | str | None = None,
     fluent_adapter: FluentAdapter | None = None,
     meshing_adapter: MeshingWorkflowAdapter | None = None,
+    session_adapter_factory: SessionAdapterFactory | None = None,
 ) -> FastAPI:
     """Create a sidecar application with authentication and persistence."""
     app = FastAPI(
@@ -49,6 +51,13 @@ def create_app(
     )
     database = Database(resolve_database_path(database_path))
     database.initialize()
+    with database.connect() as connection:
+        connection.execute(
+            """UPDATE agent_runs SET status = 'interrupted',
+               error = 'Agent run was interrupted when the application closed.',
+               finished_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+               WHERE status = 'running'"""
+        )
     with contextlib.suppress(Exception):
         database.ensure_daily_backup()
     app.state.auth_token = auth_token
@@ -56,7 +65,9 @@ def create_app(
     app.state.database = database
     app.state.fluent_service = FluentService(database, fluent_adapter or PyFluentAdapter())
     app.state.meshing_service = MeshingService(
-        database, meshing_adapter or PyFluentMeshingAdapter()
+        database,
+        meshing_adapter or PyFluentMeshingAdapter(),
+        session_adapter_factory=session_adapter_factory,
     )
 
     @app.exception_handler(RepositoryNotFoundError)
@@ -71,7 +82,9 @@ def create_app(
     def handle_meshing_adapter_busy(
         _request: Request, exc: MeshingAdapterBusyError
     ) -> JSONResponse:
-        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content={"detail": str(exc)})
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content={"detail": str(exc)}
+        )
 
     @app.exception_handler(FileNotFoundError)
     def handle_file_not_found(_request: Request, exc: FileNotFoundError) -> JSONResponse:

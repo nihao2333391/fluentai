@@ -4,6 +4,12 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+# User-facing messages are Chinese-first and intentionally use full-width
+# punctuation; those characters are not confusables in this codebase.
+allowed-confusables = [
+  "，", "。", "；", "：", "（", "）", "、", "！", "？", "“", "”", "‘", "’",
+  "【", "】", "《", "》", "～", "…", "—",
+]
 
 [tool.ruff.format]
 quote-style = "double"

@@ -2,9 +2,9 @@
 
 import json
 from concurrent.futures import Future, ThreadPoolExecutor
-from threading import Event
 from pathlib import Path
-from time import monotonic
+from threading import Event
+from time import monotonic, sleep
 
 import pytest
 
@@ -38,7 +38,11 @@ def test_new_template_rejects_geometry_path_and_old_template_remains_readable() 
     old = MeshingPresetDocument(
         schema_version=1,
         workflow_type="watertight",
-        items=[MeshingPresetItem(task_path=["import_geometry"], argument_path=["file_name"], value="A.scdocx")],
+        items=[
+            MeshingPresetItem(
+                task_path=["import_geometry"], argument_path=["file_name"], value="A.scdocx"
+            )
+        ],
     )
     assert old.items[0].value_mode == "fixed"
     with pytest.raises(ValueError, match="Geometry file paths"):
@@ -76,7 +80,9 @@ def test_boundary_mapping_pairs_survive_schema_validation_and_database_reload(
     assert validation.valid, validation.errors
 
     repository = MeshingAutomationRepository(database)
-    saved = repository.create(MeshingAutomationCreate(name="Boundary mapping roundtrip", preset=preset))
+    saved = repository.create(
+        MeshingAutomationCreate(name="Boundary mapping roundtrip", preset=preset)
+    )
     reopened = repository.get(saved.id)
     assert reopened.preset.items == items
 
@@ -120,21 +126,21 @@ def test_live_step_write_exception_marks_session_failed_instead_of_running(
             preset=MeshingPresetDocument(
                 schema_version=2,
                 workflow_type="watertight",
-                items=[MeshingPresetItem(
-                    task_path=["describe_geometry"], argument_path=["setup_type"],
-                    value="The geometry consists of only fluid regions with no voids",
-                )],
+                items=[
+                    MeshingPresetItem(
+                        task_path=["describe_geometry"],
+                        argument_path=["setup_type"],
+                        value="The geometry consists of only fluid regions with no voids",
+                    )
+                ],
             ),
         )
     )
     adapter = FakeMeshingAdapter()
     live = MeshingLiveManager(database, adapter)
-    started = live.start(
-        automation.id, [model.id], FluentConnectionConfig(mode="launch"), False
-    )
+    started = live.start(automation.id, [model.id], FluentConnectionConfig(mode="launch"), False)
     step_index = next(
-        index for index, step in enumerate(started.steps)
-        if step.task_path == ["update_boundaries"]
+        index for index, step in enumerate(started.steps) if step.task_path == ["update_boundaries"]
     )
     adapter.write_arguments = lambda _request: (_ for _ in ()).throw(  # type: ignore[method-assign]
         RuntimeError("Fluent write channel closed")
@@ -143,11 +149,13 @@ def test_live_step_write_exception_marks_session_failed_instead_of_running(
     report = live.write_step(
         started.session_id,
         step_index,
-        [MeshingPresetItem(
-            task_path=["update_boundaries"],
-            argument_path=["selection_type"],
-            value="label",
-        )],
+        [
+            MeshingPresetItem(
+                task_path=["update_boundaries"],
+                argument_path=["selection_type"],
+                value="label",
+            )
+        ],
     )
 
     assert report.status == "failed"
@@ -163,22 +171,27 @@ def test_enter_live_step_timeout_marks_session_failed(
     database.initialize()
     target = tmp_path / "enter-timeout.scdocx"
     target.write_bytes(b"test geometry")
-    model = ModelRepository(database).create(ModelCreate(name="Enter Timeout", file_path=str(target)))
+    model = ModelRepository(database).create(
+        ModelCreate(name="Enter Timeout", file_path=str(target))
+    )
     preset = MeshingPresetDocument(
         schema_version=2,
         workflow_type="watertight",
         items=[
             MeshingPresetItem(
-                task_path=["describe_geometry"], argument_path=["setup_type"],
+                task_path=["describe_geometry"],
+                argument_path=["setup_type"],
                 value="The geometry consists of only fluid regions with no voids",
             ),
             MeshingPresetItem(
                 task_path=["create_surface_mesh"],
-                argument_path=["cfd_surface_mesh_controls", "min_size"], value=0.001,
+                argument_path=["cfd_surface_mesh_controls", "min_size"],
+                value=0.001,
             ),
             MeshingPresetItem(
                 task_path=["create_surface_mesh"],
-                argument_path=["cfd_surface_mesh_controls", "max_size"], value=0.02,
+                argument_path=["cfd_surface_mesh_controls", "max_size"],
+                value=0.02,
             ),
         ],
     )
@@ -193,8 +206,7 @@ def test_enter_live_step_timeout_marks_session_failed(
     service.live.begin(started.session_id)
     assert service.live.get(started.session_id).phase == "surface_ready"
     boundary_index = next(
-        index for index, step in enumerate(started.steps)
-        if step.task_path == ["update_boundaries"]
+        index for index, step in enumerate(started.steps) if step.task_path == ["update_boundaries"]
     )
     call_entered = Event()
     release_call = Event()
@@ -212,7 +224,7 @@ def test_enter_live_step_timeout_marks_session_failed(
 
     service._run = short_timeout  # type: ignore[method-assign]
     try:
-        with pytest.raises(MeshingAdapterBusyError, match="0.1 秒没有返回"):
+        with pytest.raises(MeshingAdapterBusyError, match=r"0\.1 秒没有返回"):
             service.enter_live_step(
                 started.session_id,
                 MeshingLiveStepRequest(step_index=boundary_index),
@@ -252,16 +264,19 @@ def test_live_retry_timeouts_mark_the_session_failed(
         workflow_type="watertight",
         items=[
             MeshingPresetItem(
-                task_path=["describe_geometry"], argument_path=["setup_type"],
+                task_path=["describe_geometry"],
+                argument_path=["setup_type"],
                 value="The geometry consists of only fluid regions with no voids",
             ),
             MeshingPresetItem(
                 task_path=["create_surface_mesh"],
-                argument_path=["cfd_surface_mesh_controls", "min_size"], value=0.001,
+                argument_path=["cfd_surface_mesh_controls", "min_size"],
+                value=0.001,
             ),
             MeshingPresetItem(
                 task_path=["create_surface_mesh"],
-                argument_path=["cfd_surface_mesh_controls", "max_size"], value=0.02,
+                argument_path=["cfd_surface_mesh_controls", "max_size"],
+                value=0.02,
             ),
         ],
     )
@@ -287,6 +302,8 @@ def test_live_retry_timeouts_mark_the_session_failed(
         raise RuntimeError("test adapter resumed after timeout")
 
     if operation == "retry_prepare":
+        failed_session = service.live._require(started.session_id)
+        failed_session.phase = "failed"
         service.live.retry_prepare = block_adapter_call  # type: ignore[method-assign]
         retry = service.retry_live_preparation
     else:
@@ -299,7 +316,7 @@ def test_live_retry_timeouts_mark_the_session_failed(
 
     service._run = short_timeout  # type: ignore[method-assign]
     try:
-        with pytest.raises(MeshingAdapterBusyError, match="0.1 秒没有返回"):
+        with pytest.raises(MeshingAdapterBusyError, match=r"0\.1 秒没有返回"):
             retry(started.session_id)
         assert call_entered.is_set()
         snapshot = service.live.get(started.session_id)
@@ -344,9 +361,7 @@ def test_two_checkpoints_generate_only_after_confirmation_and_archive_mesh(tmp_p
     )
     adapter = FakeMeshingAdapter()
     live = MeshingLiveManager(database, adapter)
-    started = live.start(
-        automation.id, [model.id], FluentConnectionConfig(mode="launch"), False
-    )
+    started = live.start(automation.id, [model.id], FluentConnectionConfig(mode="launch"), False)
     live.begin(started.session_id)
     assert adapter.applied_presets[0][1] == str(target)
     assert live.get(started.session_id).models[0].status == "ready"
@@ -354,14 +369,21 @@ def test_two_checkpoints_generate_only_after_confirmation_and_archive_mesh(tmp_p
 
     # A legacy at-use field must be supplied before the surface checkpoint can pass.
     surface_index = next(
-        index for index, step in enumerate(live.get(started.session_id).steps)
+        index
+        for index, step in enumerate(live.get(started.session_id).steps)
         if step.task_path == ["create_surface_mesh"]
     )
-    live.write_step(started.session_id, surface_index, [MeshingPresetItem(
-        task_path=["create_surface_mesh"],
-        argument_path=["cfd_surface_mesh_controls", "min_size"],
-        value=0.001,
-    )])
+    live.write_step(
+        started.session_id,
+        surface_index,
+        [
+            MeshingPresetItem(
+                task_path=["create_surface_mesh"],
+                argument_path=["cfd_surface_mesh_controls", "min_size"],
+                value=0.001,
+            )
+        ],
+    )
     assert live.retry_prepare(started.session_id).phase == "surface_ready"
     assert adapter.executed_tasks == []
 
@@ -380,7 +402,8 @@ def test_two_checkpoints_generate_only_after_confirmation_and_archive_mesh(tmp_p
     assert adapter.executed_tasks[0][1] == ("create_surface_mesh",)
     assert live.get(started.session_id).phase == "volume_ready"
     volume_index = next(
-        index for index, step in enumerate(live.get(started.session_id).steps)
+        index
+        for index, step in enumerate(live.get(started.session_id).steps)
         if step.task_path == ["create_volume_mesh"]
     )
     live.execute_step(started.session_id, volume_index)
@@ -439,26 +462,24 @@ def test_boundary_update_fails_when_fluent_keeps_name_based_default(tmp_path: Pa
     class NameDefaultBoundaryAdapter(FakeMeshingAdapter):
         def __init__(self) -> None:
             super().__init__(known_names={"inlet-hot"})
-            self.values[(
-                ("update_boundaries",), ("boundary_current_list",), None
-            )] = ["inlet-hot"]
-            self.values[(
-                ("update_boundaries",), ("boundary_current_type_list",), None
-            )] = ["velocity-inlet"]
+            self.values[(("update_boundaries",), ("boundary_current_list",), None)] = ["inlet-hot"]
+            self.values[(("update_boundaries",), ("boundary_current_type_list",), None)] = [
+                "velocity-inlet"
+            ]
 
     adapter = NameDefaultBoundaryAdapter()
     live = MeshingLiveManager(database, adapter)
-    started = live.start(
-        automation.id, [model.id], FluentConnectionConfig(mode="launch"), False
-    )
+    started = live.start(automation.id, [model.id], FluentConnectionConfig(mode="launch"), False)
     live.begin(started.session_id)
     snapshot = live.get(started.session_id)
     surface_index = next(
-        index for index, step in enumerate(snapshot.steps)
+        index
+        for index, step in enumerate(snapshot.steps)
         if step.task_path == ["create_surface_mesh"]
     )
     boundary_index = next(
-        index for index, step in enumerate(snapshot.steps)
+        index
+        for index, step in enumerate(snapshot.steps)
         if step.task_path == ["update_boundaries"]
     )
 
@@ -545,18 +566,18 @@ def test_boundary_update_continues_when_fluent_live_table_is_unreadable(
 
     adapter = UnreadableBoundaryAdapter()
     live = MeshingLiveManager(database, adapter)
-    started = live.start(
-        automation.id, [model.id], FluentConnectionConfig(mode="launch"), False
-    )
+    started = live.start(automation.id, [model.id], FluentConnectionConfig(mode="launch"), False)
     live.begin(started.session_id)
     snapshot = live.get(started.session_id)
     assert snapshot.phase == "surface_ready"
     surface_index = next(
-        index for index, step in enumerate(snapshot.steps)
+        index
+        for index, step in enumerate(snapshot.steps)
         if step.task_path == ["create_surface_mesh"]
     )
     boundary_index = next(
-        index for index, step in enumerate(snapshot.steps)
+        index
+        for index, step in enumerate(snapshot.steps)
         if step.task_path == ["update_boundaries"]
     )
 
@@ -603,16 +624,16 @@ def test_native_surface_mesh_completion_resumes_downstream_preparation_once(
     )
     adapter = FakeMeshingAdapter()
     live = MeshingLiveManager(database, adapter)
-    started = live.start(
-        automation.id, [model.id], FluentConnectionConfig(mode="launch"), False
-    )
+    started = live.start(automation.id, [model.id], FluentConnectionConfig(mode="launch"), False)
     live.begin(started.session_id)
     surface_index = next(
-        index for index, step in enumerate(live.get(started.session_id).steps)
+        index
+        for index, step in enumerate(live.get(started.session_id).steps)
         if step.task_path == ["create_surface_mesh"]
     )
     describe_index = next(
-        index for index, step in enumerate(live.get(started.session_id).steps)
+        index
+        for index, step in enumerate(live.get(started.session_id).steps)
         if step.task_path == ["describe_geometry"]
     )
 
@@ -623,8 +644,7 @@ def test_native_surface_mesh_completion_resumes_downstream_preparation_once(
     session = live._require(started.session_id)
     live._ingest_transcript(
         session,
-        "Surface Meshing of A-compact complete in 0.03 minutes, "
-        "with a maximum skewness of 0.43.",
+        "Surface Meshing of A-compact complete in 0.03 minutes, with a maximum skewness of 0.43.",
     )
     assert live.get(started.session_id).phase == "surface_ready"
     assert adapter.executed_tasks == []
@@ -662,9 +682,15 @@ def test_reference_inspection_uses_isolated_adapter(tmp_path: Path) -> None:
 
 def test_geometry_type_controls_middle_tasks() -> None:
     def steps(geometry: str) -> list[str]:
-        return watertight_steps([MeshingPresetItem(
-            task_path=["describe_geometry"], argument_path=["setup_type"], value=geometry,
-        )])
+        return watertight_steps(
+            [
+                MeshingPresetItem(
+                    task_path=["describe_geometry"],
+                    argument_path=["setup_type"],
+                    value=geometry,
+                )
+            ]
+        )
 
     solid = steps("The geometry consists of only solid regions")
     fluid = steps("The geometry consists of only fluid regions with no voids")
@@ -680,10 +706,18 @@ def test_import_applies_local_sizing_before_surface_generation(tmp_path: Path) -
     target = tmp_path / "local.scdocx"
     target.write_bytes(b"test geometry")
     model = ModelRepository(database).create(ModelCreate(name="Local", file_path=str(target)))
-    preset = MeshingPresetDocument(schema_version=2, workflow_type="watertight", items=[
-        MeshingPresetItem(task_path=["add_local_sizing"], argument_path=["boi_size"],
-                          value=0.01, compound_child_name="wall-size"),
-    ])
+    preset = MeshingPresetDocument(
+        schema_version=2,
+        workflow_type="watertight",
+        items=[
+            MeshingPresetItem(
+                task_path=["add_local_sizing"],
+                argument_path=["boi_size"],
+                value=0.01,
+                compound_child_name="wall-size",
+            ),
+        ],
+    )
     automation = MeshingAutomationRepository(database).create(
         MeshingAutomationCreate(name="Local sizing", preset=preset)
     )
@@ -705,16 +739,26 @@ def test_import_applies_local_sizing_before_surface_generation(tmp_path: Path) -
     assert adapter.values[(("add_local_sizing",), ("boi_size",), "wall-size")] == 0.01
 
 
-def test_local_sizing_failure_is_visible_and_stops_before_surface_generation(tmp_path: Path) -> None:
+def test_local_sizing_failure_is_visible_and_stops_before_surface_generation(
+    tmp_path: Path,
+) -> None:
     database = Database(tmp_path / "app.db")
     database.initialize()
     target = tmp_path / "local.scdocx"
     target.write_bytes(b"test geometry")
     model = ModelRepository(database).create(ModelCreate(name="Local", file_path=str(target)))
-    preset = MeshingPresetDocument(schema_version=2, workflow_type="watertight", items=[
-        MeshingPresetItem(task_path=["add_local_sizing"], argument_path=["boi_size"],
-                          value=0.01, compound_child_name="wall-size"),
-    ])
+    preset = MeshingPresetDocument(
+        schema_version=2,
+        workflow_type="watertight",
+        items=[
+            MeshingPresetItem(
+                task_path=["add_local_sizing"],
+                argument_path=["boi_size"],
+                value=0.01,
+                compound_child_name="wall-size",
+            ),
+        ],
+    )
     automation = MeshingAutomationRepository(database).create(
         MeshingAutomationCreate(name="Local sizing", preset=preset)
     )
@@ -763,11 +807,13 @@ def test_unhandled_background_start_failure_updates_live_session(tmp_path: Path)
         raise RuntimeError("background worker failed")
 
     service.live.begin = fail_begin  # type: ignore[method-assign]
-    started = service.start_live_session(MeshingLiveSessionStart(
-        automation_id=automation.id,
-        model_ids=[model.id],
-        connection=FluentConnectionConfig(mode="launch"),
-    ))
+    started = service.start_live_session(
+        MeshingLiveSessionStart(
+            automation_id=automation.id,
+            model_ids=[model.id],
+            connection=FluentConnectionConfig(mode="launch"),
+        )
+    )
     try:
         assert entered.wait(timeout=2)
         future = service._live_start_futures[started.session_id]
@@ -784,6 +830,105 @@ def test_unhandled_background_start_failure_updates_live_session(tmp_path: Path)
         service._executor.shutdown(wait=True, cancel_futures=True)
 
 
+def test_failed_live_session_releases_fluent_queue_for_next_task(tmp_path: Path) -> None:
+    database = Database(tmp_path / "app.db")
+    database.initialize()
+    target = tmp_path / "queued-after-failure.scdocx"
+    target.write_bytes(b"test geometry")
+    model = ModelRepository(database).create(ModelCreate(name="Queued", file_path=str(target)))
+    automation = MeshingAutomationRepository(database).create(
+        MeshingAutomationCreate(
+            name="Queue after failure",
+            preset=MeshingPresetDocument(schema_version=2, workflow_type="watertight", items=[]),
+        )
+    )
+    first_connect_entered = Event()
+    release_first_connect = Event()
+
+    class FailFirstConnectAdapter(FakeMeshingAdapter):
+        connect_attempts = 0
+
+        def connect(self, config: FluentConnectionConfig):
+            self.connect_attempts += 1
+            if self.connect_attempts == 1:
+                first_connect_entered.set()
+                assert release_first_connect.wait(timeout=5)
+                raise RuntimeError("simulated first Fluent launch failure")
+            return super().connect(config)
+
+    adapter = FailFirstConnectAdapter()
+    service = MeshingService(database, adapter)
+    try:
+        first = service.start_live_session(
+            MeshingLiveSessionStart(automation_id=automation.id, model_ids=[model.id])
+        )
+        assert first_connect_entered.wait(timeout=3)
+
+        second = service.start_live_session(
+            MeshingLiveSessionStart(automation_id=automation.id, model_ids=[model.id])
+        )
+        assert second.status == "queued"
+
+        release_first_connect.set()
+        deadline = monotonic() + 5
+        while monotonic() < deadline:
+            first_snapshot = service.get_live_session(first.session_id)
+            second_snapshot = service.get_live_session(second.session_id)
+            if second_snapshot.phase == "surface_ready" or second_snapshot.status == "failed":
+                break
+            sleep(0.05)
+
+        assert first_snapshot.status == "failed"
+        assert second_snapshot.status == "waiting"
+        assert second_snapshot.phase == "surface_ready"
+        assert adapter.connect_attempts == 2
+    finally:
+        release_first_connect.set()
+        service._executor.shutdown(wait=True, cancel_futures=True)
+
+
+def test_retry_preparation_reconnects_if_fluent_session_dropped(tmp_path: Path) -> None:
+    database = Database(tmp_path / "app.db")
+    database.initialize()
+    target = tmp_path / "retry-disconnected.scdocx"
+    target.write_bytes(b"test geometry")
+    model = ModelRepository(database).create(ModelCreate(name="Retry", file_path=str(target)))
+    automation = MeshingAutomationRepository(database).create(
+        MeshingAutomationCreate(
+            name="Retry disconnected session",
+            preset=MeshingPresetDocument(schema_version=2, workflow_type="watertight", items=[]),
+        )
+    )
+    adapter = FakeMeshingAdapter()
+    service = MeshingService(database, adapter)
+    try:
+        started = service.start_live_session(
+            MeshingLiveSessionStart(automation_id=automation.id, model_ids=[model.id])
+        )
+        deadline = monotonic() + 5
+        while monotonic() < deadline:
+            ready = service.get_live_session(started.session_id)
+            if ready.phase == "surface_ready" or ready.status == "failed":
+                break
+            sleep(0.05)
+        assert ready.phase == "surface_ready"
+        assert adapter.connect_calls == 1
+
+        live_session = service.live._require(started.session_id)
+        live_session.phase = "failed"
+        live_session.status = "failed"
+        adapter.disconnect()
+
+        retried = service.retry_live_preparation(started.session_id)
+
+        assert retried.phase == "surface_ready"
+        assert retried.status == "waiting"
+        assert adapter.connect_calls == 2
+        assert adapter.connected
+    finally:
+        service._executor.shutdown(wait=True, cancel_futures=True)
+
+
 def test_slow_local_sizing_warns_and_stop_does_not_wait_for_fluent(
     tmp_path: Path,
 ) -> None:
@@ -792,10 +937,18 @@ def test_slow_local_sizing_warns_and_stop_does_not_wait_for_fluent(
     target = tmp_path / "local.scdocx"
     target.write_bytes(b"test geometry")
     model = ModelRepository(database).create(ModelCreate(name="Local", file_path=str(target)))
-    preset = MeshingPresetDocument(schema_version=2, workflow_type="watertight", items=[
-        MeshingPresetItem(task_path=["add_local_sizing"], argument_path=["boi_size"],
-                          value=0.01, compound_child_name="wall-size"),
-    ])
+    preset = MeshingPresetDocument(
+        schema_version=2,
+        workflow_type="watertight",
+        items=[
+            MeshingPresetItem(
+                task_path=["add_local_sizing"],
+                argument_path=["boi_size"],
+                value=0.01,
+                compound_child_name="wall-size",
+            ),
+        ],
+    )
     automation = MeshingAutomationRepository(database).create(
         MeshingAutomationCreate(name="Timeout", preset=preset)
     )
@@ -814,11 +967,13 @@ def test_slow_local_sizing_warns_and_stop_does_not_wait_for_fluent(
 
     adapter = BlockingSizingAdapter()
     service = MeshingService(database, adapter, live_phase_timeout_seconds=0.5)
-    started = service.start_live_session(MeshingLiveSessionStart(
-        automation_id=automation.id,
-        model_ids=[model.id],
-        connection=FluentConnectionConfig(mode="launch"),
-    ))
+    started = service.start_live_session(
+        MeshingLiveSessionStart(
+            automation_id=automation.id,
+            model_ids=[model.id],
+            connection=FluentConnectionConfig(mode="launch"),
+        )
+    )
     start_future = service._live_start_futures[started.session_id]
     try:
         assert entered.wait(timeout=2)
@@ -855,10 +1010,18 @@ def test_slow_local_sizing_continues_automatically_after_fluent_returns(
     target = tmp_path / "local.scdocx"
     target.write_bytes(b"test geometry")
     model = ModelRepository(database).create(ModelCreate(name="Local", file_path=str(target)))
-    preset = MeshingPresetDocument(schema_version=2, workflow_type="watertight", items=[
-        MeshingPresetItem(task_path=["add_local_sizing"], argument_path=["boi_size"],
-                          value=0.01, compound_child_name="wall-size"),
-    ])
+    preset = MeshingPresetDocument(
+        schema_version=2,
+        workflow_type="watertight",
+        items=[
+            MeshingPresetItem(
+                task_path=["add_local_sizing"],
+                argument_path=["boi_size"],
+                value=0.01,
+                compound_child_name="wall-size",
+            ),
+        ],
+    )
     automation = MeshingAutomationRepository(database).create(
         MeshingAutomationCreate(name="Slow local sizing", preset=preset)
     )
@@ -877,11 +1040,13 @@ def test_slow_local_sizing_continues_automatically_after_fluent_returns(
 
     adapter = SlowSizingAdapter()
     service = MeshingService(database, adapter, live_phase_timeout_seconds=0.5)
-    started = service.start_live_session(MeshingLiveSessionStart(
-        automation_id=automation.id,
-        model_ids=[model.id],
-        connection=FluentConnectionConfig(mode="launch"),
-    ))
+    started = service.start_live_session(
+        MeshingLiveSessionStart(
+            automation_id=automation.id,
+            model_ids=[model.id],
+            connection=FluentConnectionConfig(mode="launch"),
+        )
+    )
     start_future = service._live_start_futures[started.session_id]
     try:
         assert entered.wait(timeout=2)
@@ -925,10 +1090,18 @@ def test_hard_timeout_stops_live_preparation_and_shows_recoverable_state(
     target = tmp_path / "local.scdocx"
     target.write_bytes(b"test geometry")
     model = ModelRepository(database).create(ModelCreate(name="Local", file_path=str(target)))
-    preset = MeshingPresetDocument(schema_version=2, workflow_type="watertight", items=[
-        MeshingPresetItem(task_path=["add_local_sizing"], argument_path=["boi_size"],
-                          value=0.01, compound_child_name="wall-size"),
-    ])
+    preset = MeshingPresetDocument(
+        schema_version=2,
+        workflow_type="watertight",
+        items=[
+            MeshingPresetItem(
+                task_path=["add_local_sizing"],
+                argument_path=["boi_size"],
+                value=0.01,
+                compound_child_name="wall-size",
+            ),
+        ],
+    )
     automation = MeshingAutomationRepository(database).create(
         MeshingAutomationCreate(name="Hard timeout", preset=preset)
     )
@@ -951,11 +1124,13 @@ def test_hard_timeout_stops_live_preparation_and_shows_recoverable_state(
         live_phase_timeout_seconds=0.05,
         live_hard_timeout_seconds=0.15,
     )
-    started = service.start_live_session(MeshingLiveSessionStart(
-        automation_id=automation.id,
-        model_ids=[model.id],
-        connection=FluentConnectionConfig(mode="launch"),
-    ))
+    started = service.start_live_session(
+        MeshingLiveSessionStart(
+            automation_id=automation.id,
+            model_ids=[model.id],
+            connection=FluentConnectionConfig(mode="launch"),
+        )
+    )
     start_future = service._live_start_futures[started.session_id]
     try:
         assert entered.wait(timeout=2)
@@ -994,7 +1169,7 @@ def test_unbounded_operation_uses_hard_timeout_and_recovers_after_return(
         release.wait(timeout=5)
 
     try:
-        with pytest.raises(MeshingAdapterBusyError, match="0.15 秒没有返回"):
+        with pytest.raises(MeshingAdapterBusyError, match=r"0\.15 秒没有返回"):
             service._run(
                 blocked_operation,
                 timeout_seconds=None,
@@ -1029,16 +1204,19 @@ def _start_callback_test_session(tmp_path: Path) -> tuple[MeshingService, FakeMe
                 workflow_type="watertight",
                 items=[
                     MeshingPresetItem(
-                        task_path=["describe_geometry"], argument_path=["setup_type"],
+                        task_path=["describe_geometry"],
+                        argument_path=["setup_type"],
                         value="The geometry consists of only fluid regions with no voids",
                     ),
                     MeshingPresetItem(
                         task_path=["create_surface_mesh"],
-                        argument_path=["cfd_surface_mesh_controls", "min_size"], value=0.001,
+                        argument_path=["cfd_surface_mesh_controls", "min_size"],
+                        value=0.001,
                     ),
                     MeshingPresetItem(
                         task_path=["create_surface_mesh"],
-                        argument_path=["cfd_surface_mesh_controls", "max_size"], value=0.02,
+                        argument_path=["cfd_surface_mesh_controls", "max_size"],
+                        value=0.02,
                     ),
                 ],
             ),
@@ -1166,9 +1344,7 @@ def test_native_task_poll_errors_are_visible_and_clear_after_recovery(
     automation = MeshingAutomationRepository(database).create(
         MeshingAutomationCreate(
             name="Native poll recovery",
-            preset=MeshingPresetDocument(
-                schema_version=2, workflow_type="watertight", items=[]
-            ),
+            preset=MeshingPresetDocument(schema_version=2, workflow_type="watertight", items=[]),
         )
     )
     adapter = FakeMeshingAdapter()
@@ -1231,9 +1407,7 @@ def test_hung_native_task_poll_is_reported_and_stop_remains_responsive(
     automation = MeshingAutomationRepository(database).create(
         MeshingAutomationCreate(
             name="Native poll timeout",
-            preset=MeshingPresetDocument(
-                schema_version=2, workflow_type="watertight", items=[]
-            ),
+            preset=MeshingPresetDocument(schema_version=2, workflow_type="watertight", items=[]),
         )
     )
     adapter = FakeMeshingAdapter()

@@ -70,4 +70,48 @@ export class CredentialStore {
     }
     return this.protector.decryptString(Buffer.from(payload.ciphertext, 'base64'))
   }
+
+  async setAgentApiKey(apiKey: string): Promise<CredentialStatus> {
+    return this.setSecret(apiKey)
+  }
+
+  async clearAgentApiKey(): Promise<CredentialStatus> {
+    return this.clearSecret()
+  }
+
+  async readAgentApiKey(): Promise<string> {
+    return this.readSecret()
+  }
+
+  private async setSecret(value: string): Promise<CredentialStatus> {
+    if (!value) throw new Error('Credential must not be empty.')
+    if (!(await this.protector.isAvailable())) {
+      throw new Error('Secure credential storage is unavailable on this system.')
+    }
+    const encrypted = await this.protector.encryptString(value)
+    const payload: StoredCredential = { version: 1, ciphertext: encrypted.toString('base64') }
+    mkdirSync(dirname(this.filePath), { recursive: true })
+    const temporaryPath = `${this.filePath}.tmp`
+    writeFileSync(temporaryPath, JSON.stringify(payload), { encoding: 'utf8', mode: 0o600 })
+    if (existsSync(this.filePath)) rmSync(this.filePath, { force: true })
+    renameSync(temporaryPath, this.filePath)
+    return this.getStatus()
+  }
+
+  private async clearSecret(): Promise<CredentialStatus> {
+    if (existsSync(this.filePath)) rmSync(this.filePath, { force: true })
+    return this.getStatus()
+  }
+
+  private async readSecret(): Promise<string> {
+    if (!(await this.protector.isAvailable())) {
+      throw new Error('Secure credential storage is unavailable on this system.')
+    }
+    if (!existsSync(this.filePath)) throw new Error('No Agent API Key is configured.')
+    const payload = JSON.parse(readFileSync(this.filePath, 'utf8')) as StoredCredential
+    if (payload.version !== 1 || typeof payload.ciphertext !== 'string') {
+      throw new Error('Stored Agent credential format is invalid.')
+    }
+    return this.protector.decryptString(Buffer.from(payload.ciphertext, 'base64'))
+  }
 }

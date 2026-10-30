@@ -1,6 +1,15 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 import type {
+  AgentModelConfig,
+  AgentProactiveSuggestion,
+  AgentImageAttachment,
+  AgentModelTestRequest,
+  AgentModelTestResult,
+  AgentCapabilityTestResult,
+  AgentRunEvent,
+  AgentSession,
+  CategoryCapabilities,
   CredentialStatus,
   DatabaseBackupInfo,
   DatabaseBackupList,
@@ -11,6 +20,11 @@ import type {
   Job,
   MeshingAutomation,
   MeshingAutomationInput,
+  PartCategory,
+  PartCategoryInput,
+  MeshingTask,
+  MeshingTaskHistory,
+  MeshingTaskDeleteReport,
   MeshingLiveSessionSnapshot,
   MeshingLiveSessionStart,
   MeshingLiveStepReport,
@@ -97,6 +111,39 @@ const api: FluentAIApi = Object.freeze({
     setFluentPassword: (password: string) =>
       invoke<CredentialStatus>('credentials:set-fluent-password', password),
     clearFluentPassword: () => invoke<CredentialStatus>('credentials:clear-fluent-password'),
+    getAgentApiKeyStatus: () => invoke<CredentialStatus>('credentials:agent-status'),
+    setAgentApiKey: (apiKey: string) =>
+      invoke<CredentialStatus>('credentials:set-agent-api-key', apiKey),
+    clearAgentApiKey: () => invoke<CredentialStatus>('credentials:clear-agent-api-key'),
+  }),
+  agent: Object.freeze({
+    getModelConfig: () => invoke<AgentModelConfig>('agent:model:get'),
+    saveModelConfig: (payload: AgentModelConfig) =>
+      invoke<AgentModelConfig>('agent:model:save', payload),
+    testModel: (payload: AgentModelTestRequest) =>
+      invoke<AgentModelTestResult>('agent:model:test', payload),
+    testCapabilities: (payload: AgentModelTestRequest) =>
+      invoke<AgentCapabilityTestResult>('agent:model:capabilities', payload),
+    getSession: (templateId: number) => invoke<AgentSession>('agent:session:get', templateId),
+    getProactiveSuggestion: (templateId: number, stageKey: string) =>
+      invoke<AgentProactiveSuggestion | null>('agent:proactive-suggestion', templateId, stageKey),
+    sendMessage: (
+      templateId: number,
+      message: string,
+      confirmOutOfRange = false,
+      images: AgentImageAttachment[] = [],
+    ) => invoke<string>('agent:message:send', templateId, message, confirmOutOfRange, images),
+    onEvent: (listener: (event: { requestId: string; payload: AgentRunEvent }) => void) => {
+      const handler = (
+        _event: Electron.IpcRendererEvent,
+        payload: { requestId: string; payload: AgentRunEvent },
+      ): void => listener(payload)
+      ipcRenderer.on('agent:message:event', handler)
+      return () => ipcRenderer.off('agent:message:event', handler)
+    },
+    stopMessage: (requestId: string) => invoke<void>('agent:message:stop', requestId),
+    getCategoryCapabilities: (categoryId: string) =>
+      invoke<CategoryCapabilities>('agent:category-capabilities:get', categoryId),
   }),
   meshing: Object.freeze({
     status: () => invoke<FluentStatus>('meshing:status'),
@@ -112,7 +159,10 @@ const api: FluentAIApi = Object.freeze({
     validatePreset: (preset: MeshingPresetDocument) =>
       invoke<MeshingPresetValidationReport>('meshing:validate-preset', preset),
     inspectReferenceModel: (modelId: number) =>
-      invoke<import('../shared/contracts').MeshingReferenceInspection>('meshing:inspect-reference', modelId),
+      invoke<import('../shared/contracts').MeshingReferenceInspection>(
+        'meshing:inspect-reference',
+        modelId,
+      ),
   }),
   meshingAutomations: Object.freeze({
     list: () => invoke<MeshingAutomation[]>('meshing-automations:list'),
@@ -124,6 +174,20 @@ const api: FluentAIApi = Object.freeze({
     delete: (id: number) => invoke<void>('meshing-automations:delete', id),
     validate: (id: number) =>
       invoke<MeshingPresetValidationReport>('meshing-automations:validate', id),
+    publish: (id: number) => invoke<MeshingAutomation>('meshing-automations:publish', id),
+  }),
+  categories: Object.freeze({
+    list: () => invoke<PartCategory[]>('categories:list'),
+    create: (payload: PartCategoryInput) => invoke<PartCategory>('categories:create', payload),
+    rename: (id: string, name: string) => invoke<PartCategory>('categories:rename', id, name),
+    delete: (id: string) => invoke<void>('categories:delete', id),
+  }),
+  meshingTasks: Object.freeze({
+    list: (includeDeleted?: boolean) => invoke<MeshingTask[]>('meshing-tasks:list', includeDeleted),
+    history: (taskId: string, includeDeleted?: boolean) =>
+      invoke<MeshingTaskHistory>('meshing-tasks:history', taskId, includeDeleted),
+    delete: (taskId: string, cleanupArtifacts: boolean) =>
+      invoke<MeshingTaskDeleteReport>('meshing-tasks:delete', taskId, cleanupArtifacts),
   }),
   meshingLive: Object.freeze({
     start: (payload: MeshingLiveSessionStart) =>
@@ -146,9 +210,16 @@ const api: FluentAIApi = Object.freeze({
     stop: (sessionId: string) => invoke<MeshingLiveSessionSnapshot>('meshing-live:stop', sessionId),
     pickMeshFile: () => invoke<string | null>('meshing-live:pick-mesh'),
     archive: (sessionId: string, payload: import('../shared/contracts').MeshingArchiveCreate) =>
-      invoke<import('../shared/contracts').MeshingArchiveRecord>('meshing-live:archive', sessionId, payload),
+      invoke<import('../shared/contracts').MeshingArchiveRecord>(
+        'meshing-live:archive',
+        sessionId,
+        payload,
+      ),
     archives: (sessionId: string) =>
-      invoke<import('../shared/contracts').MeshingArchiveRecord[]>('meshing-live:archives', sessionId),
+      invoke<import('../shared/contracts').MeshingArchiveRecord[]>(
+        'meshing-live:archives',
+        sessionId,
+      ),
   }),
   fluent: Object.freeze({
     status: () => invoke<FluentStatus>('fluent:status'),

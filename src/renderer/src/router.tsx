@@ -1,6 +1,7 @@
 import { createHashRouter, Navigate } from 'react-router-dom'
 
 import { AppLayout } from './app/AppLayout'
+import { ExtensionsPage } from './pages/ExtensionsPage'
 import { MeshingAutomationCreatePage } from './pages/MeshingAutomationCreatePage'
 import { MeshingAutomationsPage } from './pages/MeshingAutomationsPage'
 import { MeshingLiveSyncPage } from './pages/MeshingLiveSyncPage'
@@ -24,6 +25,7 @@ export const appRoutes = [
         element: <MeshingAutomationCreatePage key="meshing-edit" />,
       },
       { path: 'meshing/live/:sessionId', element: <MeshingLiveSyncPage /> },
+      { path: 'extensions', element: <ExtensionsPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <Navigate to="/meshing" replace /> },
     ],

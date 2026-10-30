@@ -16,7 +16,8 @@ def watertight_steps(items: list[MeshingPresetItem]) -> list[str]:
     values: dict[str, Any] = {
         item.argument_path[0]: item.value
         for item in items
-        if item.task_path == ["describe_geometry"] and len(item.argument_path) == 1
+        if item.task_path == ["describe_geometry"]
+        and len(item.argument_path) == 1
         and item.value_mode == "fixed"
     }
     geometry = values.get("setup_type", DEFAULT_GEOMETRY)
@@ -31,7 +32,9 @@ def watertight_steps(items: list[MeshingPresetItem]) -> list[str]:
         if rule:
             if "geometry" in rule and geometry not in rule["geometry"]:
                 continue
-            if "argument" in rule and values.get(rule["argument"], rule.get("default", "No")) != rule["equals"]:
+            if "argument" in rule and (
+                values.get(rule["argument"], rule.get("default", "No")) != rule["equals"]
+            ):
                 continue
         result.append(name)
     return result

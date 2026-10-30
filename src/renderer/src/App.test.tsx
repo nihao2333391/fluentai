@@ -56,6 +56,45 @@ const createMockApi = (): FluentAIApi => ({
     getStatus: vi.fn().mockResolvedValue({ encryptionAvailable: true, configured: false }),
     setFluentPassword: vi.fn(),
     clearFluentPassword: vi.fn(),
+    getAgentApiKeyStatus: vi
+      .fn()
+      .mockResolvedValue({ encryptionAvailable: true, configured: false }),
+    setAgentApiKey: vi.fn(),
+    clearAgentApiKey: vi.fn(),
+  },
+  agent: {
+    getModelConfig: vi.fn().mockResolvedValue({
+      display_name: '',
+      model_id: '',
+      base_url: '',
+      timeout_seconds: 90,
+      enabled: false,
+      connection_status: 'untested',
+      tool_status: 'untested',
+      vision_status: 'untested',
+      streaming_status: 'untested',
+    }),
+    saveModelConfig: vi.fn(),
+    testModel: vi.fn(),
+    testCapabilities: vi.fn(),
+    getSession: vi.fn().mockResolvedValue({
+      template_id: 1,
+      agent_id: 'agent',
+      session_id: 'session',
+      messages: [],
+      needs_range_confirmation: false,
+      proactive_suggestions: [],
+    }),
+    getProactiveSuggestion: vi.fn().mockResolvedValue(null),
+    sendMessage: vi.fn(),
+    onEvent: vi.fn(() => () => undefined),
+    stopMessage: vi.fn(),
+    getCategoryCapabilities: vi.fn().mockResolvedValue({
+      category_id: 'uncategorized',
+      knowledge: [],
+      rules: [],
+      tools: [],
+    }),
   },
   fluent: {
     status: vi.fn().mockResolvedValue({
@@ -123,6 +162,7 @@ const createMockApi = (): FluentAIApi => ({
     update: vi.fn(),
     delete: vi.fn(),
     validate: vi.fn(),
+    publish: vi.fn(),
   },
   meshingLive: {
     start: vi.fn(),
@@ -138,6 +178,27 @@ const createMockApi = (): FluentAIApi => ({
     pickMeshFile: vi.fn(),
     archive: vi.fn(),
     archives: vi.fn().mockResolvedValue([]),
+  },
+  categories: {
+    list: vi.fn().mockResolvedValue([
+      {
+        id: 'uncategorized',
+        name: '未分类',
+        description: '',
+        is_system: true,
+        template_count: 0,
+        created_at: '',
+        updated_at: '',
+      },
+    ]),
+    create: vi.fn(),
+    rename: vi.fn(),
+    delete: vi.fn(),
+  },
+  meshingTasks: {
+    list: vi.fn().mockResolvedValue([]),
+    history: vi.fn(),
+    delete: vi.fn(),
   },
 })
 
@@ -155,9 +216,9 @@ describe('App', () => {
   it('opens Meshing automations first and navigates between routes', async () => {
     render(<App />)
 
-    expect(await screen.findByRole('heading', { name: '网格划分自动化' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '模板库' })).toBeInTheDocument()
     expect(screen.queryByText('自动化创建')).not.toBeInTheDocument()
-    const meshingMenu = screen.getByRole('menuitem', { name: /网格划分自动化/ })
+    const meshingMenu = screen.getByRole('menuitem', { name: /模板库/ })
     expect(screen.queryByRole('menuitem', { name: /我的自动化/ })).not.toBeInTheDocument()
     const modelsMenu = screen.getByRole('menuitem', { name: /我的模型/ })
     expect(

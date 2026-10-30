@@ -11,6 +11,7 @@ import { ModelFileRegistry } from './model-file-registry'
 import { resolveSidecarDataDirectory, SidecarManager } from './sidecar'
 
 let mainWindow: BrowserWindow | null = null
+const appWindows = new Set<BrowserWindow>()
 let quitAfterSidecarStop = false
 const smokeTest = process.env.FLUENT_AI_SMOKE_TEST === '1'
 let smokeRendererLoaded = false
@@ -95,7 +96,8 @@ const createMainWindow = (): BrowserWindow => {
     },
   })
 
-  mainWindow = window
+  mainWindow = mainWindow === null || mainWindow.isDestroyed() ? window : mainWindow
+  appWindows.add(window)
 
   window.once('ready-to-show', () => {
     if (!smokeTest) window.show()
@@ -108,6 +110,7 @@ const createMainWindow = (): BrowserWindow => {
   })
 
   window.on('closed', () => {
+    appWindows.delete(window)
     if (mainWindow === window) {
       mainWindow = null
     }
@@ -128,6 +131,14 @@ const createMainWindow = (): BrowserWindow => {
   return window
 }
 
+// Every window shares the same sidecar and database; each window keeps its
+// own page state, so users can run several meshing tasks side by side.
+const openNewWindow = (): BrowserWindow => {
+  const window = createMainWindow()
+  if (!smokeTest) window.show()
+  return window
+}
+
 app.whenReady().then(() => {
   const modelFiles = new ModelFileRegistry()
   registerBusinessIpc({
@@ -135,6 +146,8 @@ app.whenReady().then(() => {
     modelFiles,
     modelFilePicker: new ElectronModelFilePicker(modelFiles),
     credentials: createElectronCredentialStore(app.getPath('userData')),
+    agentCredentials: createElectronCredentialStore(app.getPath('userData'), 'agent-api-key.json'),
+    openNewWindow,
   })
 
   createMainWindow()

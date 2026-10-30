@@ -72,6 +72,14 @@ async def serve() -> int:
     app.state.fluent_service.adapter = PyFluentAdapter(pyfluent_module=pyfluent)
     if os.environ.get("FLUENT_AI_DEBUG") == "1":
         print("[fluent-debug] PyFluent preload complete", file=sys.stderr, flush=True)
+    if os.environ.get("FLUENT_AI_MESHING_WORKERS", "1") != "0":
+        from app.meshing.factory import SubprocessWorkerFactory
+
+        # Each live Meshing task runs in its own worker subprocess so several
+        # Fluent instances can execute in parallel without sharing state.
+        app.state.meshing_service.set_session_adapter_factory(
+            SubprocessWorkerFactory(preload_pyfluent=True)
+        )
     config = uvicorn.Config(
         app,
         host="127.0.0.1",
@@ -113,6 +121,7 @@ async def serve() -> int:
     )
 
     await server_task
+    app.state.meshing_service.shutdown()
     app.state.fluent_service.disconnect()
     return 0
 

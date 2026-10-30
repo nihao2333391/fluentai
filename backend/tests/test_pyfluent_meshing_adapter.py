@@ -9,6 +9,7 @@ from types import ModuleType
 from typing import Any
 
 from app.domain import (
+    FluentConnectionConfig,
     MeshingArgumentReference,
     MeshingPresetDocument,
     MeshingPresetItem,
@@ -97,6 +98,43 @@ class FakeWorkflow:
 class ActiveSession:
     def is_active(self) -> bool:
         return True
+
+
+def test_launch_derives_awp_root_from_configured_fluent_executable(
+    monkeypatch: Any, tmp_path: Any
+) -> None:
+    adapter_module = _import_adapter(monkeypatch)
+    fluent_root = tmp_path / "v252"
+    fluent_executable = fluent_root / "fluent" / "ntbin" / "win64" / "fluent.exe"
+    fluent_executable.parent.mkdir(parents=True)
+    fluent_executable.write_bytes(b"test executable")
+    launch_kwargs: dict[str, Any] = {}
+
+    class LaunchedSession(ActiveSession):
+        def get_fluent_version(self) -> str:
+            return "25.2.0"
+
+    class PyFluent:
+        @staticmethod
+        def launch_fluent(**kwargs: Any) -> LaunchedSession:
+            launch_kwargs.update(kwargs)
+            return LaunchedSession()
+
+    monkeypatch.delenv("AWP_ROOT252", raising=False)
+    adapter = adapter_module.PyFluentMeshingAdapter(pyfluent_module=PyFluent())
+
+    status = adapter.connect(
+        FluentConnectionConfig(
+            mode="launch",
+            fluent_path=str(fluent_executable),
+            product_version="25.2.0",
+        )
+    )
+
+    assert status.connected
+    assert adapter_module.os.environ["AWP_ROOT252"] == str(fluent_root)
+    assert launch_kwargs["env"]["AWP_ROOT252"] == str(fluent_root)
+    assert launch_kwargs["fluent_path"] == str(fluent_executable)
 
 
 def test_read_arguments_fetches_state_once_per_task_or_child(monkeypatch: Any) -> None:

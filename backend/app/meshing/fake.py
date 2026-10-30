@@ -257,3 +257,12 @@ class FakeMeshingAdapter:
             model_path,
         )
         return sorted(self.known_names)
+
+
+class AttachRejectingMeshingAdapter(FakeMeshingAdapter):
+    """Fake adapter that rejects attach mode like the real PyFluent adapter."""
+
+    def connect(self, config: FluentConnectionConfig) -> FluentStatus:
+        if config.mode == "attach" and not config.port and not config.server_info_file:
+            raise ValueError("Attach mode requires a port or server-info file.")
+        return super().connect(config)

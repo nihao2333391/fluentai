@@ -147,10 +147,11 @@ class MeshingSchemaIndex:
                 kind = "labels" if is_label_selection else "geometry zone names"
                 errors.append(f"Update Boundaries {kind} must be unique.")
             task = task_index.get(("update_boundaries",), {})
-            allowed_argument = next(
+            arguments: list[dict[str, Any]] = task.get("arguments", [])
+            allowed_argument: dict[str, Any] = next(
                 (
                     argument
-                    for argument in task.get("arguments", [])
+                    for argument in arguments
                     if argument.get("name") == "boundary_allowed_type_list"
                 ),
                 {},

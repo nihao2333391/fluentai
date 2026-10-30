@@ -1,7 +1,17 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { randomUUID } from 'node:crypto'
 
 import type {
   CredentialStatus,
+  AgentModelConfig,
+  AgentModelTestRequest,
+  AgentModelTestResult,
+  AgentCapabilityTestResult,
+  AgentRunEvent,
+  AgentImageAttachment,
+  AgentSession,
+  CategoryCapabilities,
+  AgentProactiveSuggestion,
   DatabaseBackupInfo,
   DatabaseBackupList,
   FluentConnectionConfig,
@@ -10,11 +20,16 @@ import type {
   Job,
   MeshingAutomation,
   MeshingAutomationInput,
+  PartCategory,
+  PartCategoryInput,
   MeshingLiveSessionSnapshot,
   MeshingLiveSessionStart,
   MeshingLiveStepReport,
   MeshingLiveStepRequest,
   MeshingLiveWriteRequest,
+  MeshingTask,
+  MeshingTaskHistory,
+  MeshingTaskDeleteReport,
   MeshingPresetDocument,
   MeshingPresetValidationReport,
   MeshingReadReport,
@@ -50,6 +65,8 @@ interface BusinessIpcOptions {
   modelFiles: ModelFileRegistry
   modelFilePicker: ElectronModelFilePicker
   credentials: CredentialStore
+  agentCredentials: CredentialStore
+  openNewWindow: () => BrowserWindow
 }
 
 const jsonBody = (value: unknown): string => JSON.stringify(value)
@@ -57,7 +74,13 @@ const FLUENT_OPERATION_TIMEOUT_MS = 360_000
 const MESHING_PARAMETER_TIMEOUT_MS = 120_000
 
 export function registerBusinessIpc(options: BusinessIpcOptions): void {
-  const { sidecar, modelFiles, modelFilePicker, credentials } = options
+  const { sidecar, modelFiles, modelFilePicker, credentials, agentCredentials, openNewWindow } =
+    options
+  const agentStreams = new Map<string, AbortController>()
+
+  ipcMain.handle('window:open-new', () => {
+    openNewWindow()
+  })
 
   ipcMain.handle('models:list', () => sidecar.request<Model[]>('/api/models'))
   ipcMain.handle('models:get', (_event, id: number) => sidecar.request<Model>(`/api/models/${id}`))
@@ -197,6 +220,33 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
   ipcMain.handle('meshing-automations:list', () =>
     sidecar.request<MeshingAutomation[]>('/api/meshing-automations'),
   )
+  ipcMain.handle('categories:list', () => sidecar.request<PartCategory[]>('/api/categories'))
+  ipcMain.handle('categories:create', (_event, payload: PartCategoryInput) =>
+    sidecar.request<PartCategory>('/api/categories', { method: 'POST', body: jsonBody(payload) }),
+  )
+  ipcMain.handle('categories:rename', (_event, id: string, name: string) =>
+    sidecar.request<PartCategory>(`/api/categories/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: jsonBody({ name }),
+    }),
+  )
+  ipcMain.handle('categories:delete', (_event, id: string) =>
+    sidecar.request<void>(`/api/categories/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  )
+  ipcMain.handle('meshing-tasks:list', (_event, includeDeleted = false) =>
+    sidecar.request<MeshingTask[]>(`/api/meshing/tasks?include_deleted=${includeDeleted}`),
+  )
+  ipcMain.handle('meshing-tasks:history', (_event, taskId: string, includeDeleted = false) =>
+    sidecar.request<MeshingTaskHistory>(
+      `/api/meshing/tasks/${encodeURIComponent(taskId)}/history?include_deleted=${includeDeleted}`,
+    ),
+  )
+  ipcMain.handle('meshing-tasks:delete', (_event, taskId: string, cleanupArtifacts: boolean) =>
+    sidecar.request<MeshingTaskDeleteReport>(`/api/meshing/tasks/${encodeURIComponent(taskId)}`, {
+      method: 'DELETE',
+      body: jsonBody({ cleanup_artifacts: cleanupArtifacts }),
+    }),
+  )
   ipcMain.handle('meshing-automations:create', (_event, payload: MeshingAutomationInput) =>
     sidecar.request<MeshingAutomation>('/api/meshing-automations', {
       method: 'POST',
@@ -219,6 +269,11 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
   )
   ipcMain.handle('meshing-automations:validate', (_event, id: number) =>
     sidecar.request<MeshingPresetValidationReport>(`/api/meshing-automations/${id}/validate`, {
+      method: 'POST',
+    }),
+  )
+  ipcMain.handle('meshing-automations:publish', (_event, id: number) =>
+    sidecar.request<MeshingAutomation>(`/api/meshing-automations/${id}/publish`, {
       method: 'POST',
     }),
   )
@@ -301,11 +356,13 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
       : await dialog.showOpenDialog(options)
     return result.canceled ? null : (result.filePaths[0] ?? null)
   })
-  ipcMain.handle('meshing-live:archive', (_event, sessionId: string, payload: import('../shared/contracts').MeshingArchiveCreate) =>
-    sidecar.request<import('../shared/contracts').MeshingArchiveRecord>(
-      `/api/meshing/live-sessions/${sessionId}/archive`,
-      { method: 'POST', body: jsonBody(payload), timeoutMs: FLUENT_OPERATION_TIMEOUT_MS },
-    ),
+  ipcMain.handle(
+    'meshing-live:archive',
+    (_event, sessionId: string, payload: import('../shared/contracts').MeshingArchiveCreate) =>
+      sidecar.request<import('../shared/contracts').MeshingArchiveRecord>(
+        `/api/meshing/live-sessions/${sessionId}/archive`,
+        { method: 'POST', body: jsonBody(payload), timeoutMs: FLUENT_OPERATION_TIMEOUT_MS },
+      ),
   )
   ipcMain.handle('meshing-live:archives', (_event, sessionId: string) =>
     sidecar.request<import('../shared/contracts').MeshingArchiveRecord[]>(
@@ -358,4 +415,108 @@ export function registerBusinessIpc(options: BusinessIpcOptions): void {
     credentials.setFluentPassword(password),
   )
   ipcMain.handle('credentials:clear-fluent-password', () => credentials.clearFluentPassword())
+  ipcMain.handle('credentials:agent-status', () => agentCredentials.getStatus())
+  ipcMain.handle('credentials:set-agent-api-key', (_event, apiKey: string) =>
+    agentCredentials.setAgentApiKey(apiKey),
+  )
+  ipcMain.handle('credentials:clear-agent-api-key', () => agentCredentials.clearAgentApiKey())
+
+  ipcMain.handle('agent:model:get', () => sidecar.request<AgentModelConfig>('/api/agent/model'))
+  ipcMain.handle('agent:model:save', (_event, payload: AgentModelConfig) =>
+    sidecar.request<AgentModelConfig>('/api/agent/model', {
+      method: 'PUT',
+      body: jsonBody(payload),
+    }),
+  )
+  ipcMain.handle('agent:model:test', async (_event, payload: AgentModelTestRequest) => {
+    const apiKey = await agentCredentials.readAgentApiKey()
+    return sidecar.request<AgentModelTestResult>('/api/agent/model/test', {
+      method: 'POST',
+      body: jsonBody(payload),
+      headers: { 'X-Model-Api-Key': apiKey },
+      timeoutMs: 120_000,
+    })
+  })
+  ipcMain.handle('agent:model:capabilities', async (_event, payload: AgentModelTestRequest) => {
+    const apiKey = await agentCredentials.readAgentApiKey()
+    return sidecar.request<AgentCapabilityTestResult>('/api/agent/model/capabilities', {
+      method: 'POST',
+      body: jsonBody(payload),
+      headers: { 'X-Model-Api-Key': apiKey },
+      timeoutMs: 180_000,
+    })
+  })
+  ipcMain.handle('agent:session:get', (_event, templateId: number) =>
+    sidecar.request<AgentSession>(`/api/agent/templates/${templateId}/session`),
+  )
+  ipcMain.handle('agent:category-capabilities:get', (_event, categoryId: string) =>
+    sidecar.request<CategoryCapabilities>(
+      `/api/agent/categories/${encodeURIComponent(categoryId)}/capabilities`,
+    ),
+  )
+  ipcMain.handle(
+    'agent:proactive-suggestion',
+    async (_event, templateId: number, stageKey: string) => {
+      const apiKey = await agentCredentials.readAgentApiKey()
+      return sidecar.request<AgentProactiveSuggestion | null>(
+        `/api/agent/templates/${templateId}/proactive-suggestion`,
+        {
+          method: 'POST',
+          body: jsonBody({ stage_key: stageKey }),
+          headers: { 'X-Model-Api-Key': apiKey },
+          timeoutMs: 180_000,
+        },
+      )
+    },
+  )
+  ipcMain.handle(
+    'agent:message:send',
+    async (
+      event,
+      templateId: number,
+      message: string,
+      confirmOutOfRange = false,
+      images: AgentImageAttachment[] = [],
+    ) => {
+      const requestId = randomUUID()
+      const controller = new AbortController()
+      agentStreams.set(requestId, controller)
+      void (async () => {
+        try {
+          const apiKey = await agentCredentials.readAgentApiKey()
+          await sidecar.streamRequest<AgentRunEvent>(
+            `/api/agent/templates/${templateId}/messages`,
+            {
+              method: 'POST',
+              body: jsonBody({
+                message,
+                client_message_id: requestId,
+                confirm_out_of_range: confirmOutOfRange,
+                images,
+              }),
+              headers: { 'X-Model-Api-Key': apiKey },
+              timeoutMs: 300_000,
+            },
+            (payload) => event.sender.send('agent:message:event', { requestId, payload }),
+            controller.signal,
+          )
+        } catch (error) {
+          event.sender.send('agent:message:event', {
+            requestId,
+            payload: {
+              type: 'error',
+              run_id: requestId,
+              content: error instanceof Error ? error.message : String(error),
+            } satisfies AgentRunEvent,
+          })
+        } finally {
+          agentStreams.delete(requestId)
+        }
+      })()
+      return requestId
+    },
+  )
+  ipcMain.handle('agent:message:stop', (_event, requestId: string) => {
+    agentStreams.get(requestId)?.abort()
+  })
 }

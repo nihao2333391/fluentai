@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -141,18 +142,307 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ON meshing_result_archives(session_id, created_at DESC);
         """,
     ),
+    (
+        5,
+        """
+        CREATE TABLE part_categories (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+            description TEXT NOT NULL DEFAULT '',
+            is_system INTEGER NOT NULL DEFAULT 0 CHECK (is_system IN (0, 1)),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+
+        INSERT INTO part_categories(id, name, description, is_system, created_at, updated_at)
+        SELECT 'uncategorized', '未分类', '迁移前创建的网格预设', 1,
+               strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+               strftime('%Y-%m-%dT%H:%M:%fZ', 'now');
+
+        ALTER TABLE meshing_automations ADD COLUMN category_id TEXT
+            REFERENCES part_categories(id) ON DELETE RESTRICT;
+        UPDATE meshing_automations SET category_id = 'uncategorized';
+        CREATE INDEX meshing_automations_category
+            ON meshing_automations(category_id, updated_at DESC);
+
+        CREATE TABLE meshing_template_revisions (
+            id TEXT PRIMARY KEY,
+            automation_id INTEGER NOT NULL REFERENCES meshing_automations(id) ON DELETE CASCADE,
+            revision_number INTEGER NOT NULL CHECK (revision_number > 0),
+            preset_json TEXT NOT NULL,
+            status TEXT NOT NULL CHECK (status IN ('draft', 'published')),
+            created_at TEXT NOT NULL,
+            UNIQUE(automation_id, revision_number)
+        );
+        INSERT INTO meshing_template_revisions(
+            id, automation_id, revision_number, preset_json, status, created_at
+        )
+        SELECT 'legacy-' || id, id, 1, preset_json,
+               CASE WHEN status = 'active' THEN 'published' ELSE 'draft' END,
+               created_at
+        FROM meshing_automations;
+        ALTER TABLE meshing_automations ADD COLUMN revision INTEGER NOT NULL DEFAULT 1;
+        ALTER TABLE meshing_automations ADD COLUMN published_revision INTEGER;
+        UPDATE meshing_automations SET published_revision =
+            CASE WHEN status = 'active' THEN 1 ELSE NULL END;
+        """,
+    ),
+    (
+        6,
+        """
+        CREATE TABLE meshing_tasks (
+            id TEXT PRIMARY KEY,
+            automation_id INTEGER REFERENCES meshing_automations(id) ON DELETE SET NULL,
+            template_revision INTEGER NOT NULL,
+            template_snapshot_json TEXT NOT NULL,
+            model_snapshot_json TEXT NOT NULL,
+            session_id TEXT UNIQUE,
+            status TEXT NOT NULL CHECK (
+                status IN ('queued', 'preparing', 'waiting_surface', 'waiting_volume',
+                           'completed', 'failed', 'stopped', 'interrupted')
+            ),
+            surface_mesh_status TEXT NOT NULL DEFAULT 'pending',
+            volume_mesh_status TEXT NOT NULL DEFAULT 'pending',
+            phase TEXT NOT NULL DEFAULT 'queued',
+            message TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            completed_at TEXT
+        );
+        CREATE INDEX meshing_tasks_created ON meshing_tasks(created_at DESC);
+        CREATE INDEX meshing_tasks_status ON meshing_tasks(status, created_at);
+        """,
+    ),
+    (
+        7,
+        """
+        ALTER TABLE meshing_tasks ADD COLUMN deleted_at TEXT;
+        ALTER TABLE meshing_result_archives ADD COLUMN task_id TEXT
+            REFERENCES meshing_tasks(id) ON DELETE SET NULL;
+
+        CREATE TABLE meshing_task_artifacts (
+            id TEXT PRIMARY KEY,
+            task_id TEXT NOT NULL REFERENCES meshing_tasks(id) ON DELETE RESTRICT,
+            archive_id TEXT REFERENCES meshing_result_archives(id) ON DELETE SET NULL,
+            kind TEXT NOT NULL CHECK (kind IN (
+                'mesh', 'record_json', 'record_markdown', 'log', 'report'
+            )),
+            file_path TEXT NOT NULL,
+            file_size INTEGER,
+            status TEXT NOT NULL CHECK (status IN ('retained', 'missing', 'deleted')),
+            created_at TEXT NOT NULL,
+            metadata_json TEXT NOT NULL DEFAULT '{}',
+            UNIQUE(task_id, file_path)
+        );
+        CREATE INDEX meshing_task_artifacts_task
+            ON meshing_task_artifacts(task_id, created_at DESC);
+        CREATE INDEX meshing_task_artifacts_path
+            ON meshing_task_artifacts(file_path);
+
+        CREATE TABLE meshing_task_events (
+            id TEXT PRIMARY KEY,
+            task_id TEXT NOT NULL REFERENCES meshing_tasks(id) ON DELETE RESTRICT,
+            event_type TEXT NOT NULL,
+            status TEXT NOT NULL,
+            phase TEXT NOT NULL,
+            message TEXT NOT NULL DEFAULT '',
+            payload_json TEXT NOT NULL DEFAULT '{}',
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX meshing_task_events_task
+            ON meshing_task_events(task_id, created_at, id);
+        """,
+    ),
+    (
+        8,
+        """
+        INSERT INTO part_categories(id, name, description, is_system, created_at, updated_at)
+        SELECT lower(hex(randomblob(16))), '文丘里', '', 0,
+               strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+               strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+        WHERE NOT EXISTS (SELECT 1 FROM part_categories WHERE name = '文丘里')
+          AND EXISTS (
+              SELECT 1 FROM meshing_automations
+              WHERE model_family = '文丘里'
+                 OR (lower(name) = 'localsize' AND model_family = '')
+          );
+
+        UPDATE meshing_automations
+        SET category_id = (SELECT id FROM part_categories WHERE name = '文丘里'),
+            model_family = '文丘里'
+        WHERE model_family = '文丘里'
+           OR (lower(name) = 'localsize' AND model_family = '');
+        """,
+    ),
+    (
+        9,
+        """
+        INSERT INTO part_categories(id, name, description, is_system, created_at, updated_at)
+        SELECT lower(hex(randomblob(16))), trim(a.model_family), '', 0,
+               strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+               strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+        FROM meshing_automations a
+        WHERE trim(COALESCE(a.model_family, '')) <> ''
+          AND NOT EXISTS (
+              SELECT 1 FROM part_categories c WHERE c.name = trim(a.model_family)
+          )
+        GROUP BY trim(a.model_family);
+
+        UPDATE meshing_automations
+        SET category_id = (
+            SELECT c.id FROM part_categories c WHERE c.name = trim(meshing_automations.model_family)
+        )
+        WHERE category_id = 'uncategorized'
+          AND trim(COALESCE(model_family, '')) <> '';
+        """,
+    ),
+    (
+        10,
+        """
+        CREATE TABLE agent_templates (
+            template_id INTEGER PRIMARY KEY REFERENCES meshing_automations(id) ON DELETE CASCADE,
+            agno_agent_id TEXT NOT NULL UNIQUE,
+            agno_session_id TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE agent_runs (
+            id TEXT PRIMARY KEY,
+            template_id INTEGER NOT NULL REFERENCES meshing_automations(id) ON DELETE CASCADE,
+            agno_session_id TEXT NOT NULL,
+            agno_run_id TEXT,
+            client_message_id TEXT NOT NULL,
+            status TEXT NOT NULL CHECK (
+                status IN ('running', 'completed', 'failed', 'interrupted')
+            ),
+            user_message TEXT NOT NULL,
+            assistant_message TEXT NOT NULL DEFAULT '',
+            error TEXT,
+            created_at TEXT NOT NULL,
+            finished_at TEXT
+        );
+        CREATE UNIQUE INDEX agent_runs_client_message
+            ON agent_runs(template_id, client_message_id);
+        CREATE INDEX agent_runs_template ON agent_runs(template_id, created_at DESC);
+
+        CREATE UNIQUE INDEX agent_runs_one_running_per_template
+            ON agent_runs(template_id) WHERE status = 'running';
+
+        CREATE TABLE agent_run_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id TEXT NOT NULL REFERENCES agent_runs(id) ON DELETE CASCADE,
+            event_type TEXT NOT NULL,
+            payload_json TEXT NOT NULL DEFAULT '{}',
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX agent_run_events_run ON agent_run_events(run_id, id);
+
+        UPDATE agent_runs SET status = 'interrupted',
+            error = 'Agent run was interrupted when the application closed.',
+            finished_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+        WHERE status = 'running';
+        """,
+    ),
+    (
+        11,
+        """
+        ALTER TABLE agent_runs
+            ADD COLUMN model_snapshot_json TEXT NOT NULL DEFAULT '{}';
+        """,
+    ),
+    (
+        12,
+        """
+        ALTER TABLE agent_runs ADD COLUMN run_kind TEXT NOT NULL DEFAULT 'chat';
+        ALTER TABLE agent_runs ADD COLUMN trigger_key TEXT;
+        ALTER TABLE agent_runs ADD COLUMN response_json TEXT NOT NULL DEFAULT '{}';
+        CREATE UNIQUE INDEX agent_runs_proactive_trigger
+            ON agent_runs(template_id, trigger_key)
+            WHERE trigger_key IS NOT NULL;
+
+        CREATE TABLE agent_knowledge_sources (
+            id TEXT PRIMARY KEY,
+            display_name TEXT NOT NULL,
+            source_files_json TEXT NOT NULL,
+            allowed_tools_json TEXT NOT NULL DEFAULT '[]',
+            enabled INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE agent_category_knowledge (
+            category_id TEXT NOT NULL REFERENCES part_categories(id) ON DELETE CASCADE,
+            knowledge_source_id TEXT NOT NULL REFERENCES agent_knowledge_sources(id)
+                ON DELETE CASCADE,
+            created_at TEXT NOT NULL,
+            PRIMARY KEY (category_id, knowledge_source_id)
+        );
+
+        INSERT INTO agent_knowledge_sources(
+            id, display_name, source_files_json, allowed_tools_json, enabled, created_at
+        ) VALUES (
+            'venturi-boundary-layer-v2',
+            '文丘里边界层规则',
+            '["原有_层数推荐算法说明.md","Uniform_First_Height_计算封装说明.md"]',
+            '["calculate_smooth_layers","calculate_uniform_first_height"]',
+            1,
+            strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+        );
+        INSERT INTO agent_category_knowledge(category_id, knowledge_source_id, created_at)
+        SELECT id, 'venturi-boundary-layer-v2', strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+        FROM part_categories
+        WHERE lower(name) LIKE '%venturi%' OR name LIKE '%文丘里%';
+        """,
+    ),
 )
 
 
 class Database:
-    """Small SQLite wrapper using a connection per operation."""
+    """Small SQLite wrapper using a connection per operation.
+
+    A long-lived keeper connection stays open so the WAL sidecar files are
+    never deleted between short-lived connections. On Windows the last
+    connection closing a WAL database removes its ``-wal``/``-shm`` files; a
+    new connection racing that removal can observe the database as read-only
+    (``SQLITE_READONLY``) when it later writes. Holding the keeper open for
+    the lifetime of this object prevents the race.
+    """
 
     def __init__(self, path: Path | str) -> None:
         self.path = Path(path)
+        self._keeper: sqlite3.Connection | None = None
+        self._keeper_lock = threading.Lock()
+        # Serializes transactional blocks. Concurrent WAL writers on Windows
+        # can hit transient SQLITE_READONLY errors when the OS briefly denies
+        # access to the WAL sidecar files (antivirus scans are a common
+        # trigger); one writer at a time avoids the race entirely.
+        self._access_lock = threading.RLock()
+
+    def _ensure_keeper(self) -> None:
+        if self._keeper is not None:
+            return
+        with self._keeper_lock:
+            if self._keeper is not None:
+                return
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            keeper = sqlite3.connect(self.path, timeout=5.0, check_same_thread=False)
+            keeper.execute("PRAGMA busy_timeout = 5000")
+            keeper.execute("PRAGMA journal_mode = WAL")
+            self._keeper = keeper
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        """Run one transactional block with exclusive access to this database.
+
+        The lock serializes writers process-wide; SQLite operations here are
+        short-lived, so contention is negligible, and single-writer access
+        sidesteps transient Windows WAL lock errors under concurrency.
+        """
+        with self._access_lock, self._single_connection() as connection:
+            yield connection
+
+    @contextmanager
+    def _single_connection(self) -> Iterator[sqlite3.Connection]:
+        self._ensure_keeper()
         connection = sqlite3.connect(self.path, timeout=5.0)
         connection.row_factory = sqlite3.Row
         try:

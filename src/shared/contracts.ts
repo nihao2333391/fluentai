@@ -196,6 +196,151 @@ export interface CredentialsApi {
   getStatus: () => Promise<CredentialStatus>
   setFluentPassword: (password: string) => Promise<CredentialStatus>
   clearFluentPassword: () => Promise<CredentialStatus>
+  setAgentApiKey: (apiKey: string) => Promise<CredentialStatus>
+  clearAgentApiKey: () => Promise<CredentialStatus>
+  getAgentApiKeyStatus: () => Promise<CredentialStatus>
+}
+
+export type AgentCapabilityStatus = 'untested' | 'passed' | 'failed' | 'unsupported'
+
+export interface AgentModelConfig {
+  display_name: string
+  model_id: string
+  base_url: string
+  timeout_seconds: number
+  enabled: boolean
+  connection_status: 'untested' | 'passed' | 'failed'
+  tool_status: AgentCapabilityStatus
+  vision_status: AgentCapabilityStatus
+  streaming_status: AgentCapabilityStatus
+}
+
+export interface AgentModelTestRequest {
+  display_name: string
+  model_id: string
+  base_url: string
+  timeout_seconds: number
+}
+
+export interface AgentModelTestResult {
+  status: 'passed'
+  message: string
+}
+
+export interface AgentImageAttachment {
+  filename: string
+  mime_type: 'image/png' | 'image/jpeg' | 'image/webp'
+  data_base64: string
+}
+
+export interface AgentCapabilityTestResult {
+  tool_status: 'passed' | 'failed' | 'unsupported'
+  streaming_status: 'passed' | 'failed' | 'unsupported'
+  message: string
+}
+
+export interface AgentMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  run_id: string | null
+  status: string | null
+  created_at: string
+  attachments?: AgentImageAttachment[]
+  tool_name?: string | null
+  tool_status?: string | null
+}
+
+export interface AgentSession {
+  template_id: number
+  agent_id: string
+  session_id: string
+  messages: AgentMessage[]
+  needs_range_confirmation: boolean
+  proactive_suggestions: AgentProactiveSuggestion[]
+}
+
+export interface AgentKnowledgeCitation {
+  source: string
+  section: string
+}
+
+export interface AgentExecutionRecord {
+  tool_name: string
+  status: string
+  target: unknown
+  result: unknown
+}
+
+export interface AgentProactiveSuggestion {
+  should_suggest: boolean
+  relevance_reason: string
+  suggestion: string
+  follow_up_questions: string[]
+  sources: AgentKnowledgeCitation[]
+  run_id: string
+  stage_key: string
+  execution_records: AgentExecutionRecord[]
+  created_at: string
+}
+
+export interface AgentRunEvent {
+  type: 'started' | 'content' | 'tool' | 'confirmation_required' | 'completed' | 'error'
+  run_id: string
+  content?: string
+  tool_name?: string
+  tool_status?: string
+}
+
+export interface CategoryCapabilityKnowledge {
+  id: string
+  name: string
+  files: string[]
+  status: 'enabled' | 'disabled'
+  created_at: string
+}
+
+export interface CategoryCapabilityRule {
+  id: string
+  name: string
+  status: 'enabled' | 'disabled'
+  description: string
+}
+
+export interface CategoryCapabilityTool {
+  name: string
+  display_name: string
+  status: 'enabled' | 'disabled'
+  source: string
+}
+
+/** Real capability inventory for one part category (Extension Workspace V1). */
+export interface CategoryCapabilities {
+  category_id: string
+  knowledge: CategoryCapabilityKnowledge[]
+  rules: CategoryCapabilityRule[]
+  tools: CategoryCapabilityTool[]
+}
+
+export interface AgentApi {
+  getModelConfig: () => Promise<AgentModelConfig>
+  saveModelConfig: (payload: AgentModelConfig) => Promise<AgentModelConfig>
+  testModel: (payload: AgentModelTestRequest) => Promise<AgentModelTestResult>
+  testCapabilities: (payload: AgentModelTestRequest) => Promise<AgentCapabilityTestResult>
+  getSession: (templateId: number) => Promise<AgentSession>
+  getProactiveSuggestion: (
+    templateId: number,
+    stageKey: string,
+  ) => Promise<AgentProactiveSuggestion | null>
+  sendMessage: (
+    templateId: number,
+    message: string,
+    confirmOutOfRange?: boolean,
+    images?: AgentImageAttachment[],
+  ) => Promise<string>
+  onEvent: (listener: (event: { requestId: string; payload: AgentRunEvent }) => void) => () => void
+  stopMessage: (requestId: string) => Promise<void>
+  getCategoryCapabilities: (categoryId: string) => Promise<CategoryCapabilities>
 }
 
 export type FluentLaunchMode = 'launch' | 'attach'
@@ -355,12 +500,15 @@ export interface MeshingWorkflowContract {
   workflow_type: MeshingWorkflowType
   source_schema: string
   step_order: string[]
-  conditional_tasks?: Record<string, {
-    geometry?: string[]
-    argument?: string
-    equals?: string
-    default?: string
-  }>
+  conditional_tasks?: Record<
+    string,
+    {
+      geometry?: string[]
+      argument?: string
+      equals?: string
+      default?: string
+    }
+  >
   steps: MeshingWorkflowStepContract[]
 }
 
@@ -452,6 +600,7 @@ export interface MeshingArchiveCreate {
 export interface MeshingArchiveRecord {
   id: string
   session_id: string
+  task_id: string | null
   automation_id: number
   model_id: number
   mesh_path: string
@@ -487,10 +636,26 @@ export interface MeshingAutomationInput {
   reference_model_id: number | null
   preset: MeshingPresetDocument
   status: 'draft' | 'active'
+  category_id: string
 }
 
 export interface MeshingAutomation extends MeshingAutomationInput {
   id: number
+  created_at: string
+  updated_at: string
+  revision: number
+  published_revision: number | null
+}
+
+export interface PartCategoryInput {
+  name: string
+  description: string
+}
+
+export interface PartCategory extends PartCategoryInput {
+  id: string
+  is_system: boolean
+  template_count: number
   created_at: string
   updated_at: string
 }
@@ -552,10 +717,12 @@ export interface MeshingLiveModelState {
 
 export interface MeshingLiveSessionSnapshot {
   session_id: string
+  task_id: string
   automation_id: number
   automation_name: string
   workflow_type: MeshingWorkflowType
-  status: 'starting' | 'connected' | 'running' | 'waiting' | 'completed' | 'failed' | 'stopped'
+  status:
+    'queued' | 'starting' | 'connected' | 'running' | 'waiting' | 'completed' | 'failed' | 'stopped'
   phase?:
     | 'connecting'
     | 'importing'
@@ -579,6 +746,71 @@ export interface MeshingLiveSessionSnapshot {
   logs: MeshingLiveLogEntry[]
   message: string
   native_task_poll_error?: string | null
+}
+
+export interface MeshingTask {
+  id: string
+  automation_id: number | null
+  automation_name: string
+  template_revision: number
+  model_names: string[]
+  session_id: string | null
+  status:
+    | 'queued'
+    | 'preparing'
+    | 'waiting_surface'
+    | 'waiting_volume'
+    | 'completed'
+    | 'failed'
+    | 'stopped'
+    | 'interrupted'
+  surface_mesh_status: 'pending' | 'ready' | 'running' | 'completed' | 'failed'
+  volume_mesh_status: 'pending' | 'ready' | 'running' | 'completed' | 'failed'
+  phase: string
+  message: string
+  created_at: string
+  updated_at: string
+  completed_at: string | null
+  deleted_at: string | null
+  artifact_count: number
+}
+
+export interface MeshingTaskArtifact {
+  id: string
+  task_id: string
+  archive_id: string | null
+  kind: 'mesh' | 'record_json' | 'record_markdown' | 'log' | 'report'
+  file_path: string
+  file_size: number | null
+  status: 'retained' | 'missing' | 'deleted'
+  created_at: string
+  metadata: Record<string, unknown>
+}
+
+export interface MeshingTaskEvent {
+  id: string
+  task_id: string
+  event_type: string
+  status: string
+  phase: string
+  message: string
+  payload: Record<string, unknown>
+  created_at: string
+}
+
+export interface MeshingTaskHistory {
+  task: MeshingTask
+  artifacts: MeshingTaskArtifact[]
+  events: MeshingTaskEvent[]
+}
+
+export interface MeshingTaskDeleteReport {
+  task_id: string
+  deleted: boolean
+  files_retained: number
+  files_deleted: number
+  files_missing: number
+  message: string
 }
 
 export interface MeshingLiveStepReport {
@@ -654,6 +886,20 @@ export interface MeshingAutomationsApi {
   update: (id: number, payload: MeshingAutomationInput) => Promise<MeshingAutomation>
   delete: (id: number) => Promise<void>
   validate: (id: number) => Promise<MeshingPresetValidationReport>
+  publish: (id: number) => Promise<MeshingAutomation>
+}
+
+export interface CategoriesApi {
+  list: () => Promise<PartCategory[]>
+  create: (payload: PartCategoryInput) => Promise<PartCategory>
+  rename: (id: string, name: string) => Promise<PartCategory>
+  delete: (id: string) => Promise<void>
+}
+
+export interface MeshingTasksApi {
+  list: (includeDeleted?: boolean) => Promise<MeshingTask[]>
+  history: (taskId: string, includeDeleted?: boolean) => Promise<MeshingTaskHistory>
+  delete: (taskId: string, cleanupArtifacts: boolean) => Promise<MeshingTaskDeleteReport>
 }
 
 export interface FluentAIApi {
@@ -665,8 +911,11 @@ export interface FluentAIApi {
   readonly syncLogs: SyncLogsApi
   readonly system: SystemApi
   readonly credentials: CredentialsApi
+  readonly agent: AgentApi
   readonly fluent: FluentApi
   readonly meshing: MeshingApi
   readonly meshingLive: MeshingLiveApi
   readonly meshingAutomations: MeshingAutomationsApi
+  readonly categories: CategoriesApi
+  readonly meshingTasks: MeshingTasksApi
 }
