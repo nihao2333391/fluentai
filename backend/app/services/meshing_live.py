@@ -25,6 +25,7 @@ from app.domain import (
     MeshingLiveStepState,
     MeshingPresetDocument,
     MeshingPresetItem,
+    MeshingReadItemResult,
     MeshingReadReport,
     MeshingReadRequest,
     MeshingWriteReport,
@@ -506,6 +507,7 @@ class MeshingLiveManager:
             return self._step_report(session, step_index, None, read_report)
         items = self._step_preset_items(session, step_index)
         write_report: MeshingWriteReport | None = None
+        boundary_staged = False
         if items:
             write_report = self.adapter.write_arguments(
                 MeshingWriteRequest(
@@ -517,26 +519,45 @@ class MeshingLiveManager:
             )
             self._raise_if_aborted(session)
             self._track_children(session, items)
+            boundary_staged = (
+                step.task_path == ["update_boundaries"]
+                and write_report.status == "success"
+                and not write_report.verified
+            )
+            if write_report.status == "failed":
+                step.message = _write_report_message(write_report)
             self._log(
                 session,
                 "success" if write_report.status == "success" else "error",
                 (
-                    f"已写入第 {step_index + 1} 步的 {len(items)} 项预设并回读。"
+                    f"已暂存第 {step_index + 1} 步的边界映射；执行任务后核对实际边界表。"
+                    if boundary_staged
+                    else f"已写入第 {step_index + 1} 步的 {len(items)} 项预设并回读。"
                     if write_report.status == "success"
-                    else write_report.error or "步骤预设写入失败。"
+                    else _write_report_message(write_report)
                 ),
                 self._current_model(session).model_id,
             )
-        read_report = self._read_step(session, step_index)
+        if boundary_staged:
+            read_report = self._staged_boundary_read_report(session, items)
+            step.message = "边界映射已暂存；执行更新边界后核对 Fluent 实际边界表。"
+        else:
+            read_report = self._read_step(session, step_index)
         self._raise_if_aborted(session)
         failed = (write_report is not None and write_report.status == "failed") or (
             read_report.status == "failed"
         )
         step.preset_status = "manual" if failed else "applied"
         session.steps[step_index].status = "failed" if failed else "active"
-        session.steps[step_index].message = (
-            (write_report.error if write_report else None) or read_report.error or ""
-        )
+        if write_report is not None and write_report.status == "failed":
+            step.message = _write_report_message(write_report)
+        elif read_report.status == "failed":
+            step.message = read_report.error or "Fluent 参数回读失败。"
+        elif boundary_staged:
+            step.message = "边界映射已暂存；执行更新边界后核对 Fluent 实际边界表。"
+        else:
+            step.message = ""
+        session.steps[step_index].message = step.message
         step.duration_ms = round((perf_counter() - started) * 1000)
         if not step.message:
             step.message = f"参数同步完成，用时 {step.duration_ms / 1000:.1f} 秒。"
@@ -619,19 +640,26 @@ class MeshingLiveManager:
                 for item in items
             )
         self._track_children(session, items)
-        read_report = self._read_step(session, step_index)
+        boundary_staged = (
+            write_report.status == "success"
+            and not write_report.verified
+            and any(item.task_path == ["update_boundaries"] for item in items)
+        )
+        if boundary_staged:
+            read_report = self._staged_boundary_read_report(session, items)
+        else:
+            read_report = self._read_step(session, step_index)
         failed = write_report.status == "failed" or read_report.status == "failed"
         session.steps[step_index].status = "failed" if failed else "active"
         if write_report.status == "failed":
             session.steps[step_index].message = _write_report_message(write_report)
         elif read_report.status == "failed":
             session.steps[step_index].message = read_report.error or "Fluent 参数回读失败。"
-        elif (
-            not write_report.verified
-            and any(item.task_path == ["update_boundaries"] for item in items)
+        elif not write_report.verified and any(
+            item.task_path == ["update_boundaries"] for item in items
         ):
             session.steps[step_index].message = (
-                "边界映射已暂存；执行 Update Boundaries 后会回读 Fluent 实际边界表。"
+                "边界映射已暂存；执行更新边界后将核对 Fluent 实际边界表。"
             )
         else:
             session.steps[step_index].message = "参数已写入 Fluent 并回读。"
@@ -733,7 +761,11 @@ class MeshingLiveManager:
             self._log(session, "info", line, model.model_id)
         try:
             read_report = (
-                self._read_step(session, step_index)
+                self._read_step(
+                    session,
+                    step_index,
+                    fresh=task_path == ["update_boundaries"],
+                )
                 if execution.status == "success"
                 else None
             )
@@ -750,14 +782,53 @@ class MeshingLiveManager:
             model.error = message
             self._log(session, "error", message, model.model_id)
             return self._step_report(session, step_index, None, None)
-        if read_report is not None and read_report.status == "failed":
+        boundary_readback_fields = {
+            "boundary_current_list",
+            "boundary_current_type_list",
+        }
+        failed_read_items = (
+            [item for item in read_report.items if not item.found or item.error]
+            if read_report is not None
+            else []
+        )
+        boundary_table_unavailable = (
+            task_path == ["update_boundaries"]
+            and execution.status == "success"
+            and bool(failed_read_items)
+            and all(
+                item.task_path == ["update_boundaries"]
+                and item.argument_path
+                and item.argument_path[-1] in boundary_readback_fields
+                for item in failed_read_items
+            )
+        )
+        if (
+            read_report is not None
+            and read_report.status == "failed"
+            and not boundary_table_unavailable
+        ):
             execution.status = "failed"
             execution.message = read_report.error or "Fluent 任务完成，但参数回读失败。"
-        if read_report is not None and task_path == ["update_boundaries"]:
+        if (
+            read_report is not None
+            and task_path == ["update_boundaries"]
+            and not boundary_table_unavailable
+        ):
             mismatch = self._boundary_update_mismatch(session, read_report)
             if mismatch:
                 execution.status = "failed"
                 execution.message = mismatch
+        if boundary_table_unavailable:
+            execution.message = (
+                "update_boundaries 已由 Fluent 执行成功；当前会话未提供更新后的动态边界表，"
+                "平台无法自动复核读回。"
+            )
+            self._log(
+                session,
+                "warning",
+                execution.message,
+                model.model_id,
+            )
         if execution.status == "success":
             session.steps[step_index].status = "completed"
             session.steps[step_index].message = (
@@ -787,7 +858,16 @@ class MeshingLiveManager:
             model.status = "failed"
             model.error = session.steps[step_index].message
             self._log(session, "error", session.steps[step_index].message, model.model_id)
-        return self._step_report(session, step_index, None, read_report)
+        # When the live boundary table is unavailable, the unreadable read
+        # report is deliberately tolerated; do not let it mark the completed
+        # step as failed in the returned report, or volume preparation will
+        # treat the tolerated warning as a preparation failure.
+        return self._step_report(
+            session,
+            step_index,
+            None,
+            None if boundary_table_unavailable else read_report,
+        )
 
     def _execute_import_step(self, session: _LiveSession) -> MeshingLiveStepReport:
         model = self._current_model(session)
@@ -1388,7 +1468,37 @@ class MeshingLiveManager:
             self._prepare_surface(session)
         return self._snapshot(session)
 
-    def _read_step(self, session: _LiveSession, step_index: int) -> MeshingReadReport:
+    @staticmethod
+    def _staged_boundary_read_report(
+        session: _LiveSession,
+        items: list[MeshingPresetItem],
+    ) -> MeshingReadReport:
+        # Update Boundaries holds the requested mapping until the Fluent task
+        # executes. Use the submitted values for the preparation view; the
+        # executed task performs the authoritative live-table verification.
+        return MeshingReadReport(
+            workflow_type=session.workflow_type,
+            status="success",
+            items=[
+                MeshingReadItemResult(
+                    task_path=item.task_path,
+                    argument_path=item.argument_path,
+                    compound_child_name=item.compound_child_name,
+                    found=True,
+                    value=item.value,
+                )
+                for item in items
+                if item.value_mode == "fixed"
+            ],
+        )
+
+    def _read_step(
+        self,
+        session: _LiveSession,
+        step_index: int,
+        *,
+        fresh: bool = False,
+    ) -> MeshingReadReport:
         task_path = list(session.steps[step_index].task_path)
         task = MESHING_SCHEMA_INDEX.get_task(session.workflow_type, task_path)
         if task is None:
@@ -1397,9 +1507,13 @@ class MeshingLiveManager:
                 status="failed",
                 error=f"Unknown Meshing task: {'/'.join(task_path)}",
             )
-        references = self._read_references(session, task, task_path)
+        references = self._read_references(session, task, task_path, fresh=fresh)
         report = self.adapter.read_arguments(
-            MeshingReadRequest(workflow_type=session.workflow_type, items=references)
+            MeshingReadRequest(
+                workflow_type=session.workflow_type,
+                items=references,
+                fresh=fresh,
+            )
         )
         self._raise_if_aborted(session)
         return report
@@ -1409,6 +1523,8 @@ class MeshingLiveManager:
         session: _LiveSession,
         task: dict[str, Any],
         task_path: list[str],
+        *,
+        fresh: bool = False,
     ) -> list[MeshingArgumentReference]:
         references = self._argument_references(task.get("arguments") or [], task_path)
         if task_path == ["update_boundaries"]:
@@ -1445,11 +1561,13 @@ class MeshingLiveManager:
                 if reference.argument_path
                 and reference.argument_path[-1]
                 in {
-                    "selection_type",
-                    name_argument,
-                    type_argument,
                     "boundary_current_list",
                     "boundary_current_type_list",
+                    *(
+                        ()
+                        if fresh
+                        else ("selection_type", name_argument, type_argument)
+                    ),
                 }
             ]
             references.extend(

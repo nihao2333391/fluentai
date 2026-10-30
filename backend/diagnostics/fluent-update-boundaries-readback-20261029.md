@@ -168,3 +168,74 @@ fallback. The backend closure and adapter regression tests passed (33 tests).
 The UI log now states which event subscriptions are available. A new platform
 run is still needed to confirm both the poll warning and boundary mapping on
 the user's Fluent session.
+
+## Readback marked the live table unreadable instead of warning
+
+Date: 2026-10-30
+
+After the deferred-verification change, a real run failed with
+`Fluent 未返回更新后的实际边界表，无法确认边界类型。` even though
+`update_boundaries` had executed successfully. The failure came from
+`_boundary_update_mismatch()` rather than the intended
+"table unavailable" warning path. The gap was in
+`PyFluentMeshingAdapter.read_arguments()`:
+
+- The per-field remote reader (`_read_remote_argument`) was stored into the
+  read state unconditionally. When PyFluent returns `None` (or a legacy
+  Python-literal list string) instead of raising, the read item was marked
+  `found` with a non-list value, so the read report "succeeded".
+- The service's `boundary_table_unavailable` check only treats items with
+  `found=False`/`error` as unavailable, so the mismatch check ran and failed
+  on the missing list instead of warning.
+
+Changes:
+
+- `read_arguments()` now always reads Update Boundaries from a fresh remote
+  snapshot (restoring the pre-execution behavior that the regression test
+  `test_update_boundaries_read_arguments_bypasses_stale_pyfluent_cache`
+  encodes), then overrides the dynamic table fields with per-field remote
+  reads. A field is marked unreadable only when neither the per-field read
+  nor the fresh snapshot yields a list, which routes the service to the
+  warning path.
+- `_read_remote_argument()` parses legacy Python-literal list strings
+  (`"['wall', ...]"`) for `*_list` fields, reusing a new
+  `_parse_list_literal()` helper also used by `_normalize_state()`.
+- `_update_boundary_previous_state()` reads the initial selection/type state
+  from one fresh remote snapshot, switches `selection_type` only when needed,
+  and reuses that snapshot as its per-field fallback (no extra RPC).
+- `MeshingLiveManager._write_step()` now uses the same staged read report as
+  `_prepare_step()` for unverified Update Boundaries writes, so a manual write
+  cannot fail on a pre-execution read of the dynamic table.
+
+Regression coverage: three new adapter tests (string-literal parsing,
+unreadable table marked not found, per-field failure falling back to the
+snapshot) and one new closure test that executes `update_boundaries` with an
+unreadable table and expects the step to complete with the
+`未提供更新后的动态边界表` warning. Backend suite: 86 passed with two
+pre-existing `test_meshing_api.py` failures that also fail at the commit
+that authored them and are unrelated to boundaries. A real-Fluent rerun is
+still required to confirm the warning path on the live session.
+
+## Warning path contradicted by a preparation failure
+
+Date: 2026-10-30 (08:06 local)
+
+The real-Fluent rerun confirmed the warning path fired
+(`update_boundaries 已由 Fluent 执行成功；当前会话未提供更新后的动态边界表`)
+but the step still failed immediately with
+`update_boundaries 准备失败: <the same warning text>`. Cause:
+`_execute_one_step()` passed the deliberately tolerated failed read report to
+`_step_report()`, which marks the report failed whenever
+`read_report.status == "failed"`; `_prepare_step()` then called
+`_preparation_failed()` with the warning message. The regression test missed
+this because `FakeMeshingAdapter.read_arguments()` always reports
+`status="success"` even for missing items, unlike the real adapter.
+
+Fixes:
+
+- `_execute_one_step()` no longer forwards the read report on the tolerated
+  `boundary_table_unavailable` path, so the completed step reports success.
+- The closure regression test's adapter now mirrors the real adapter for the
+  dynamic boundary fields (missing boundary table fields make the read
+  fail), reproducing the real run; the full preparation then reaches
+  `volume_ready` with the warning intact.

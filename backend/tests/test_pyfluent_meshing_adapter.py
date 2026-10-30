@@ -431,6 +431,161 @@ def test_update_boundaries_read_arguments_bypasses_stale_pyfluent_cache(
     assert update_boundaries.arguments.remote_read_count == 1
 
 
+class _RemoteField:
+    """Per-argument object exposing PyFluent's dynamic remote reader."""
+
+    def __init__(self, value: Any = None, *, raises: bool = False) -> None:
+        self._value = value
+        self._raises = raises
+
+    def get_remote_state(self) -> Any:
+        if self._raises:
+            raise RuntimeError("Dynamic argument is not readable.")
+        return self._value
+
+    def set_state(self, value: Any) -> None:
+        self._value = value
+
+
+def _field_aware_task(
+    state: dict[str, Any],
+    fields: dict[str, _RemoteField],
+    remote_state: dict[str, Any] | None = None,
+) -> FakeTask:
+    class FieldAwareArguments(CountingArguments):
+        def __getattr__(self, name: str) -> Any:
+            if name in fields:
+                return fields[name]
+            return super().__getattr__(name)
+
+    task = FakeTask("update_boundaries", state)
+    task.arguments = FieldAwareArguments(state)
+    if remote_state is not None:
+        task.arguments.remote_state = remote_state
+    return task
+
+
+def test_update_boundaries_read_parses_legacy_string_literal_remote_values(
+    monkeypatch: Any,
+) -> None:
+    adapter_module = _import_adapter(monkeypatch)
+    update_boundaries = _field_aware_task(
+        {"selection_type": "label"},
+        {
+            "boundary_current_list": _RemoteField("['inlet-hot', 'inlet-cold']"),
+            "boundary_current_type_list": _RemoteField("['wall', 'wall']"),
+        },
+        remote_state={"selection_type": "label"},
+    )
+    adapter = adapter_module.PyFluentMeshingAdapter(session=ActiveSession())
+    adapter._workflow = FakeWorkflow([update_boundaries])
+    adapter._workflow_type = "watertight"
+
+    report = adapter.read_arguments(
+        MeshingReadRequest(
+            workflow_type="watertight",
+            items=[
+                MeshingArgumentReference(
+                    task_path=["update_boundaries"],
+                    argument_path=["boundary_current_list"],
+                ),
+                MeshingArgumentReference(
+                    task_path=["update_boundaries"],
+                    argument_path=["boundary_current_type_list"],
+                ),
+            ],
+            fresh=True,
+        )
+    )
+
+    assert report.status == "success"
+    values = {item.argument_path[-1]: item.value for item in report.items}
+    assert values["boundary_current_list"] == ["inlet-hot", "inlet-cold"]
+    assert values["boundary_current_type_list"] == ["wall", "wall"]
+
+
+def test_update_boundaries_read_marks_unreadable_live_table_as_not_found(
+    monkeypatch: Any,
+) -> None:
+    adapter_module = _import_adapter(monkeypatch)
+    # PyFluent returns no usable list for the dynamic table: the per-field
+    # remote reader yields None and the task snapshot omits the fields.
+    update_boundaries = _field_aware_task(
+        {"selection_type": "label"},
+        {
+            "boundary_current_list": _RemoteField(None),
+            "boundary_current_type_list": _RemoteField(None),
+        },
+        remote_state={"selection_type": "label"},
+    )
+    adapter = adapter_module.PyFluentMeshingAdapter(session=ActiveSession())
+    adapter._workflow = FakeWorkflow([update_boundaries])
+    adapter._workflow_type = "watertight"
+
+    report = adapter.read_arguments(
+        MeshingReadRequest(
+            workflow_type="watertight",
+            items=[
+                MeshingArgumentReference(
+                    task_path=["update_boundaries"],
+                    argument_path=["boundary_current_list"],
+                ),
+                MeshingArgumentReference(
+                    task_path=["update_boundaries"],
+                    argument_path=["boundary_current_type_list"],
+                ),
+            ],
+            fresh=True,
+        )
+    )
+
+    assert report.status == "failed"
+    assert len(report.items) == 2
+    assert all(not item.found for item in report.items)
+    assert all(item.error for item in report.items)
+
+
+def test_update_boundaries_read_falls_back_to_fresh_snapshot_when_field_read_fails(
+    monkeypatch: Any,
+) -> None:
+    adapter_module = _import_adapter(monkeypatch)
+    update_boundaries = _field_aware_task(
+        {
+            "selection_type": "label",
+            "boundary_current_list": ["inlet-hot", "inlet-cold"],
+            "boundary_current_type_list": ["velocity-inlet", "velocity-inlet"],
+        },
+        {
+            "boundary_current_list": _RemoteField(raises=True),
+            "boundary_current_type_list": _RemoteField(raises=True),
+        },
+        remote_state={
+            "selection_type": "label",
+            "boundary_current_list": ["inlet-hot", "inlet-cold"],
+            "boundary_current_type_list": ["wall", "wall"],
+        },
+    )
+    adapter = adapter_module.PyFluentMeshingAdapter(session=ActiveSession())
+    adapter._workflow = FakeWorkflow([update_boundaries])
+    adapter._workflow_type = "watertight"
+
+    report = adapter.read_arguments(
+        MeshingReadRequest(
+            workflow_type="watertight",
+            items=[
+                MeshingArgumentReference(
+                    task_path=["update_boundaries"],
+                    argument_path=["boundary_current_type_list"],
+                ),
+            ],
+            fresh=True,
+        )
+    )
+
+    assert report.status == "success"
+    assert report.items[0].value == ["wall", "wall"]
+
+
 def test_update_boundaries_fails_when_fluent_task_returns_false(monkeypatch: Any) -> None:
     adapter_module = _import_adapter(monkeypatch)
 

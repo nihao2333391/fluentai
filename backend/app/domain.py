@@ -379,6 +379,7 @@ class MeshingReadRequest(BaseModel):
 
     workflow_type: MeshingWorkflowType
     items: list[MeshingArgumentReference] = Field(default_factory=list)
+    fresh: bool = False
 
 
 class MeshingReadItemResult(MeshingArgumentReference):

@@ -18,8 +18,11 @@ from app.domain import (
     MeshingLiveStepRequest,
     MeshingPresetDocument,
     MeshingPresetItem,
+    MeshingReadReport,
+    MeshingReadRequest,
     MeshingTaskExecutionReport,
     MeshingWriteReport,
+    MeshingWriteRequest,
     ModelCreate,
 )
 from app.meshing.fake import FakeMeshingAdapter
@@ -469,6 +472,101 @@ def test_boundary_update_fails_when_fluent_keeps_name_based_default(tmp_path: Pa
     assert "wall" in snapshot.steps[boundary_index].message
     assert ("watertight", ("update_boundaries",)) in adapter.executed_tasks
     assert ("watertight", ("create_volume_mesh",)) not in adapter.executed_tasks
+
+
+def test_boundary_update_continues_when_fluent_live_table_is_unreadable(
+    tmp_path: Path,
+) -> None:
+    database = Database(tmp_path / "app.db")
+    database.initialize()
+    target = tmp_path / "A-compact.scdocx"
+    target.write_bytes(b"test geometry")
+    model = ModelRepository(database).create(ModelCreate(name="A-compact", file_path=str(target)))
+    preset = MeshingPresetDocument(
+        schema_version=2,
+        workflow_type="watertight",
+        items=[
+            MeshingPresetItem(
+                task_path=["describe_geometry"],
+                argument_path=["setup_type"],
+                value="The geometry consists of only fluid regions with no voids",
+            ),
+            MeshingPresetItem(
+                task_path=["update_boundaries"],
+                argument_path=["selection_type"],
+                value="label",
+            ),
+            MeshingPresetItem(
+                task_path=["update_boundaries"],
+                argument_path=["boundary_label_list"],
+                value=["inlet-hot"],
+            ),
+            MeshingPresetItem(
+                task_path=["update_boundaries"],
+                argument_path=["boundary_label_type_list"],
+                value=["wall"],
+            ),
+        ],
+    )
+    automation = MeshingAutomationRepository(database).create(
+        MeshingAutomationCreate(name="Boundary unreadable table", preset=preset)
+    )
+
+    class UnreadableBoundaryAdapter(FakeMeshingAdapter):
+        def __init__(self) -> None:
+            super().__init__(known_names={"inlet-hot"})
+
+        def read_arguments(self, request: MeshingReadRequest) -> MeshingReadReport:
+            # Mirror the real adapter for the dynamic boundary table: when the
+            # live boundary fields are missing from Fluent's state, the read
+            # fails instead of reporting success. Other missing schema leaves
+            # stay tolerant because the fake only tracks explicitly written
+            # values, while real Fluent returns every schema argument.
+            report = super().read_arguments(request)
+            boundary_items = [
+                item
+                for item in report.items
+                if item.task_path == ["update_boundaries"]
+                and item.argument_path[-1]
+                in {"boundary_current_list", "boundary_current_type_list"}
+            ]
+            if boundary_items and any(not item.found for item in boundary_items):
+                report.status = "failed"
+                report.error = "Argument path was not found."
+            return report
+
+        def write_arguments(self, request: MeshingWriteRequest) -> MeshingWriteReport:
+            report = super().write_arguments(request)
+            if any(item.task_path == ["update_boundaries"] for item in request.items):
+                # Mirror the real adapter: staged boundary mappings are verified
+                # from Fluent's live table after the task executes.
+                report.verified = False
+            return report
+
+    adapter = UnreadableBoundaryAdapter()
+    live = MeshingLiveManager(database, adapter)
+    started = live.start(
+        automation.id, [model.id], FluentConnectionConfig(mode="launch"), False
+    )
+    live.begin(started.session_id)
+    snapshot = live.get(started.session_id)
+    assert snapshot.phase == "surface_ready"
+    surface_index = next(
+        index for index, step in enumerate(snapshot.steps)
+        if step.task_path == ["create_surface_mesh"]
+    )
+    boundary_index = next(
+        index for index, step in enumerate(snapshot.steps)
+        if step.task_path == ["update_boundaries"]
+    )
+
+    live.execute_step(started.session_id, surface_index)
+
+    snapshot = live.get(started.session_id)
+    assert ("watertight", ("update_boundaries",)) in adapter.executed_tasks
+    assert snapshot.phase == "volume_ready"
+    assert snapshot.steps[boundary_index].status == "completed"
+    assert "未提供更新后的动态边界表" in snapshot.steps[boundary_index].message
 
 
 def test_native_surface_mesh_completion_resumes_downstream_preparation_once(

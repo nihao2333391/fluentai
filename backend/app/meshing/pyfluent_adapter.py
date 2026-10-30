@@ -113,6 +113,21 @@ def _read_argument_state(target: Any, *, fresh: bool = False) -> dict[str, Any]:
     return state
 
 
+def _read_remote_argument(target: Any, argument_name: str) -> Any:
+    """Read one dynamic workflow argument directly instead of the task snapshot."""
+    arguments = getattr(target, "arguments", None)
+    argument = getattr(arguments, argument_name, None)
+    getter = getattr(argument, "get_remote_state", None)
+    if not callable(getter):
+        raise RuntimeError(
+            f"PyFluent does not expose a remote reader for {argument_name}."
+        )
+    value = _normalize_state(getter())
+    if argument_name.endswith("_list") and isinstance(value, str):
+        value = _parse_list_literal(value)
+    return value
+
+
 def _find_task(workflow: Any, task_path: list[str]) -> Any:
     candidates = list(workflow.tasks())
     task: Any = None
@@ -147,6 +162,17 @@ def _merge_state(target: dict[str, Any], path: list[str], value: Any) -> None:
     current[path[-1]] = value
 
 
+def _parse_list_literal(value: str) -> Any:
+    """Parse Fluent's Python-literal list strings, returning None on failure."""
+    try:
+        parsed = ast.literal_eval(value)
+    except (ValueError, SyntaxError):
+        return None
+    if isinstance(parsed, (list, tuple, set)):
+        return _normalize_state(parsed)
+    return None
+
+
 def _normalize_state(value: Any) -> Any:
     if isinstance(value, dict):
         normalized: dict[str, Any] = {}
@@ -158,12 +184,9 @@ def _normalize_state(value: Any) -> Any:
             # Normalize only fields named as lists; ordinary text may itself
             # happen to look like a Python list.
             if normalized_key.endswith("_list") and isinstance(normalized_item, str):
-                try:
-                    parsed = ast.literal_eval(normalized_item)
-                except (ValueError, SyntaxError):
-                    parsed = None
-                if isinstance(parsed, (list, tuple, set)):
-                    normalized_item = _normalize_state(parsed)
+                parsed = _parse_list_literal(normalized_item)
+                if parsed is not None:
+                    normalized_item = parsed
             normalized[normalized_key] = normalized_item
         return normalized
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
@@ -460,17 +483,69 @@ def _update_boundary_previous_state(task: Any, state: dict[str, Any]) -> dict[st
     if any(not isinstance(name, str) for name in target_names):
         raise ValueError(f"{names_argument} must contain only names.")
 
-    # The current table follows Selection Type. Switch it before reading the
-    # baseline so label mappings cannot accidentally use Fluent's zone table.
-    getattr(task.arguments, "selection_type").set_state(selection_type)
-    current_state = _read_argument_state(task, fresh=True)
-    current_pairs: dict[str, str] = {}
-    current_names = _read_state_path(current_state, ["boundary_current_list"])
-    current_types = _read_state_path(current_state, ["boundary_current_type_list"])
+    # The current table follows Selection Type. Read the existing selection
+    # from a fresh remote snapshot, then switch only when needed so an
+    # unnecessary RPC cannot clear Fluent's dynamically-populated table.
+    initial_state = _read_argument_state(task, fresh=True)
+    if initial_state.get("selection_type") != selection_type:
+        getattr(task.arguments, "selection_type").set_state(selection_type)
+        initial_state = _read_argument_state(task, fresh=True)
+
+    # PyFluent's task-level remote snapshot can omit dynamically-populated
+    # arguments. Read each live table field directly first, then use complete
+    # task snapshots as compatibility fallbacks for PyFluent versions where
+    # the per-field remote reader is unavailable.
+    current_names: Any = None
+    current_types: Any = None
+    read_errors: list[str] = []
+    try:
+        current_names = _read_remote_argument(task, "boundary_current_list")
+    except Exception as exc:
+        read_errors.append(f"boundary_current_list field read: {type(exc).__name__}: {exc}")
+    try:
+        current_types = _read_remote_argument(task, "boundary_current_type_list")
+    except Exception as exc:
+        read_errors.append(
+            f"boundary_current_type_list field read: {type(exc).__name__}: {exc}"
+        )
+
+    def has_target_table(names: Any, types: Any) -> bool:
+        return (
+            isinstance(names, list)
+            and isinstance(types, list)
+            and len(names) == len(types)
+            and all(name in names for name in target_names)
+        )
+
+    if not has_target_table(current_names, current_types):
+        # The fresh snapshot already reflects the current Selection Type, so
+        # reuse it before falling back to PyFluent's cached state.
+        remote_names = _read_state_path(initial_state, ["boundary_current_list"])
+        remote_types = _read_state_path(initial_state, ["boundary_current_type_list"])
+        if has_target_table(remote_names, remote_types):
+            current_names, current_types = remote_names, remote_types
+        else:
+            if not isinstance(current_names, list):
+                current_names = remote_names
+            if not isinstance(current_types, list):
+                current_types = remote_types
+    if not has_target_table(current_names, current_types):
+        cached_state = _read_argument_state(task)
+        cached_names = _read_state_path(cached_state, ["boundary_current_list"])
+        cached_types = _read_state_path(cached_state, ["boundary_current_type_list"])
+        if has_target_table(cached_names, cached_types):
+            current_names, current_types = cached_names, cached_types
+        else:
+            if not isinstance(current_names, list):
+                current_names = cached_names
+            if not isinstance(current_types, list):
+                current_types = cached_types
     if not isinstance(current_names, list) or not isinstance(current_types, list):
-        raise LookupError("Fluent did not return its current boundary table.")
+        detail = " " + "; ".join(read_errors) if read_errors else ""
+        raise LookupError("Fluent did not return its current boundary table." + detail)
     if len(current_names) != len(current_types):
         raise ValueError("Fluent's current boundary table has unpaired names and types.")
+    current_pairs: dict[str, str] = {}
     for current_name, current_type in zip(current_names, current_types):
         if isinstance(current_name, str) and isinstance(current_type, str):
             current_pairs.setdefault(current_name, current_type)
@@ -658,12 +733,43 @@ class PyFluentMeshingAdapter:
                                 f"Compound child was not found: {child_name}"
                             )
                         target = child
-                    state = _read_argument_state(
-                        target,
-                        fresh=task_path == ("update_boundaries",) and child_name is None,
+                    # Update Boundaries populates its live table dynamically and
+                    # PyFluent's cached snapshot can lag behind Fluent, so always
+                    # read this task from a fresh remote snapshot. Per-field
+                    # remote reads are even fresher, but may be unavailable or
+                    # return no list value; only then fall back to the snapshot,
+                    # and mark the field unreadable when neither source yields
+                    # a list so the caller can treat the table as unavailable.
+                    fresh_boundary_read = (
+                        task_path == ("update_boundaries",) and child_name is None
                     )
+                    state = _read_argument_state(target, fresh=fresh_boundary_read)
+                    dynamic_read_errors: dict[str, str] = {}
+                    if fresh_boundary_read:
+                        for argument_name in (
+                            "boundary_current_list",
+                            "boundary_current_type_list",
+                        ):
+                            try:
+                                value = _read_remote_argument(target, argument_name)
+                            except Exception as exc:
+                                if not isinstance(state.get(argument_name), list):
+                                    state.pop(argument_name, None)
+                                    dynamic_read_errors[argument_name] = (
+                                        f"{type(exc).__name__}: {exc}"
+                                    )
+                                continue
+                            if isinstance(value, list):
+                                state[argument_name] = value
+                            elif not isinstance(state.get(argument_name), list):
+                                state.pop(argument_name, None)
+                                dynamic_read_errors[argument_name] = (
+                                    "Fluent returned a non-list value for "
+                                    f"{argument_name}: {str(value)[:120]!r}"
+                                )
                     for index, reference in group:
                         found = _state_path_exists(state, reference.argument_path)
+                        argument_name = reference.argument_path[-1]
                         results[index] = MeshingReadItemResult(
                             task_path=reference.task_path,
                             argument_path=reference.argument_path,
@@ -673,7 +779,13 @@ class PyFluentMeshingAdapter:
                                 MeshingPresetValue | None,
                                 _read_state_path(state, reference.argument_path),
                             ),
-                            error=None if found else "Argument path was not found.",
+                            error=(
+                                None
+                                if found
+                                else dynamic_read_errors.get(
+                                    argument_name, "Argument path was not found."
+                                )
+                            ),
                         )
                 except Exception as exc:
                     for index, reference in group:
@@ -747,12 +859,6 @@ class PyFluentMeshingAdapter:
                         task_path_tuple == ("update_boundaries",) and child_name is None
                     )
                     if defer_boundary_verification:
-                        # Fluent's Update Boundaries command holds paired old/new
-                        # values until execution. PyFluent's get_state() is backed
-                        # by the service cache, which can still contain Fluent's
-                        # current table after set_state(). Verify the applied
-                        # boundary types from a fresh remote read after the task
-                        # executes instead of rejecting this staged command here.
                         report.verified = False
                         actual_state: dict[str, Any] = {}
                     else:
@@ -761,10 +867,7 @@ class PyFluentMeshingAdapter:
                         if defer_boundary_verification:
                             actual = None
                             success = True
-                            message = (
-                                "Boundary mapping will be verified from Fluent's live table "
-                                "after Update Boundaries executes."
-                            )
+                            message = "Boundary mapping will be checked after Update Boundaries executes."
                         else:
                             actual = _read_state_path(actual_state, item.argument_path)
                             schema_argument = MESHING_SCHEMA_INDEX.get_argument(
