@@ -1,4 +1,23 @@
-# Documentation Index
+# Fluent AI 文档目录与评委阅读顺序
+
+本页说明各文档的用途。评委或首次使用者建议按以下顺序阅读：
+
+1. [项目首页 README](../README.md)：项目定位、当前交付状态、环境要求和启动入口。
+2. [用户操作指南](用户操作指南.md)：应用页面、首次使用和 Meshing 流程。
+3. [生产交付与部署指南](生产交付与部署指南.md)：源码准备、开发启动、检查和 Windows 安装包构建。
+4. [已知问题](KNOWN_ISSUES.md)：当前能力边界和待处理问题。
+5. [项目进度](PROGRESS.md)与[验证记录](verification/)：功能进度及对应验证范围。
+
+## 各类读者从哪里开始
+
+| 读者 | 建议入口 | 目的 |
+| --- | --- | --- |
+| 评委 / 体验者 | `README.md` → `用户操作指南.md` → `KNOWN_ISSUES.md` | 了解项目、运行条件和已知限制 |
+| 从源码启动的人 | `README.md` → `生产交付与部署指南.md` | 安装依赖并启动开发版 |
+| 构建安装包的人 | `生产交付与部署指南.md` | 构建、检查并交付 Windows 安装包 |
+| 开发者 | `CONTRIBUTING.md` → `PROGRESS.md` → `adr/` | 了解协作、进度和架构决策 |
+
+**安装包状态：** 当前仓库没有公开的 Windows `.exe` 安装包。`release/` 被 Git 忽略；在项目维护者发布安装包前，体验者需要按生产交付指南从源码构建。
 
 ## Project status
 
@@ -28,8 +47,8 @@
 
 ## Repository
 
-The shared Gitee repository is:
+The public GitHub repository is:
 
 ```text
-https://gitee.com/alcohol-free-beverage-station/fluent-ai-for-aic2026
+https://github.com/nihao2333391/fluentai
 ```
