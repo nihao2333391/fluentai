@@ -47,8 +47,14 @@
 
 ## Repository
 
-The public GitHub repository is:
+评审快照位于 GitHub `zhuxu` 分支：
 
 ```text
-https://github.com/nihao2333391/fluentai
+https://github.com/nihao2333391/fluentai/tree/zhuxu
+```
+
+后续开发以 Gitee `develop` 分支为工作分支：
+
+```text
+https://gitee.com/alcohol-free-beverage-station/fluent-ai-for-aic2026/tree/develop
 ```
